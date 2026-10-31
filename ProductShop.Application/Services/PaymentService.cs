@@ -1,9 +1,11 @@
 using Microsoft.EntityFrameworkCore;
 using ProductShop.Application.Services.Interface;
 using ProductShop.Domain.Entities;
+using ProductShop.Domain.Enum;
 using ProductShop.Infrastructure.Database;
 using ProductShop.Payments.Gateway;
 using System;
+using System.Net.Http;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -49,9 +51,21 @@ namespace ProductShop.Application.Services
             if (order is null)
                 return null;
 
-            var remote = await _gateway.GetOrderStatusAsync(gatewayOrderId, ct);
-            if (remote.IsPaid && order.MarkAsPaid())
-                await _db.SaveChangesAsync(ct);
+            // Already confirmed: no need to call Cashfree again
+            if (order.Status == OrderStatus.Paid)
+                return order;
+
+            try
+            {
+                var remote = await _gateway.GetOrderStatusAsync(gatewayOrderId, ct);
+                if (remote.IsPaid && order.MarkAsPaid())
+                    await _db.SaveChangesAsync(ct);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
+            {
+                // Cashfree is unreachable or returned an error. Show the stored status;
+                // the webhook will still mark the order paid when Cashfree sends it.
+            }
 
             return order;
         }

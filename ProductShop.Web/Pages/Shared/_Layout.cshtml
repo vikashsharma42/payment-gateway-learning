@@ -1,3 +1,7 @@
+@{
+    // Set by AppPageModel and read once per request
+    var toastJson = TempData["Toast"] as string;
+}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -12,8 +16,15 @@
             <a class="navbar-brand" href="/">ProductShop</a>
         </div>
     </nav>
+
     <main class="container pb-5">
         @RenderBody()
     </main>
+
+    <div id="toast-host" class="toast-container position-fixed top-0 end-0 p-3" data-toast="@toastJson"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" defer></script>
+    <script src="~/js/app.js" asp-append-version="true" defer></script>
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

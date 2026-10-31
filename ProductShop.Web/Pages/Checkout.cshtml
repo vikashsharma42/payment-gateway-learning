@@ -4,88 +4,76 @@
     ViewData["Title"] = "Checkout";
 }
 
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a asp-page="/Index">Products</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Checkout</li>
+    </ol>
+</nav>
+
 <h2 class="mb-4">Checkout</h2>
 
 <div class="row g-4">
     <div class="col-md-6">
-        <div class="card shadow-sm">
+        <div class="card shadow-sm h-100">
             <img src="@Model.Product.ImageUrl" class="card-img-top" alt="@Model.Product.Name"
                  style="height: 220px; object-fit: cover;" />
             <div class="card-body">
-                <h5 class="card-title">@Model.Product.Name</h5>
+                <h1 class="h5 card-title">@Model.Product.Name</h1>
                 <p class="card-text text-muted">@Model.Product.Description</p>
-                <strong class="fs-5">₹@Model.Product.Price.ToString("N0")</strong>
+                <p class="fs-5 fw-semibold mb-0">@Money.Inr(Model.Product.Price)</p>
             </div>
         </div>
     </div>
 
     <div class="col-md-6">
-        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-        {
-            <div class="alert alert-danger">@Model.ErrorMessage</div>
-        }
-
-        @if (!string.IsNullOrEmpty(Model.PaymentSessionId))
+        @if (Model.Pending is not null)
         {
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <p>Order <code>@Model.OrderId</code> is created. Click below to pay.</p>
+                    <p class="mb-1">Your order is ready.</p>
+                    <p class="small text-muted mb-3">Reference: <code>@Model.Pending.OrderId</code></p>
 
-                    <div id="checkout-box"
-                         data-session="@Model.PaymentSessionId"
-                         data-mode="@Model.CashfreeMode">
-                        <button id="payBtn" class="btn btn-success w-100">
-                            Pay ₹@Model.Amount.ToString("N0")
-                        </button>
-                        <p id="payError" class="text-danger mt-2 mb-0"></p>
-                    </div>
+                    <button id="payBtn" type="button" class="btn btn-success btn-lg w-100"
+                            data-session="@Model.Pending.SessionId"
+                            data-mode="@Model.CashfreeMode">
+                        Pay @Money.Inr(Model.Pending.Amount)
+                    </button>
+
+                    <p class="small text-muted mt-3 mb-0">Payments are handled securely by Cashfree.</p>
                 </div>
             </div>
-
-            <script src="https://sdk.cashfree.com/js/v3/cashfree.js"></script>
-            <script>
-                (function () {
-                    var box = document.getElementById('checkout-box');
-                    var btn = document.getElementById('payBtn');
-                    var err = document.getElementById('payError');
-
-                    btn.addEventListener('click', async function () {
-                        try {
-                            var cashfree = Cashfree({ mode: box.dataset.mode });
-                            await cashfree.checkout({
-                                paymentSessionId: box.dataset.session,
-                                redirectTarget: "_self"
-                            });
-                        } catch (e) {
-                            err.textContent = 'Could not open checkout: ' + e.message;
-                        }
-                    });
-                })();
-            </script>
         }
         else
         {
             <div class="card shadow-sm">
                 <div class="card-body">
-                    <form method="post">
+                    <form method="post" data-submit-once>
                         <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
 
                         <div class="mb-3">
                             <label asp-for="Email" class="form-label"></label>
-                            <input asp-for="Email" class="form-control" placeholder="you@example.com" />
-                            <span asp-validation-for="Email" class="text-danger"></span>
+                            <input asp-for="Email" type="email" class="form-control"
+                                   placeholder="you@example.com" autocomplete="email" />
+                            <span asp-validation-for="Email" class="text-danger small"></span>
                         </div>
 
                         <div class="mb-3">
                             <label asp-for="Phone" class="form-label"></label>
-                            <input asp-for="Phone" class="form-control" placeholder="9999999999" />
-                            <span asp-validation-for="Phone" class="text-danger"></span>
+                            <input asp-for="Phone" type="tel" class="form-control"
+                                   placeholder="+91 9999999999" autocomplete="tel" inputmode="tel" />
+                            <span asp-validation-for="Phone" class="text-danger small"></span>
                         </div>
 
-                        <button type="submit" class="btn btn-primary w-100">Continue to payment</button>
+                        <button type="submit" class="btn btn-primary btn-lg w-100">Continue to payment</button>
                     </form>
                 </div>
             </div>
         }
     </div>
 </div>
+
+@section Scripts {
+    <script src="https://sdk.cashfree.com/js/v3/cashfree.js" defer></script>
+    <script src="~/js/checkout.js" asp-append-version="true" defer></script>
+}

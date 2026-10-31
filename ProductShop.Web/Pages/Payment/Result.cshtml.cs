@@ -1,13 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using ProductShop.Application.Services.Interface;
 using ProductShop.Domain.Entities;
+using ProductShop.Domain.Enum;
+using ProductShop.Web.Helpers;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace ProductShop.Web.Pages.Payment
 {
-    public class ResultModel : PageModel
+    public class ResultModel : AppPageModel
     {
         private readonly IPaymentService _payments;
 
@@ -18,7 +19,7 @@ namespace ProductShop.Web.Pages.Payment
 
         // Cashfree sends the order id as "order_id" in the query string
         [BindProperty(SupportsGet = true, Name = "order_id")]
-        public string OrderId { get; set; }
+        public string OrderId { get; set; } = string.Empty;
 
         public Orders CurrentOrder { get; private set; }
 
@@ -27,10 +28,20 @@ namespace ProductShop.Web.Pages.Payment
             if (string.IsNullOrWhiteSpace(OrderId))
                 return RedirectToPage("/Index");
 
-            // Confirms with Cashfree and updates the order status in the database
+            // Confirms with Cashfree and updates the stored status
             CurrentOrder = await _payments.GetOrderStatusAsync(OrderId, ct);
             if (CurrentOrder is null)
                 return NotFound();
+
+            switch (CurrentOrder.Status)
+            {
+                case OrderStatus.Paid:
+                    ToastSuccess("Payment successful. Thank you for your order.");
+                    break;
+                case OrderStatus.Failed:
+                    ToastError("Payment was not completed. You can try again.");
+                    break;
+            }
 
             return Page();
         }

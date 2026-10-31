@@ -4,26 +4,31 @@
     ViewData["Title"] = "Products";
 }
 
-<h2 class="mb-4">Our Products</h2>
+<h2 class="mb-4">Our products</h2>
+
+@if (Model.Products.Count == 0)
+{
+    <p class="text-muted">No products are available right now.</p>
+}
 
 <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-4">
     @foreach (var product in Model.Products)
     {
         <div class="col">
-            <div class="card h-100 shadow-sm">
-                <img src="@product.ImageUrl"
-                     class="card-img-top"
-                     alt="@product.Name"
-                     style="height: 180px; object-fit: cover;" />
+            <article class="card h-100 shadow-sm">
+                <img src="@product.ImageUrl" class="card-img-top" alt="@product.Name"
+                     loading="lazy" decoding="async" style="height: 180px; object-fit: cover;" />
                 <div class="card-body">
-                    <h5 class="card-title">@product.Name</h5>
+                    <h2 class="h5 card-title">@product.Name</h2>
                     <p class="card-text small text-muted">@product.Description</p>
                 </div>
-                <div class="card-footer d-flex justify-content-between align-items-center">
-                    <strong>₹@product.Price.ToString("N0")</strong>
-                    <a href="/Checkout/@product.Id" class="btn btn-primary btn-sm">Buy</a>
+                <div class="card-footer d-flex justify-content-between align-items-center bg-white">
+                    <strong>@Money.Inr(product.Price)</strong>
+                    <a asp-page="/Checkout" asp-route-id="@product.Id" class="btn btn-primary btn-sm">
+                        Buy<span class="visually-hidden"> @product.Name</span>
+                    </a>
                 </div>
-            </div>
+            </article>
         </div>
     }
 </div>
