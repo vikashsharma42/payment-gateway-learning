@@ -25,7 +25,7 @@ namespace ProductShop.Application.Services.Interface
         /// Confirms the status with the gateway and marks the order paid if needed.
         /// Returns null when the order does not exist.
         /// </summary>
-        Task<Order> GetOrderStatusAsync(string gatewayOrderId, CancellationToken ct = default);
+        Task<Orders> GetOrderStatusAsync(string gatewayOrderId, CancellationToken ct = default);
 
         /// <summary>
         /// Verifies the webhook signature and marks the order paid (idempotent).

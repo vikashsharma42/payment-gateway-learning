@@ -3,9 +3,9 @@ using ProductShop.Domain.Exceptions;
 
 namespace ProductShop.Domain.Entities
 {
-    public class Product : BaseEntity
+    public class Products : BaseEntity
     {
-        public Product(string name, string description, decimal price, string imageUrl)
+        public Products(string name, string description, decimal price, string imageUrl)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new DomainException("Product name is required.");

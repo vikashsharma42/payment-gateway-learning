@@ -20,7 +20,7 @@ namespace ProductShop.Web.Pages.Payment
         [BindProperty(SupportsGet = true, Name = "order_id")]
         public string OrderId { get; set; }
 
-        public Order CurrentOrder { get; private set; }
+        public Orders CurrentOrder { get; private set; }
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {

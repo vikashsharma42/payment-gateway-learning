@@ -18,7 +18,7 @@ namespace ProductShop.Web.Pages
             _db = db;
         }
 
-        public IReadOnlyCollection<Product> Products { get; private set; } = [];
+        public IReadOnlyCollection<Products> Products { get; private set; } = [];
 
         public async Task OnGetAsync(CancellationToken ct)
         {

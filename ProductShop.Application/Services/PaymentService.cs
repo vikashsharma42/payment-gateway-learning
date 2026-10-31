@@ -37,13 +37,13 @@ namespace ProductShop.Application.Services
                 returnUrl,
                 ct);
 
-            _db.Orders.Add(new Order(product.Id, product.Price, session.OrderId));
+            _db.Orders.Add(new Orders(product.Id, product.Price, session.OrderId));
             await _db.SaveChangesAsync(ct);
 
             return session;
         }
 
-        public async Task<Order> GetOrderStatusAsync(string gatewayOrderId, CancellationToken ct = default)
+        public async Task<Orders> GetOrderStatusAsync(string gatewayOrderId, CancellationToken ct = default)
         {
             var order = await _db.Orders.FirstOrDefaultAsync(o => o.GatewayOrderId == gatewayOrderId, ct);
             if (order is null)

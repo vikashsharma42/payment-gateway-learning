@@ -36,7 +36,7 @@ namespace ProductShop.Web.Pages
         [Required, StringLength(15, MinimumLength = 10)]
         public string Phone { get; set; }
 
-        public Product Product { get; private set; }
+        public Products Product { get; private set; }
 
         public string OrderId { get; private set; }
 

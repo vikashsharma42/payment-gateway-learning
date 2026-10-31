@@ -5,9 +5,9 @@ using System;
 
 namespace ProductShop.Domain.Entities
 {
-    public class Order : BaseEntity
+    public class Orders : BaseEntity
     {
-        public Order(int productId, decimal amount, string gatewayOrderId)
+        public Orders(long productId, decimal amount, string gatewayOrderId)
         {
             if (productId <= 0)
                 throw new DomainException("Product id is required.");
@@ -18,12 +18,15 @@ namespace ProductShop.Domain.Entities
             if (string.IsNullOrWhiteSpace(gatewayOrderId))
                 throw new DomainException("Gateway order id is required.");
 
+            ProductId = productId;
             PublicId = Guid.NewGuid();
             Amount = amount;
             GatewayOrderId = gatewayOrderId.Trim();
             Status = OrderStatus.Pending;
             CreatedAt = DateTime.UtcNow;
         }
+
+        public long ProductId { get; private set; }
 
         public Guid PublicId { get; private set; }
 
