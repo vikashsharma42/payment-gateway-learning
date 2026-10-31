@@ -64,12 +64,11 @@ namespace ProductShop.Web
             services.AddCashfreePayments(_configuration);
             services.AddProductShopApplication();
 
-            // Site:PublicBaseUrl and Cloudflare Turnstile verification
+            // Site:PublicBaseUrl
             services.AddSiteOptions(_configuration);
 
             // Receipt emails are sent when a payment is confirmed
             services.AddEmailNotifications(_configuration);
-            services.AddHttpClient<TurnstileVerifier>();
         }
 
         public void Configure(IApplicationBuilder app)

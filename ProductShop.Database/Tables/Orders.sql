@@ -1,7 +1,7 @@
 CREATE TABLE Orders (
     Id               BIGINT IDENTITY(1, 1) NOT NULL,
     ProductId        BIGINT NOT NULL,
-    PublicId         CHAR(36) NOT NULL,
+    PublicId         UNIQUEIDENTIFIER NOT NULL,
     Amount           DECIMAL(18, 2) NOT NULL,
     GatewayOrderId   NVARCHAR(100) NOT NULL,
     PaymentSessionId NVARCHAR(200) NULL,

@@ -30,7 +30,6 @@
                 <ul class="trust-list">
                     <li>Payment handled by Cashfree</li>
                     <li>We never see or store card details</li>
-                    <li>Protected against bots by Cloudflare Turnstile</li>
                 </ul>
             </div>
         </div>
@@ -81,7 +80,6 @@
                             <span asp-validation-for="Phone" class="text-danger small"></span>
                         </div>
 
-                        <div class="cf-turnstile mb-3" data-sitekey="@Model.TurnstileSiteKey"></div>
 
                         <button type="submit" class="btn btn-brand btn-lg w-100">Continue to payment</button>
                     </form>
@@ -92,7 +90,6 @@
 </div>
 
 @section Scripts {
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <script src="https://sdk.cashfree.com/js/v3/cashfree.js" defer></script>
     <script src="~/js/checkout.js" asp-append-version="true" defer></script>
 }

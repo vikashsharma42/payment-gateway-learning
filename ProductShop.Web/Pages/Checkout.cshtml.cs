@@ -21,7 +21,6 @@ namespace ProductShop.Web.Pages
     public class CheckoutModel : AppPageModel
     {
         private const string PendingKey = "PendingPayment";
-        private const string TurnstileField = "cf-turnstile-response";
 
         // Cashfree payment sessions expire. Confirm the lifetime in the Cashfree docs.
         private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(30);
@@ -30,7 +29,6 @@ namespace ProductShop.Web.Pages
         private readonly IPaymentService _payments;
         private readonly IConfiguration _configuration;
         private readonly SiteOptions _site;
-        private readonly TurnstileVerifier _turnstile;
         private readonly ILogger<CheckoutModel> _logger;
 
         public CheckoutModel(
@@ -38,14 +36,12 @@ namespace ProductShop.Web.Pages
             IPaymentService payments,
             IConfiguration configuration,
             IOptions<SiteOptions> site,
-            TurnstileVerifier turnstile,
             ILogger<CheckoutModel> logger)
         {
             _db = db;
             _payments = payments;
             _configuration = configuration;
             _site = site.Value;
-            _turnstile = turnstile;
             _logger = logger;
         }
 
@@ -74,8 +70,6 @@ namespace ProductShop.Web.Pages
                 ? "production"
                 : "sandbox";
 
-        public string TurnstileSiteKey => _configuration["Turnstile:SiteKey"] ?? string.Empty;
-
         public async Task<IActionResult> OnGetAsync(int id, CancellationToken ct)
         {
             if (!await LoadProductAsync(id, ct))
@@ -90,15 +84,6 @@ namespace ProductShop.Web.Pages
         {
             if (!await LoadProductAsync(id, ct))
                 return NotFound();
-
-            // Bot check first, so scripts cannot create orders at Cashfree
-            var token = Request.Form[TurnstileField].ToString();
-            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
-            if (!await _turnstile.VerifyAsync(token, ip, ct))
-            {
-                ToastError("Security check failed. Please try again.");
-                return Page();
-            }
 
             if (!ModelState.IsValid)
             {
