@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     // Stop double submits on the details form
     var form = document.querySelector('form[data-submit-once]');
     if (form) {

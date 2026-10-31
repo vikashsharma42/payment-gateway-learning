@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using ProductShop.Payments.Cashfree;
 using ProductShop.Payments.Configuration;
 using ProductShop.Payments.Gateway;
+using System;
 
 namespace ProductShop.Payments.DependencyInjection
 {
@@ -20,7 +21,11 @@ namespace ProductShop.Payments.DependencyInjection
                     "Cashfree:AppId and Cashfree:SecretKey must be set (use user-secrets).")
                 .ValidateOnStart();
 
-            services.AddHttpClient<IPaymentGateway, CashfreeGateway>();
+            // Timeout on every Cashfree call so a slow gateway cannot hold requests open
+            services.AddHttpClient<IPaymentGateway, CashfreeGateway>(client =>
+            {
+                client.Timeout = TimeSpan.FromSeconds(20);
+            });
 
             return services;
         }

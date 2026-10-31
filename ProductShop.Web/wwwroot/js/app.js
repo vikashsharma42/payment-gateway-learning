@@ -1,4 +1,4 @@
-﻿(function () {
+(function () {
     var host = document.getElementById('toast-host');
 
     // Shows a Bootstrap toast. type: "success", "danger", "warning" or "info"

@@ -6,12 +6,13 @@ using System.Threading.Tasks;
 namespace ProductShop.Application.Services.Interface
 {
     /// <summary>
-    /// Payment use cases: create an order, check its status, and handle the gateway webhook.
+    /// Payment use cases: create an order, check its status, handle the webhook, and refund.
     /// </summary>
     public interface IPaymentService
     {
         /// <summary>
         /// Creates a gateway order for the product's server-side price and stores a pending Order.
+        /// The same idempotency key always returns the same order.
         /// Returns null when the product does not exist.
         /// </summary>
         Task<PaymentOrderResult> CreateOrderAsync(
@@ -19,6 +20,7 @@ namespace ProductShop.Application.Services.Interface
             string customerEmail,
             string customerPhone,
             string returnUrl,
+            string idempotencyKey,
             CancellationToken ct = default);
 
         /// <summary>
@@ -32,5 +34,16 @@ namespace ProductShop.Application.Services.Interface
         /// Returns false when the signature is invalid.
         /// </summary>
         Task<bool> HandleWebhookAsync(string rawBody, string timestamp, string signature, CancellationToken ct = default);
+
+        /// <summary>
+        /// Marks a pending order paid and sends the receipt email. Returns true only when the status changed.
+        /// </summary>
+        Task<bool> MarkPaidAsync(string gatewayOrderId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Refunds a paid order in full. Safe to call again: it resumes or re-checks an earlier attempt.
+        /// Returns null when the order does not exist.
+        /// </summary>
+        Task<Orders> RefundAsync(string gatewayOrderId, CancellationToken ct = default);
     }
 }

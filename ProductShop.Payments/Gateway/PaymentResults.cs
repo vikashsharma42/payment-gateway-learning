@@ -6,4 +6,9 @@ namespace ProductShop.Payments.Gateway
     {
         public bool IsPaid => Status == "PAID";
     }
+
+    public record RefundResult(string RefundId, string Status)
+    {
+        public bool IsSuccess => Status == "SUCCESS";
+    }
 }

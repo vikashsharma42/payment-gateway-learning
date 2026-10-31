@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Text.Json;
 
-namespace ProductShop.Web.Helpers
+namespace ProductShop.Web.Infrastructure
 {
     public abstract class AppPageModel : PageModel
     {

@@ -6,6 +6,8 @@
     <Deploy />
   </Project>
   <Project Path="ProductShop.Domain/ProductShop.Domain.csproj" />
+  <Project Path="ProductShop.Email/ProductShop.Email.csproj" />
+  <Project Path="ProductShop.Tests/ProductShop.Tests.csproj" />
   <Project Path="ProductShop.Infrastructure/ProductShop.Infrastructure.csproj" />
   <Project Path="ProductShop.Payments/ProductShop.Payments.csproj" />
   <Project Path="ProductShop.Web/ProductShop.Web.csproj" />

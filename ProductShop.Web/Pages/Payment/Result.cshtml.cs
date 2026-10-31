@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using ProductShop.Application.Services.Interface;
 using ProductShop.Domain.Entities;
 using ProductShop.Domain.Enum;
-using ProductShop.Web.Helpers;
+using ProductShop.Web.Infrastructure;
 using System.Threading;
 using System.Threading.Tasks;
 

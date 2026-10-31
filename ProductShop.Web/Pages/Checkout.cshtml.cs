@@ -1,11 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using ProductShop.Application.Configuration;
 using ProductShop.Application.Services.Interface;
 using ProductShop.Domain.Entities;
 using ProductShop.Infrastructure.Database;
-using ProductShop.Web.Helpers;
+using ProductShop.Web.Infrastructure;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
@@ -14,9 +17,11 @@ using System.Threading.Tasks;
 
 namespace ProductShop.Web.Pages
 {
+    [EnableRateLimiting("checkout")]
     public class CheckoutModel : AppPageModel
     {
         private const string PendingKey = "PendingPayment";
+        private const string TurnstileField = "cf-turnstile-response";
 
         // Cashfree payment sessions expire. Confirm the lifetime in the Cashfree docs.
         private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(30);
@@ -24,17 +29,23 @@ namespace ProductShop.Web.Pages
         private readonly ApplicationDbContext _db;
         private readonly IPaymentService _payments;
         private readonly IConfiguration _configuration;
+        private readonly SiteOptions _site;
+        private readonly TurnstileVerifier _turnstile;
         private readonly ILogger<CheckoutModel> _logger;
 
         public CheckoutModel(
             ApplicationDbContext db,
             IPaymentService payments,
             IConfiguration configuration,
+            IOptions<SiteOptions> site,
+            TurnstileVerifier turnstile,
             ILogger<CheckoutModel> logger)
         {
             _db = db;
             _payments = payments;
             _configuration = configuration;
+            _site = site.Value;
+            _turnstile = turnstile;
             _logger = logger;
         }
 
@@ -48,6 +59,11 @@ namespace ProductShop.Web.Pages
         [RegularExpression(@"^\+?[0-9 ]{10,15}$", ErrorMessage = "Enter a valid phone number.")]
         public string Phone { get; set; } = string.Empty;
 
+        // One key per checkout form. A double submit or a "back" resubmit sends the same key,
+        // so the customer gets the same order instead of a new one.
+        [BindProperty]
+        public string IdempotencyKey { get; set; } = string.Empty;
+
         public Products Product { get; private set; }
 
         // Null when there is no live payment session for this product
@@ -58,12 +74,15 @@ namespace ProductShop.Web.Pages
                 ? "production"
                 : "sandbox";
 
+        public string TurnstileSiteKey => _configuration["Turnstile:SiteKey"] ?? string.Empty;
+
         public async Task<IActionResult> OnGetAsync(int id, CancellationToken ct)
         {
             if (!await LoadProductAsync(id, ct))
                 return NotFound();
 
             Pending = ReadPending(id);
+            IdempotencyKey = Guid.NewGuid().ToString("N");
             return Page();
         }
 
@@ -72,18 +91,33 @@ namespace ProductShop.Web.Pages
             if (!await LoadProductAsync(id, ct))
                 return NotFound();
 
+            // Bot check first, so scripts cannot create orders at Cashfree
+            var token = Request.Form[TurnstileField].ToString();
+            var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+            if (!await _turnstile.VerifyAsync(token, ip, ct))
+            {
+                ToastError("Security check failed. Please try again.");
+                return Page();
+            }
+
             if (!ModelState.IsValid)
             {
                 ToastError("Please check your details and try again.");
                 return Page();
             }
 
+            if (string.IsNullOrWhiteSpace(IdempotencyKey))
+                IdempotencyKey = Guid.NewGuid().ToString("N");
+
             try
             {
-                var returnUrl = Url.Page("/Payment/Result", null, null, Request.Scheme);
+                // Built from configuration, never from the Host header
+                var returnUrl = $"{_site.PublicBaseUrl.TrimEnd('/')}/Payment/Result";
 
                 // Price is read from the database inside PaymentService, never from the form
-                var session = await _payments.CreateOrderAsync(id, Email.Trim(), Phone.Trim(), returnUrl, ct);
+                var session = await _payments.CreateOrderAsync(
+                    id, Email.Trim(), Phone.Trim(), returnUrl, IdempotencyKey, ct);
+
                 if (session is null)
                     return NotFound();
 

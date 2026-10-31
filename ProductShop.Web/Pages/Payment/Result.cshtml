@@ -1,18 +1,18 @@
 @page
 @model ResultModel
-@using ProductShop.Domain.Enum
 @{
     ViewData["Title"] = "Payment status";
 
     var badge = Model.CurrentOrder.Status switch
     {
         OrderStatus.Paid => "text-bg-success",
+        OrderStatus.Refunded => "text-bg-secondary",
         OrderStatus.Failed => "text-bg-danger",
         _ => "text-bg-warning"
     };
 }
 
-<h2 class="mb-4">Payment status</h2>
+<h1 class="h2 mb-4">Payment status</h1>
 
 <div class="card shadow-sm" style="max-width: 32rem;">
     <div class="card-body">
