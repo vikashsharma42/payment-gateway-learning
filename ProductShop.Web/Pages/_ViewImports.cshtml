@@ -1,2 +1,11 @@
+@using Microsoft.Extensions.Configuration
+@using ProductShop.Domain.Entities
+@using ProductShop.Domain.Enum
+@using ProductShop.Infrastructure.Database
+
+@inject IConfiguration Configuration
+
 @namespace ProductShop.Web.Pages
-@using ProductShop.Domain.Products
+
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@addTagHelper *, ProductShop.Web

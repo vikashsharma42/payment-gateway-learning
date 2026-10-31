@@ -1,22 +1,16 @@
-using ProductShop.Infrastructure;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Hosting;
+using ProductShop.Web;
+using System.IO;
 
-var builder = WebApplication.CreateBuilder(args);
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureWebHostDefaults(webBuilder =>
+    {
+        webBuilder
+            .UseContentRoot(Directory.GetCurrentDirectory())
+            .UseWebRoot("wwwroot")
+            .UseStartup<Startup>();
+    })
+    .Build();
 
-builder.Services.AddRazorPages();
-builder.Services.AddInfrastructure(builder.Configuration);
-
-var app = builder.Build();
-
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Error");
-    app.UseHsts();
-}
-
-app.UseHttpsRedirection();
-app.UseStaticFiles();
-app.UseRouting();
-app.UseAuthorization();
-app.MapRazorPages();
-
-app.Run();
+host.Run();

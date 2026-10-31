@@ -1,0 +1,31 @@
+@page
+@model ResultModel
+@{
+    ViewData["Title"] = "Payment status";
+}
+
+<h2 class="mb-4">Payment status</h2>
+
+@if (Model.CurrentOrder!.Status == OrderStatus.Paid)
+{
+    <div class="alert alert-success">
+        <strong>Payment successful!</strong> Thank you for your order.
+    </div>
+}
+else if (Model.CurrentOrder.Status == OrderStatus.Failed)
+{
+    <div class="alert alert-danger">
+        <strong>Payment failed.</strong> You can try again from the product page.
+    </div>
+}
+else
+{
+    <div class="alert alert-info">
+        <strong>Payment is pending.</strong> Refresh this page in a few seconds.
+    </div>
+}
+
+<p>Order: <code>@Model.CurrentOrder.GatewayOrderId</code></p>
+<p>Amount: ₹@Model.CurrentOrder.Amount.ToString("N0")</p>
+
+<a href="/" class="btn btn-outline-secondary">Back to products</a>

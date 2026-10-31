@@ -1,19 +1,31 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
-using ProductShop.Domain.Products;
-using ProductShop.Infrastructure.Persistence;
+using ProductShop.Domain.Entities;
+using ProductShop.Infrastructure.Database;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace ProductShop.Web.Pages;
-
-public class IndexModel(AppDbContext db) : PageModel
+namespace ProductShop.Web.Pages
 {
-    public List<Product> Products { get; private set; } = [];
-
-    public async Task OnGetAsync()
+    public class IndexModel : PageModel
     {
-        Products = await db.Products
-            .AsNoTracking()
-            .OrderBy(p => p.Id)
-            .ToListAsync();
+        private readonly ApplicationDbContext _db;
+
+        public IndexModel(ApplicationDbContext db)
+        {
+            _db = db;
+        }
+
+        public IReadOnlyCollection<Product> Products { get; private set; } = [];
+
+        public async Task OnGetAsync(CancellationToken ct)
+        {
+            Products = await _db.Products
+                .AsNoTracking()
+                .OrderBy(p => p.Id)
+                .ToListAsync(ct);
+        }
     }
 }

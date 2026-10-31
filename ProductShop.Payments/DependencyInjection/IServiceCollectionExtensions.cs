@@ -1,0 +1,28 @@
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using ProductShop.Payments.Cashfree;
+using ProductShop.Payments.Configuration;
+using ProductShop.Payments.Gateway;
+
+namespace ProductShop.Payments.DependencyInjection
+{
+    public static class IServiceCollectionExtensions
+    {
+        /// <summary>
+        /// Binds Cashfree options (validated at startup) and registers the gateway.
+        /// AppId and SecretKey must come from user-secrets, never from appsettings.json.
+        /// </summary>
+        public static IServiceCollection AddCashfreePayments(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddOptions<CashfreeOptions>()
+                .Bind(configuration.GetSection(CashfreeOptions.SectionName))
+                .Validate(o => !string.IsNullOrWhiteSpace(o.AppId) && !string.IsNullOrWhiteSpace(o.SecretKey),
+                    "Cashfree:AppId and Cashfree:SecretKey must be set (use user-secrets).")
+                .ValidateOnStart();
+
+            services.AddHttpClient<IPaymentGateway, CashfreeGateway>();
+
+            return services;
+        }
+    }
+}

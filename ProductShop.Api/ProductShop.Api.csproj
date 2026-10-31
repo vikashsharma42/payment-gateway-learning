@@ -1,21 +1,22 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
-  <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+		<AnalysisLevel>latest-all</AnalysisLevel>
+		<!-- Suppress NuGet package vulnerability warnings -->
+		<NoWarn>$(NoWarn);NU1902;NU1903</NoWarn>
+		<!-- Same id as ProductShop.Web, so both projects share the Cashfree secrets -->
+		<UserSecretsId>6f1c2b7e-3d4a-4e8f-9b2a-7c5d1e0f8a31</UserSecretsId>
+	</PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.0" />
-    <!-- Required by "dotnet ef" commands. This project is the startup project for migrations. -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\ProductShop.Application\ProductShop.Application.csproj" />
     <ProjectReference Include="..\ProductShop.Infrastructure\ProductShop.Infrastructure.csproj" />
     <ProjectReference Include="..\ProductShop.Payments\ProductShop.Payments.csproj" />
   </ItemGroup>
