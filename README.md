@@ -1,274 +1,172 @@
 # ProductShop
 
-ProductShop is a .NET 10 solution with two applications:
+A .NET 10 learning project with a Razor Pages product storefront, a Web API for frontend consumption, and Cashfree payment gateway integration (sandbox mode).
 
-1. **ProductShop.Web**: A Razor Pages website that shows 10 products as cards (image, name, description, and price).
-2. **ProductShop.Api**: A Web API that returns the same products as JSON, so a frontend (React, Angular, plain JavaScript, etc.) can call it.
+## 1. Architecture
 
-Both projects share a class library, **ProductShop.Core**, which contains the product model and the service interface. The data is currently hardcoded in the backend. To load data from a database later, you only need to replace one service class. The Web and API projects will keep working without changes.
+The project uses **Domain-Driven Design (DDD)** with a few deliberate simplifications:
 
----
+- **Domain** holds the entities and their business rules (`Product`, `Order`). It has no dependencies on other projects or packages.
+- **Infrastructure** holds the EF Core `AppDbContext`, entity configurations, seed data, and SQLite setup.
+- **Payments** holds the Cashfree integration behind the `IPaymentGateway` interface.
+- **Web** (Razor Pages) and **Api** (controllers) use `AppDbContext` directly. There is **no repository layer**, by design.
 
-## 1. Solution structure
+```
+ProductShop.Domain          (entities, business rules, no dependencies)
+        ▲
+        │
+ProductShop.Infrastructure  (AppDbContext, EF Core, SQLite)
+        ▲                ▲
+        │                │
+ProductShop.Web     ProductShop.Api ──► ProductShop.Payments (Cashfree, IPaymentGateway)
+(Razor Pages)       (Controllers)
+```
+
+Dependencies only point inward. The Domain project references nothing.
+
+## 2. Project structure
 
 ```
 ProductShop/
 ├── ProductShop.sln
 ├── README.md
 ├── .gitignore
-├── ProductShop.Core/                 (Class Library, net10.0)
-│   ├── ProductShop.Core.csproj
-│   ├── Models/
-│   │   └── Product.cs
-│   └── Services/
-│       ├── IProductService.cs
-│       └── HardcodedProductService.cs
-├── ProductShop.Web/                  (Razor Pages web app, net10.0)
-│   ├── ProductShop.Web.csproj
-│   ├── Program.cs
-│   ├── Properties/
-│   │   └── launchSettings.json
-│   ├── wwwroot/                      (static files, e.g. local images)
-│   └── Pages/
-│       ├── _ViewImports.cshtml
-│       ├── _ViewStart.cshtml
-│       ├── Index.cshtml              (product card UI)
-│       ├── Index.cshtml.cs           (page model, gets data from the service)
-│       ├── Error.cshtml
-│       ├── Error.cshtml.cs
-│       └── Shared/
-│           └── _Layout.cshtml        (Bootstrap layout)
-└── ProductShop.Api/                  (ASP.NET Core Web API, net10.0)
-    ├── ProductShop.Api.csproj
+├── ProductShop.Domain/
+│   ├── Common/DomainException.cs
+│   ├── Products/Product.cs              (Create, ChangePrice)
+│   └── Orders/Order.cs, OrderStatus.cs  (Create, MarkAsPaid, MarkAsFailed)
+├── ProductShop.Infrastructure/
+│   ├── DependencyInjection.cs           (AddInfrastructure)
+│   └── Persistence/
+│       ├── AppDbContext.cs
+│       └── Configurations/
+│           ├── ProductConfiguration.cs  (includes the 10 seed products)
+│           └── OrderConfiguration.cs
+├── ProductShop.Payments/
+│   ├── Abstractions/IPaymentGateway.cs
+│   ├── Cashfree/CashfreeGateway.cs
+│   ├── Options/CashfreeOptions.cs
+│   └── Extensions/PaymentServiceCollectionExtensions.cs  (AddCashfreePayments)
+├── ProductShop.Web/                     (Razor Pages, product listing)
+└── ProductShop.Api/
     ├── Program.cs
-    ├── Properties/
-    │   └── launchSettings.json
+    ├── appsettings.json
     └── Controllers/
-        └── ProductsController.cs
+        ├── ProductsController.cs
+        └── PaymentsController.cs
 ```
-
----
-
-## 2. What each project does
-
-### ProductShop.Core (Class Library)
-This project has no UI and no HTTP code. It contains:
-
-- **Models/Product.cs**: the product model.
-  - `Id` (int), `Name`, `Description`, `Price` (decimal, in rupees), `ImageUrl`
-- **Services/IProductService.cs**: the data access contract.
-  - `GetAllAsync()`: returns all products.
-  - `GetByIdAsync(int id)`: returns one product, or `null` if it does not exist.
-- **Services/HardcodedProductService.cs**: a temporary implementation of `IProductService` that holds 10 products in code.
-
-This design lets you add a database later by writing one new class (for example, `DbProductService`).
-
-### ProductShop.Web (Razor Pages)
-- **Program.cs**: enables Razor Pages and registers `IProductService` with `HardcodedProductService`.
-- **Pages/Index.cshtml.cs**: in `OnGetAsync`, loads the products from the service and stores them in the `Products` property.
-- **Pages/Index.cshtml**: renders the products as Bootstrap cards. Prices are shown with the rupee sign and Indian-style grouping (for example, `65,999`).
-- **Pages/Shared/_Layout.cshtml**: the navbar and the Bootstrap CSS (loaded from a CDN).
-- **Pages/Error.cshtml(.cs)**: the error page shown in production when an unhandled exception occurs.
-
-### ProductShop.Api (Web API)
-- **Program.cs**: configures controllers, OpenAPI, service registration, and CORS.
-- **Controllers/ProductsController.cs**: exposes two endpoints (see Section 5).
-
-CORS is enabled so that a browser-based frontend running on a different port can call the API. For development, the policy allows any origin. In production, restrict it to your frontend's domain.
-
----
 
 ## 3. Requirements
 
-- **.NET 10 SDK**. Check your installed version with:
-  ```bash
-  dotnet --version
-  ```
-  The output should start with `10.`. If it does not, download the SDK from https://dotnet.microsoft.com/download.
-- An editor: Visual Studio 2022 (17.12 or later), VS Code, or JetBrains Rider.
-- An internet connection. The Bootstrap CSS and the product images (from `picsum.photos`) are loaded from external servers.
+- .NET 10 SDK (`dotnet --version` should start with `10.`)
+- EF Core CLI tools: `dotnet tool install --global dotnet-ef`
+- An editor: Visual Studio 2022 (17.12+), VS Code, or Rider
+- Internet access (Bootstrap CDN, product images from `picsum.photos`, Cashfree sandbox)
 
----
+## 4. First-time setup
 
-## 4. Setup and run
+Run all commands from the **solution folder** (where `ProductShop.sln` is). The SQLite file `productshop.db` is created in the current working directory, so using the same folder for every command keeps Web and Api on the same database.
 
-### Option A: Visual Studio
-1. Open `ProductShop.sln`.
-2. In Solution Explorer, right-click `ProductShop.Web` and choose **Set as Startup Project**.
-3. Press **F5**. The website opens in your browser.
-4. To run the API as well, right-click `ProductShop.Api` and choose **Debug → Start New Instance**.
-
-You can also configure **Multiple Startup Projects** to run both at the same time.
-
-### Option B: Command line
-From the solution folder (where the `.sln` file is):
-
+### Step 1: Restore and build
 ```bash
-# Restore packages and build
 dotnet restore
 dotnet build
-
-# Terminal 1: the Razor Pages website
-dotnet run --project ProductShop.Web
-
-# Terminal 2: the Web API
-dotnet run --project ProductShop.Api
 ```
 
-Default URLs (from `launchSettings.json`):
-
-| Project          | HTTP                  | HTTPS                   |
-|------------------|-----------------------|-------------------------|
-| ProductShop.Web  | http://localhost:5080 | https://localhost:7080  |
-| ProductShop.Api  | http://localhost:5200 | https://localhost:7200  |
-
-If you see an HTTPS certificate warning, trust the development certificate once:
+### Step 2: Create the database
 ```bash
-dotnet dev-certs https --trust
+dotnet ef migrations add InitialCreate --project ProductShop.Infrastructure --startup-project ProductShop.Api
+dotnet ef database update --project ProductShop.Infrastructure --startup-project ProductShop.Api
 ```
 
----
+This creates `productshop.db` with the `Products` and `Orders` tables and the 10 seed products.
 
-## 5. Verifying the application
+### Step 3: Set Cashfree test secrets (Api project)
+Get the **Test Environment** App ID and Secret Key from the Cashfree dashboard (Developers → API Keys). Never put them in `appsettings.json` or commit them to Git.
 
-### Razor Pages website
-Open `http://localhost:5080/` (or `https://localhost:7080/`).
-
-You should see 10 product cards: Laptop, Smartphone, Wireless Headphones, Smartwatch, Mechanical Keyboard, Wireless Mouse, 27" Monitor, Tablet, Backpack, and Water Bottle.
-
-### API endpoints
-
-| Method | URL                        | Description                                  |
-|--------|----------------------------|----------------------------------------------|
-| GET    | `/api/products`            | All 10 products (JSON array)                 |
-| GET    | `/api/products/{id}`       | One product by id (1 to 10)                  |
-| GET    | `/openapi/v1.json`         | OpenAPI document (Development environment only) |
-
-Example: `http://localhost:5200/api/products/3`
-
-Response:
-```json
-{
-  "id": 3,
-  "name": "Wireless Headphones",
-  "description": "Noise cancelling, 30h battery",
-  "price": 2999,
-  "imageUrl": "https://picsum.photos/seed/headphones/600/400"
-}
+```bash
+cd ProductShop.Api
+dotnet user-secrets init
+dotnet user-secrets set "Cashfree:AppId" "your_test_app_id"
+dotnet user-secrets set "Cashfree:SecretKey" "your_test_secret_key"
+cd ..
 ```
 
-If the id does not exist (for example, `/api/products/99`), the API returns `404 Not Found`.
+`Cashfree:Environment` is already `sandbox` in `appsettings.json`.
 
----
+Note: `ValidateOnStart` makes the Api fail at startup if these secrets are missing. That is intentional.
 
-## 6. Calling the API from a frontend
+## 5. Run
 
-Plain JavaScript example:
+```bash
+# Terminal 1: Razor Pages website
+dotnet run --project ProductShop.Web      # http://localhost:5080
 
-```html
-<script>
-  const API_BASE = "http://localhost:5200/api";
-
-  async function loadProducts() {
-    const res = await fetch(`${API_BASE}/products`);
-    if (!res.ok) throw new Error("API error: " + res.status);
-    const products = await res.json();
-
-    products.forEach(p => {
-      console.log(`${p.name} - ₹${p.price}`);
-    });
-  }
-
-  loadProducts();
-</script>
+# Terminal 2: Web API
+dotnet run --project ProductShop.Api      # http://localhost:5200
 ```
 
-Notes:
-- If your frontend runs over HTTPS, change `API_BASE` to `https://localhost:7200/api`.
-- Run `dotnet dev-certs https --trust` first to avoid certificate warnings in the browser.
-- JSON property names are camelCase (`name`, `price`, `imageUrl`), not the C# names (`Name`, `Price`).
+In Visual Studio, set **Multiple Startup Projects** (Web and Api), or start them separately. If you start from inside a project folder, the working directory changes and the SQLite file path changes too. Run from the solution folder to avoid this.
 
----
+## 6. Endpoints
 
-## 7. Changing product data (current version)
+| Method | URL                              | Description                                            |
+|--------|----------------------------------|--------------------------------------------------------|
+| GET    | `/` (Web)                        | Product listing page                                   |
+| GET    | `/api/products`                  | All products                                           |
+| GET    | `/api/products/{id}`             | One product (404 if not found)                         |
+| POST   | `/api/payments/create-order`     | Creates a Cashfree order. Body: `{ "productId": 3, "customerEmail": "...", "customerPhone": "9999999999" }` |
+| GET    | `/api/payments/status/{orderId}` | Confirms status with Cashfree and updates the order    |
+| POST   | `/api/payments/webhook`          | Cashfree server-to-server callback (signature verified)|
 
-The products are defined in `ProductShop.Core/Services/HardcodedProductService.cs`. To change a product's name, description, price, or image, edit that file directly:
-
-```csharp
-new() { Id = 1, Name = "Laptop", Description = "14-inch, 16GB RAM, 512GB SSD", Price = 65999, ImageUrl = "https://picsum.photos/seed/laptop/600/400" },
+Example:
+```bash
+curl -X POST http://localhost:5200/api/payments/create-order \
+  -H "Content-Type: application/json" \
+  -d '{"productId":3,"customerEmail":"test@example.com","customerPhone":"9999999999"}'
 ```
 
-Prices are decimal values in rupees. The website displays them as `₹65,999`.
+The response contains `paymentSessionId`, which the frontend passes to the Cashfree JS SDK to open checkout.
 
-### Using local images
-1. Copy the image file to `ProductShop.Web/wwwroot/images/`, for example `laptop.jpg`.
-2. Set `ImageUrl` to `/images/laptop.jpg`.
+## 7. Payment flow
 
-Note: a relative path like this works only in the Web project. The API project has no `wwwroot`, so for the API use a full URL, or serve the images from the API project.
+1. Browser calls `POST /api/payments/create-order` with a `productId`.
+2. The API reads the **price from the database**, calls Cashfree, and saves an `Order` with status `Pending`.
+3. The frontend opens Cashfree checkout using `paymentSessionId`.
+4. After payment, the frontend calls `GET /api/payments/status/{orderId}`. The API checks the status with Cashfree and calls `order.MarkAsPaid()` if it is paid.
+5. Cashfree may also call `POST /api/payments/webhook`. Duplicate calls are safe because `MarkAsPaid()` returns `false` when the order is already paid.
 
----
+Business rules live in the entity. For example, `Order.MarkAsPaid()` rejects paying a failed order, and `Product.ChangePrice()` rejects zero or negative prices.
 
-## 8. Adding a database (next step)
+## 8. Changing product data
 
-The design makes a database easy to add:
+Products are seeded in `ProductShop.Infrastructure/Persistence/Configurations/ProductConfiguration.cs`. Changing that file only affects a fresh database. For an existing database, either:
 
-1. Create an EF Core `DbContext` and a `DbProductService` class that implements `IProductService`. You can place them in `ProductShop.Core` or in a new project such as `ProductShop.Data`.
-2. In both `Program.cs` files, change the registration:
+- update the `Products` table directly (for example with DB Browser for SQLite), or
+- add a migration after changing the seed data.
 
-   ```csharp
-   // current
-   builder.Services.AddSingleton<IProductService, HardcodedProductService>();
+## 9. Webhook testing (local)
 
-   // after adding a database
-   builder.Services.AddScoped<IProductService, DbProductService>();
-   ```
+Cashfree cannot reach `localhost`. Options:
 
-3. The Razor Page (`Index.cshtml.cs`) and the API controller (`ProductsController.cs`) do not need any changes, because both depend only on `IProductService`.
+- Use **ngrok** (`ngrok http 5200`) and set the public URL plus `/api/payments/webhook` in the Cashfree dashboard (Developers → Webhooks, test mode).
+- Or skip the webhook and rely on `GET /api/payments/status/{orderId}`, which checks the status directly with Cashfree.
 
-Use `AddScoped` instead of `AddSingleton` when the service depends on a `DbContext`, because `DbContext` is scoped.
-
----
-
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| `dotnet` command not found | Install the .NET 10 SDK and restart the terminal. |
-| `The type or namespace ... could not be found` | Run `dotnet restore`. Check the project references with `dotnet sln list`. |
-| The page has no styling | Check your internet connection. The Bootstrap link is in `_Layout.cshtml`. |
-| Product images do not load | `picsum.photos` needs internet access. Or use local images (Section 7). |
-| CORS error in the frontend | Make sure the API is running. CORS is configured in `Program.cs` with the `AllowFrontend` policy. |
-| HTTPS certificate warning | Run `dotnet dev-certs https --trust`. |
-| Port already in use | Change the port in `launchSettings.json`, or stop the process that is using it. |
+| `Cashfree:AppId and Cashfree:SecretKey must be set` on startup | Run the `user-secrets set` commands in the Api project (Step 3). |
+| `no such table: Products` | Run the migration commands (Step 2). |
+| Different data in Web and Api | Both must run from the solution folder so they use the same `productshop.db`. |
+| `dotnet ef` not found | `dotnet tool install --global dotnet-ef`, then restart the terminal. |
+| `Failed to create payment order` | Check the Api console log. Usually the sandbox keys are wrong or the environment is `production`. |
+| Images not loading | Needs internet access to `picsum.photos`. |
+| HTTPS warning | `dotnet dev-certs https --trust` |
 
----
+## 11. Notes
 
-## 10. Current limitations
-
-- The data is hardcoded. Changes made in code are only visible after you rebuild and restart.
-- There is no cart, login, or payment feature.
-- CORS allows all origins, which is acceptable only for development.
-- Product images come from external URLs (`picsum.photos`).
-- The website has only a product listing page. There is no product detail page.
-
----
-
-## 11. Possible next steps
-
-- A database service with EF Core and SQLite or SQL Server.
-- A product detail page (`/Products/Details/{id}`).
-- A cart and a Cashfree payment integration (sandbox mode).
-- An admin page to add and edit products.
-- Authentication for the API and a stricter production CORS policy.
-
----
-
-## 12. Quick command reference
-
-```bash
-dotnet --version                       # should show 10.x
-dotnet restore
-dotnet build
-dotnet run --project ProductShop.Web   # http://localhost:5080
-dotnet run --project ProductShop.Api   # http://localhost:5200/api/products
-```
+- Never commit secrets. Keep Cashfree keys in user-secrets, and never use live keys for this project.
+- The CORS policy allows all origins. That is acceptable only for development.
+- Test card: `4111 1111 1111 1111`, any future expiry, CVV `123`.
+- Do not change the webhook or status logic to skip signature checks or to trust the browser redirect alone.

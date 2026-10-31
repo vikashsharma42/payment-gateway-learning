@@ -1,17 +1,17 @@
-using ProductShop.Core.Services;
+using ProductShop.Infrastructure;
+using ProductShop.Payments.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.Services.AddSingleton<IProductService, HardcodedProductService>();
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddCashfreePayments(builder.Configuration);
 
-// The frontend runs on a different port/domain, so CORS is open (development only)
+// Frontend runs on a different port/domain, so CORS is open (development only)
 builder.Services.AddCors(options =>
-{
     options.AddPolicy("AllowFrontend", policy =>
-        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
-});
+        policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
 var app = builder.Build();
 

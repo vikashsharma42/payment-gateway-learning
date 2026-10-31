@@ -1,15 +1,19 @@
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using ProductShop.Core.Models;
-using ProductShop.Core.Services;
+using Microsoft.EntityFrameworkCore;
+using ProductShop.Domain.Products;
+using ProductShop.Infrastructure.Persistence;
 
 namespace ProductShop.Web.Pages;
 
-public class IndexModel(IProductService productService) : PageModel
+public class IndexModel(AppDbContext db) : PageModel
 {
-    public IReadOnlyList<Product> Products { get; private set; } = [];
+    public List<Product> Products { get; private set; } = [];
 
     public async Task OnGetAsync()
     {
-        Products = await productService.GetAllAsync();
+        Products = await db.Products
+            .AsNoTracking()
+            .OrderBy(p => p.Id)
+            .ToListAsync();
     }
 }

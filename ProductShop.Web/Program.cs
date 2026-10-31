@@ -1,9 +1,9 @@
-using ProductShop.Core.Services;
+using ProductShop.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
-builder.Services.AddSingleton<IProductService, HardcodedProductService>();
+builder.Services.AddInfrastructure(builder.Configuration);
 
 var app = builder.Build();
 
