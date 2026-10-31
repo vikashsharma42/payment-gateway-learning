@@ -1,0 +1,81 @@
+# Default: normalize text files to LF
+* text=auto eol=lf
+
+# .NET / Source Files
+*.cs text eol=lf
+*.csproj text eol=lf
+*.props text eol=lf
+*.targets text eol=lf
+*.json text eol=lf
+*.xml text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.config text eol=lf
+*.env.example text eol=lf
+
+# Visual Studio Solution
+*.sln text eol=crlf
+
+# Images
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.bmp binary
+*.tif binary
+*.tiff binary
+*.svg binary
+*.webp binary
+
+# Fonts
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.eot binary
+
+# Documents
+*.pdf binary
+*.doc binary
+*.docx binary
+*.xls binary
+*.xlsx binary
+*.ppt binary
+*.pptx binary
+
+# Archives
+*.zip binary
+*.rar binary
+*.7z binary
+*.tar binary
+*.gz binary
+
+# Audio
+*.mp3 binary
+*.wav binary
+*.ogg binary
+*.flac binary
+*.aac binary
+
+# Video
+*.mp4 binary
+*.avi binary
+*.mov binary
+*.mkv binary
+*.webm binary
+
+# Database / Binary Data
+*.db binary
+*.sqlite binary
+*.sqlite3 binary
+*.bin binary
+*.dat binary
+
+# Certificates / Keys
+*.pfx binary
+*.p12 binary
+*.cer binary
+*.der binary
