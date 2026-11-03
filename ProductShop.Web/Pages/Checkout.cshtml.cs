@@ -48,17 +48,17 @@ namespace ProductShop.Web.Pages
         [BindProperty]
         [Required(ErrorMessage = "Email is required.")]
         [EmailAddress]
-        public string Email { get; set; } = string.Empty;
+        public string Email { get; set; }
 
         [BindProperty]
         [Required(ErrorMessage = "Phone is required.")]
         [RegularExpression(@"^\+?[0-9 ]{10,15}$", ErrorMessage = "Enter a valid phone number.")]
-        public string Phone { get; set; } = string.Empty;
+        public string Phone { get; set; }
 
         // One key per checkout form. A double submit or a "back" resubmit sends the same key,
         // so the customer gets the same order instead of a new one.
         [BindProperty]
-        public string IdempotencyKey { get; set; } = string.Empty;
+        public string IdempotencyKey { get; set; }
 
         public Products Product { get; private set; }
 

@@ -19,7 +19,7 @@ namespace ProductShop.Web.Pages.Payment
 
         // Cashfree sends the order id as "order_id" in the query string
         [BindProperty(SupportsGet = true, Name = "order_id")]
-        public string OrderId { get; set; } = string.Empty;
+        public string OrderId { get; set; }
 
         public Orders CurrentOrder { get; private set; }
 
