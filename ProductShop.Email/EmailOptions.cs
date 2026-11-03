@@ -15,6 +15,6 @@ namespace ProductShop.Email
         // Must be a sender verified in Brevo
         public string SenderEmail { get; set; }
 
-        public string SenderName { get; set; } = "ProductShop";
+        public string SenderName { get; set; } = "Stupro";
     }
 }

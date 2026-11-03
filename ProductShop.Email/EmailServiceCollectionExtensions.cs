@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using ProductShop.Email.Renderer;
 using System;
 
 namespace ProductShop.Email
@@ -7,7 +8,8 @@ namespace ProductShop.Email
     public static class EmailServiceCollectionExtensions
     {
         /// <summary>
-        /// Registers IEmailSender. Email:Enabled=false registers a no-op sender, so no email is sent.
+        /// Registers the email service, the Razor renderer and IEmailSender.
+        /// Email:Enabled=false registers a no-op sender, so no email is sent (views still render).
         /// Enabled=true requires ApiKey and SenderEmail, and the app will not start without them.
         /// </summary>
         public static IServiceCollection AddEmailNotifications(this IServiceCollection services, IConfiguration configuration)
@@ -20,6 +22,13 @@ namespace ProductShop.Email
                                    && o.SenderEmail.Contains('@')),
                     "When Email:Enabled is true, Email:ApiKey and a valid Email:SenderEmail are required.")
                 .ValidateOnStart();
+
+            // Adds IRazorViewEngine and TempData. ProductShop.API only has AddControllers(),
+            // so this is needed there too, or PaymentService cannot be created.
+            services.AddControllersWithViews();
+
+            services.AddScoped<IRazorViewToStringRenderer, RazorViewToStringRenderer>();
+            services.AddScoped<IEmailService, EmailService>();
 
             var enabled = configuration.GetSection(EmailOptions.SectionName).GetValue<bool>("Enabled");
 

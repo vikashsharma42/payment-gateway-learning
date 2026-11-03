@@ -5,6 +5,7 @@ using ProductShop.Domain.Entities;
 using ProductShop.Domain.Enum;
 using ProductShop.Domain.Exceptions;
 using ProductShop.Email;
+using ProductShop.Email.EmailModels;
 using ProductShop.Infrastructure.Database;
 using ProductShop.Payments.Gateway;
 using System;
@@ -19,18 +20,18 @@ namespace ProductShop.Application.Services
     {
         private readonly ApplicationDbContext _db;
         private readonly IPaymentGateway _gateway;
-        private readonly IEmailSender _email;
+        private readonly IEmailService _emailService;
         private readonly ILogger<PaymentService> _logger;
 
         public PaymentService(
             ApplicationDbContext db,
             IPaymentGateway gateway,
-            IEmailSender email,
+            IEmailService emailService,
             ILogger<PaymentService> logger)
         {
             _db = db;
             _gateway = gateway;
-            _email = email;
+            _emailService = emailService;
             _logger = logger;
         }
 
@@ -180,8 +181,9 @@ namespace ProductShop.Application.Services
             await _db.SaveChangesAsync(ct);
             _logger.LogInformation("Order {GatewayOrderId} marked paid", gatewayOrderId);
 
-            await SendEmailSafelyAsync(
-                EmailTemplates.PaymentReceived(order.CustomerEmail, order.GatewayOrderId, order.Amount), ct);
+            await SendEmailSafelyAsync("payment-received", order.GatewayOrderId,
+                () => _emailService.SendAsync(
+                    new PaymentReceivedEmailModel(order.CustomerEmail, order.GatewayOrderId, order.Amount), ct), ct);
 
             return true;
         }
@@ -224,8 +226,9 @@ namespace ProductShop.Application.Services
                     await _db.SaveChangesAsync(ct);
                     _logger.LogInformation("Order {GatewayOrderId} refunded (refund {RefundId})", gatewayOrderId, refundId);
 
-                    await SendEmailSafelyAsync(
-                        EmailTemplates.RefundIssued(order.CustomerEmail, order.GatewayOrderId, order.Amount), ct);
+                    await SendEmailSafelyAsync("refund-issued", order.GatewayOrderId,
+                        () => _emailService.SendAsync(
+                            new RefundIssuedEmailModel(order.CustomerEmail, order.GatewayOrderId, order.Amount), ct), ct);
                 }
 
                 return order;
@@ -243,16 +246,17 @@ namespace ProductShop.Application.Services
             return order;
         }
 
-        private async Task SendEmailSafelyAsync(EmailMessage message, CancellationToken ct)
+        private async Task SendEmailSafelyAsync(
+            string kind, string gatewayOrderId, Func<Task> send, CancellationToken ct)
         {
             try
             {
-                await _email.SendAsync(message, ct);
+                // Rendering and sending both run inside the try: an email failure must never undo a payment or refund
+                await send();
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // A failed email must never undo a payment or refund that already succeeded
-                _logger.LogWarning(ex, "Email '{Subject}' could not be sent", message.Subject);
+                _logger.LogWarning(ex, "Email '{EmailKind}' for order {GatewayOrderId} could not be sent", kind, gatewayOrderId);
             }
         }
 
