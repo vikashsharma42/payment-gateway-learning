@@ -37,8 +37,8 @@ namespace DineBook.Domain.Entities
 
         public virtual Restaurant Restaurant { get; private set; }
 
-        private readonly List<OrderItems> _items = [];
-        public IReadOnlyCollection<OrderItems> Items => _items.AsReadOnly();
+        private readonly List<OrderItem> _items = [];
+        public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
 
         public decimal Total() => _items.Sum(i => i.LineTotal());
 
@@ -63,7 +63,7 @@ namespace DineBook.Domain.Entities
             DomainValidation<int>.Ensure(_items.Count)
                 .IsLessThanOrEqualTo(29, $"An order can have at most 30 different items.");
 
-            _items.Add(new OrderItems(menuItem.Id, menuItem.Name, menuItem.Price, quantity));
+            _items.Add(new OrderItem(menuItem.Id, menuItem.Name, menuItem.Price, quantity));
         }
 
         public void MarkServed() => MoveFrom(OrderStatus.Placed, OrderStatus.Served, "Only placed orders can be served.");

@@ -6,9 +6,9 @@ namespace DineBook.Domain.Entities
 {
     // One dish in an order, with the name and price copied at the time of ordering.
     // Added through Orders.AddOrderItem.
-    public class OrderItems : Entity, IAuditableEntity
+    public class OrderItem : Entity, IAuditableEntity
     {
-        public OrderItems(long menuItemId, string itemName, decimal unitPrice, int quantity)
+        public OrderItem(long menuItemId, string itemName, decimal unitPrice, int quantity)
         {
             DomainValidation<long>.Ensure(menuItemId, "Menu item").IsGreaterThan(0);
             DomainValidation<string>.Ensure(itemName, "Item name").IsNotNullOrWhiteSpace();

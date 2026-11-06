@@ -6,11 +6,13 @@ using System;
 
 namespace DineBook.Domain.Entities
 {
-    // One gateway payment attempt for a bill. The gateway order id ties it to Cashfree.
     // One gateway payment attempt for one food order. The gateway order id ties it to Cashfree.
     public class Payment : Entity, IAuditableEntity
     {
-        // The amount is the order total at the moment of payment, never a value passed in from outside
+        private Payment()
+        {
+        }
+
         public Payment(
             Orders order,
             string gatewayOrderId,

@@ -1,8 +1,8 @@
-using Microsoft.Extensions.DependencyInjection;
-using DineBook.Application.JWTSecurity;
+
 using DineBook.Application.Security;
 using DineBook.Application.Services;
 using DineBook.Application.Services.Interface;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace DineBook.Application.DependencyInjection
 {
@@ -19,26 +19,20 @@ namespace DineBook.Application.DependencyInjection
             // Restaurant table reservations
             services.AddScoped<IReservationService, ReservationService>();
 
-            // Menu and food ordering for a booking
+            // Menu and food ordering
             services.AddScoped<IMenuService, MenuService>();
             services.AddScoped<IFoodOrderService, FoodOrderService>();
 
-            // Admin: restaurant, table and menu management
+            // Restaurant administration
             services.AddScoped<IRestaurantAdminService, RestaurantAdminService>();
 
-            // Sign-in: JWT access and refresh tokens, password hashing, and the active-user check.
-            // Options come from AddJwtOptions and AddAdminAccountOptions (see the host's Startup).
-            services.AddMemoryCache();
-            services.AddHttpContextAccessor();
+            // Password hashing
             services.AddSingleton<IPasswordHasher, PasswordHasher>();
-            services.AddSingleton<IJwtTokenService, JwtTokenService>();
-            services.AddScoped<IRefreshTokenStore, DbRefreshTokenStore>();
-            services.AddScoped<IJwtSignInManager, JwtSignInManager>();
-            services.AddScoped<IUserActiveCache, UserActiveCache>();
-            services.AddScoped<IAccountService, AccountService>();
 
-            // Sign-up: public customer registration and admin-created staff accounts
+            // Sign-up and staff registration
             services.AddScoped<IRegistrationService, RegistrationService>();
+
+            // First admin seeding
             services.AddScoped<AdminAccountSeeder>();
 
             return services;

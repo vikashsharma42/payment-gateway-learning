@@ -13,31 +13,31 @@ namespace DineBook.Infrastructure.Database
         private const string SystemUser = "system";
 
         // Identity and sessions
-        public DbSet<ApplicationUser> Users => Set<ApplicationUser>();
+        public DbSet<ApplicationUser> Users { get; set; }
 
-        public DbSet<UserRefreshToken> UserRefreshTokens => Set<UserRefreshToken>();
+        public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
 
         // Guests
-        public DbSet<Customer> Customers => Set<Customer>();
+        public DbSet<Customer> Customers { get; set; }
 
         // Restaurants, tables and reservations
-        public DbSet<Restaurant> Restaurants => Set<Restaurant>();
+        public DbSet<Restaurant> Restaurants { get; set; }
 
-        public DbSet<RestaurantTable> RestaurantTables => Set<RestaurantTable>();
+        public DbSet<RestaurantTable> RestaurantTables { get; set; }
 
-        public DbSet<Reservation> Reservations => Set<Reservation>();
+        public DbSet<Reservation> Reservations { get; set; }
 
         // Menu
-        public DbSet<MenuCategory> MenuCategories => Set<MenuCategory>();
+        public DbSet<MenuCategory> MenuCategories { get; set; }
 
-        public DbSet<MenuItem> MenuItems => Set<MenuItem>();
+        public DbSet<MenuItem> MenuItems { get; set; }
 
         // Food ordering
-        public DbSet<Orders> Orders => Set<Orders>();
+        public DbSet<Orders> Orders { get; set; }
 
-        public DbSet<OrderItems> OrderItems => Set<OrderItems>();
+        public DbSet<OrderItem> OrderItems { get; set; }
 
-        public DbSet<Payment> Payments => Set<Payment>();
+        public DbSet<Payment> Payments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

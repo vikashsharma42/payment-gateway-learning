@@ -4,11 +4,11 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DineBook.Infrastructure.Database.Configurations
 {
-    public class OrderItemsConfiguration : IEntityTypeConfiguration<OrderItems>
+    public class OrderItemsConfiguration : IEntityTypeConfiguration<OrderItem>
     {
-        public void Configure(EntityTypeBuilder<OrderItems> builder)
+        public void Configure(EntityTypeBuilder<OrderItem> builder)
         {
-            builder.ToTable(nameof(OrderItems));
+            builder.ToTable(nameof(OrderItem));
             builder.Property(x => x.UnitPrice).HasPrecision(10, 2);
 
             // An item belongs to one order. Deleting the order removes its items.

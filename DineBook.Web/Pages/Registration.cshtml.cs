@@ -21,7 +21,7 @@ namespace DineBook.Web.Pages
         }
 
         [BindProperty]
-        public InputModel Input { get; set; } = new();
+        public InputModel Input { get; set; }
 
         public class InputModel
         {
@@ -47,7 +47,7 @@ namespace DineBook.Web.Pages
             public string Phone { get; set; }
 
             [Required(ErrorMessage = "Password is required.")]
-            [StringLength(128, MinimumLength = 12, ErrorMessage = "Password must be at least 12 characters.")]
+            [StringLength(128, MinimumLength = 9, ErrorMessage = "Password must be at least 12 characters.")]
             [DataType(DataType.Password)]
             [Display(Name = "Password")]
             public string Password { get; set; }

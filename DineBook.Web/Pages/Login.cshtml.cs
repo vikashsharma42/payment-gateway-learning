@@ -1,51 +1,57 @@
+
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Enums;
-using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
+using System;
 using System.ComponentModel.DataAnnotations;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace DineBook.Web.Pages
 {
-    // One sign-in page for every user. The role decides where they land and what they can open.
-    // Brute-force protection: the same per-IP limit as checkout
     [EnableRateLimiting("checkout")]
     public class LoginModel : PageModel
     {
-        private readonly IAccountService _accounts;
+        private readonly IWebAuthenticationService _authentication;
 
-        public LoginModel(IAccountService accounts)
+        public LoginModel(IWebAuthenticationService authentication)
         {
-            _accounts = accounts;
+            _authentication = authentication;
         }
 
         [BindProperty]
         [Required(ErrorMessage = "Enter your email.")]
         [EmailAddress]
         [Display(Name = "Email")]
-        public string Email { get; set; } = string.Empty;
+        public string Email { get; set; }
 
         [BindProperty]
         [Required(ErrorMessage = "Enter your password.")]
         [DataType(DataType.Password)]
         [Display(Name = "Password")]
-        public string Password { get; set; } = string.Empty;
+        public string Password { get; set; }
 
-        // Where to go after signing in. Only local addresses are followed.
         [BindProperty(SupportsGet = true)]
-        public string ReturnUrl { get; set; } = string.Empty;
+        public string ReturnUrl { get; set; }
 
-        // Set when a signed-in user without the needed role was sent here
         [BindProperty(SupportsGet = true)]
         public bool Denied { get; set; }
 
-        public string Error { get; private set; } = string.Empty;
+        public string Error { get; private set; }
 
-        public void OnGet()
+        public IActionResult OnGet()
         {
+            if (User.Identity?.IsAuthenticated == true)
+            {
+                var roleClaim = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+
+                if (Enum.TryParse<UserRole>(roleClaim, out var role))
+                    return LandingPageFor(role);
+            }
+
+            return Page();
         }
 
         public async Task<IActionResult> OnPostAsync(CancellationToken ct)
@@ -53,24 +59,24 @@ namespace DineBook.Web.Pages
             if (!ModelState.IsValid)
                 return Page();
 
-            var session = await _accounts.LoginAsync(Email, Password, ct);
-            if (session is null)
+            var user = await _authentication.LoginAsync(
+                Email, Password, ct);
+
+            if (user is null)
             {
-                // Same message for an unknown email, a wrong password and a deactivated account
                 Error = "That email or password is not correct.";
                 return Page();
             }
 
-            AuthCookies.Set(Response, session.Tokens);
-
-            if (!string.IsNullOrEmpty(ReturnUrl) && Url.IsLocalUrl(ReturnUrl))
+            if (!string.IsNullOrEmpty(ReturnUrl) &&
+                Url.IsLocalUrl(ReturnUrl))
+            {
                 return LocalRedirect(ReturnUrl);
+            }
 
-            return LandingPageFor(session.Role);
+            return LandingPageFor(user.Role);
         }
 
-        // Where each role starts. Access rules are enforced by the page folders, not here.
-        // Where each role starts. Access rules are enforced by the page folders, not here.
         private RedirectToPageResult LandingPageFor(UserRole role) =>
             role == UserRole.Admin
                 ? RedirectToPage("/Admin/Index")

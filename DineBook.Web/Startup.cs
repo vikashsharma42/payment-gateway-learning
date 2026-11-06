@@ -1,21 +1,22 @@
+
 using DineBook.Application.Configuration;
 using DineBook.Application.DependencyInjection;
 using DineBook.Application.Security;
+using DineBook.Application.Services;
+using DineBook.Application.Services.Interface;
 using DineBook.Domain.Enums;
 using DineBook.Email;
 using DineBook.Infrastructure.Database;
 using DineBook.Infrastructure.DependencyInjection;
 using DineBook.Payments.DependencyInjection;
 using DineBook.Web.Infrastructure;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
 using System;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
@@ -35,34 +36,42 @@ namespace DineBook.Web
 
         public void ConfigureServices(IServiceCollection services)
         {
-            // Sign-in with JWT. Jwt:Key lives in user-secrets and must be at least 32 characters.
-            // Admin:Email and Admin:Password (user-secrets) create the first admin when none exists.
-            services.AddJwtOptions(_configuration);
+            // Razor Pages
+            services.AddRazorPages();
+
+            // Cookie Authentication for Razor Pages
+            services
+                .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+                .AddCookie(options =>
+                {
+                    options.LoginPath = "/Login";
+
+                    options.Cookie.Name = "DineBook.Auth";
+                    options.Cookie.HttpOnly = true;
+                    options.Cookie.SecurePolicy =
+                        CookieSecurePolicy.Always;
+                    options.Cookie.SameSite =
+                        SameSiteMode.Strict;
+                    options.Cookie.IsEssential = true;
+
+                    options.ExpireTimeSpan = TimeSpan.FromDays(7);
+                    options.SlidingExpiration = true;
+                });
+
+            // First admin configuration
             services.AddAdminAccountOptions(_configuration);
 
-            // The token travels in an HttpOnly cookie, see JwtBearerSetup
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-                .AddJwtBearer();
-            services.AddSingleton<IConfigureOptions<JwtBearerOptions>, JwtBearerSetup>();
-
+            // Authorization
             services.AddAuthorization(options =>
             {
                 options.AddPolicy("AdminOnly", policy => policy.RequireRole(nameof(UserRole.Admin)));
             });
 
-            // TempData carries the pending payment and toasts. Keep it out of scripts' reach and HTTPS-only.
-            services.Configure<CookieTempDataProviderOptions>(options =>
-            {
-                options.Cookie.HttpOnly = true;
-                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-                options.Cookie.SameSite = SameSiteMode.Strict;
-                options.Cookie.IsEssential = true;
-            });
-
-            // Only POSTs are limited, so refreshing the checkout page never counts against the limit
+            // Rate limiting for checkout POST requests
             services.AddRateLimiter(options =>
             {
-                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+                options.RejectionStatusCode =
+                    StatusCodes.Status429TooManyRequests;
 
                 options.AddPolicy("checkout", context =>
                     context.Request.Method == HttpMethods.Post
@@ -81,15 +90,21 @@ namespace DineBook.Web
             services.AddApplicationDatabase(_configuration);
             services.AddCashfreePayments(_configuration);
             services.AddDineBookApplication();
+
+            // HTTP Context Accessor
+            services.AddHttpContextAccessor();
+
+            // Web-specific Cookie Authentication Service
+            services.AddScoped<IWebAuthenticationService, WebAuthenticationService>();
             services.AddScoped<ICurrentUserProvider, HttpContextCurrentUserProvider>();
 
-            // Site:PublicBaseUrl
+            // Site configuration
             services.AddSiteOptions(_configuration);
 
-            // Booking rules (party size, notice, slots), validated at startup
+            // Dining configuration
             services.AddDiningOptions(_configuration);
 
-            // Receipt emails are sent when a payment is confirmed
+            // Email notifications
             services.AddEmailNotifications(_configuration);
         }
 
@@ -109,11 +124,11 @@ namespace DineBook.Web
             app.UseStaticFiles();
             app.UseRouting();
 
-            // Who the user is (JWT from the cookie), then whether they may see the page
+            // Authentication and authorization
             app.UseAuthentication();
             app.UseAuthorization();
 
-            // After UseRouting, so the policy can read the endpoint
+            // Rate limiting
             app.UseRateLimiter();
 
             app.UseEndpoints(endpoints =>
@@ -122,21 +137,24 @@ namespace DineBook.Web
             });
         }
 
-        // Behind a proxy this is the proxy's address. Configure forwarded headers before relying on it.
+        // Client IP address
         private static string ClientKey(HttpContext context) =>
-            context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+            context.Connection.RemoteIpAddress?.ToString()
+            ?? "unknown";
 
         private async Task SeedDataAsync(IServiceProvider services)
         {
             await using var scope = services.CreateAsyncScope();
 
-            // The first admin, from configuration. Does nothing when an admin exists or no values are set.
+            // Seed first admin
             await scope.ServiceProvider.GetRequiredService<AdminAccountSeeder>().SeedAsync();
 
-            // Sample restaurants for local testing
+            // Seed sample restaurants in development
             if (_environment.IsDevelopment())
             {
-                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                var db = scope.ServiceProvider
+                    .GetRequiredService<ApplicationDbContext>();
+
                 await DiningSeeder.SeedAsync(db);
             }
         }

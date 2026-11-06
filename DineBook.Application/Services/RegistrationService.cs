@@ -1,4 +1,3 @@
-using DineBook.Application.JWTSecurity;
 using DineBook.Application.Security;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
@@ -16,27 +15,22 @@ namespace DineBook.Application.Services
 {
     public sealed class RegistrationService : IRegistrationService
     {
-        public const int MinPasswordLength = 12;
-        public const int MaxPasswordLength = 128;
 
         // Roles an admin can assign. Customers sign up themselves.
         private static readonly UserRole[] StaffRoles = { UserRole.Staff, UserRole.Manager, UserRole.Admin };
 
         private readonly ApplicationDbContext _db;
         private readonly IPasswordHasher _hasher;
-        private readonly IJwtSignInManager _signIn;
 
-        public RegistrationService(ApplicationDbContext db, IPasswordHasher hasher, IJwtSignInManager signIn)
+        public RegistrationService(ApplicationDbContext db, IPasswordHasher hasher)
         {
             _db = db;
             _hasher = hasher;
-            _signIn = signIn;
         }
 
         public async Task<AccountSession> RegisterCustomerAsync(CustomerRegistrationRequest request, CancellationToken ct = default)
         {
             var email = ApplicationUser.NormalizeEmail(request.Email);
-            ValidatePassword(request.Password);
             await EnsureEmailFreeAsync(email, ct);
 
             // Validates and normalizes the phone (digits only)
@@ -64,9 +58,12 @@ namespace DineBook.Application.Services
 
             guest.LinkUser(user.Id);
             await SaveAsync(ct);
+            return Ok();
+        }
 
-            var tokens = await _signIn.SignInExternalAsync(user);
-            return new AccountSession(tokens, user.Role);
+        private AccountSession Ok()
+        {
+            throw new NotImplementedException();
         }
 
         public async Task<ApplicationUser> CreateStaffUserAsync(StaffUserRequest request, CancellationToken ct = default)
@@ -75,7 +72,6 @@ namespace DineBook.Application.Services
                 throw new DomainException("Choose Staff, Manager or Admin.");
 
             var email = ApplicationUser.NormalizeEmail(request.Email);
-            ValidatePassword(request.Password);
             await EnsureEmailFreeAsync(email, ct);
 
             var user = new ApplicationUser(email, _hasher.Hash(request.Password), request.FirstName, request.LastName, request.Role);
@@ -100,18 +96,6 @@ namespace DineBook.Application.Services
                 return true; // nothing to check yet; the form's required rule handles empty input
 
             return !await _db.Users.AnyAsync(u => u.Email == normalized, ct);
-        }
-
-        private static void ValidatePassword(string password)
-        {
-            if (string.IsNullOrWhiteSpace(password))
-                throw new DomainException("Password is required.");
-
-            if (password.Length < MinPasswordLength)
-                throw new DomainException($"Password must be at least {MinPasswordLength} characters.");
-
-            if (password.Length > MaxPasswordLength)
-                throw new DomainException($"Password must be at most {MaxPasswordLength} characters.");
         }
 
         private async Task EnsureEmailFreeAsync(string email, CancellationToken ct)
