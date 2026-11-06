@@ -65,7 +65,6 @@
     <None Include="Tables\UserRefreshTokens.sql" />
     <None Include="Tables\Customers.sql" />
     <None Include="Tables\MenuCategories.sql" />
-    <None Include="Tables\Bills.sql" />
     <None Include="Tables\Payments.sql" />
     <None Include="ddd-domain-migration.sql" />
     <None Include="dummy-data.sql" />

@@ -1,4 +1,4 @@
-using DineBook.Domain.Entities.Dining;
+using DineBook.Domain.Entities;
 
 namespace DineBook.Application.Configuration
 {

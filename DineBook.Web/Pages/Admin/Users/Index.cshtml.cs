@@ -1,17 +1,15 @@
-using System;
+using DineBook.Application.Services.Interface;
+using DineBook.Domain.Entities;
+using DineBook.Domain.Enums;
+using DineBook.Domain.Exceptions;
+using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using DineBook.Application.Services.Interface;
-using DineBook.Domain.Identity;
-using DineBook.Domain.Enums;
-using DineBook.Domain.Exceptions;
-using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Admin.Users
 {
@@ -24,10 +22,10 @@ namespace DineBook.Web.Pages.Admin.Users
             _registration = registration;
         }
 
-        public IReadOnlyList<ApplicationUser> Users { get; private set; } = Array.Empty<ApplicationUser>();
+        public IReadOnlyList<ApplicationUser> Users { get; private set; }
 
         [BindProperty]
-        public CreateInputModel Input { get; set; } = new();
+        public CreateInputModel Input { get; set; }
 
         // Set when the create popup has to be shown again with its errors
         public bool ShowCreateModal { get; private set; }

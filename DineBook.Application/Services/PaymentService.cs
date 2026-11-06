@@ -9,6 +9,7 @@ using DineBook.Payments.Gateway;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text.Json;
@@ -19,6 +20,9 @@ namespace DineBook.Application.Services
 {
     public sealed class PaymentService : IPaymentService
     {
+        // Cashfree payment sessions expire. A pending payment older than this is not reused.
+        private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(30);
+
         private readonly ApplicationDbContext _db;
         private readonly IPaymentGateway _gateway;
         private readonly IEmailService _email;
@@ -36,41 +40,33 @@ namespace DineBook.Application.Services
             _logger = logger;
         }
 
-        public async Task<Bill> GetOrCreateBillAsync(string reservationCode, string phone, CancellationToken ct = default)
+        public async Task<IReadOnlyList<Orders>> GetPayableOrdersAsync(string reservationCode, string phone, CancellationToken ct = default)
         {
             var code = (reservationCode ?? string.Empty).Trim().ToUpperInvariant();
 
             var reservation = await _db.Reservations.AsNoTracking()
-                .Include(r => r.FoodOrders)
-                .ThenInclude(o => o.Items)
                 .FirstOrDefaultAsync(r => r.Code == code, ct);
 
             // Same message for an unknown code and a wrong phone, so the code alone reveals nothing
             if (reservation is null || !reservation.MatchesPhone(phone))
                 throw new DomainException("We could not find a booking with those details.");
 
-            var bills = await _db.Bills
-                .Where(b => b.ReservationId == reservation.Id && b.Status != PaymentStatus.Refunded)
+            var orders = await _db.Orders.AsNoTracking()
+                .Where(o => o.ReservationId == reservation.Id && o.Status != OrderStatus.Cancelled)
+                .Include(o => o.Items)
+                .ThenInclude(i => i.MenuItem)
+                .Include(o => o.Payments)
+                .OrderBy(o => o.Id)
                 .ToListAsync(ct);
 
-            if (bills.Any(b => b.Status == PaymentStatus.Paid))
-                throw new DomainException("This booking has already been paid.");
+            if (orders.Count == 0)
+                throw new DomainException("There is nothing to pay yet. Order some food first.");
 
-            var fresh = new Bill(reservation.Id, reservation.RestaurantId, reservation.FoodOrders);
-
-            // Reuse an unpaid bill for the same amount, so repeated clicks do not pile up bills
-            var existing = bills.FirstOrDefault(b => b.Amount == fresh.Amount);
-            if (existing is not null)
-                return existing;
-
-            _db.Bills.Add(fresh);
-            await _db.SaveChangesAsync(ct);
-
-            return fresh;
+            return orders;
         }
 
         public async Task<PaymentOrderResult> CreateOrderAsync(
-            long billId, string customerEmail, string customerPhone, string returnUrl,
+            long orderId, string customerEmail, string customerPhone, string returnUrl,
             string idempotencyKey, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Trim().Length > 64)
@@ -80,35 +76,49 @@ namespace DineBook.Application.Services
 
             // Same key means the same payment: retries, double clicks and browser "back" all land here
             var existing = await _db.Payments.AsNoTracking()
-                .FirstOrDefaultAsync(o => o.IdempotencyKey == key, ct);
+                .FirstOrDefaultAsync(p => p.IdempotencyKey == key, ct);
 
             if (existing is not null)
             {
-                if (existing.BillId != billId)
-                    throw new DomainException("This idempotency key was already used for another bill.");
+                if (existing.OrderId != orderId)
+                    throw new DomainException("This idempotency key was already used for another order.");
 
                 return ToResult(existing);
             }
 
-            // The amount always comes from the bill in the database, never from the client
-            var bill = await _db.Bills.AsNoTracking().FirstOrDefaultAsync(b => b.Id == billId, ct);
-            if (bill is null)
+            // The amount always comes from the order in the database, never from the client
+            var order = await _db.Orders.AsNoTracking()
+                .Include(o => o.Items)
+                .Include(o => o.Payments)
+                .FirstOrDefaultAsync(o => o.Id == orderId, ct);
+
+            if (order is null)
                 return null;
 
-            if (bill.Status != PaymentStatus.Pending)
-                throw new DomainException("This bill has already been settled.");
+            if (order.Status == OrderStatus.Cancelled)
+                throw new DomainException("This order was cancelled and cannot be paid.");
+
+            if (order.IsPaid)
+                throw new DomainException("This order has already been paid.");
+
+            // Reuse a fresh pending payment for this order, so two checkouts never charge the same order twice
+            var pending = order.Payments.FirstOrDefault(p =>
+                p.Status == PaymentStatus.Pending && DateTimeOffset.UtcNow - p.CreatedDateTime < SessionLifetime);
+            if (pending is not null)
+                return ToResult(pending);
 
             var session = await _gateway.CreateOrderAsync(
-                bill.Amount,
+                order.Total(),
                 $"cust_{Guid.NewGuid():N}",
                 customerEmail,
                 customerPhone,
                 returnUrl,
                 ct);
 
-            var order = new Payment(
-                bill.Id, bill.Amount, session.OrderId, session.PaymentSessionId, key, customerEmail);
-            _db.Payments.Add(order);
+            // The Payment constructor takes its amount from the order again, so both always agree
+            var payment = new Payment(
+                order, session.OrderId, session.PaymentSessionId, key, customerEmail);
+            _db.Payments.Add(payment);
 
             try
             {
@@ -116,13 +126,13 @@ namespace DineBook.Application.Services
             }
             catch (DbUpdateException ex)
             {
-                // A parallel request with the same key saved first. Return that order.
+                // A parallel request with the same key saved first. Return that payment.
                 // The Cashfree order created here stays unused and expires on its own.
-                _logger.LogWarning(ex, "Duplicate idempotency key {IdempotencyKey}; returning the existing order", key);
+                _logger.LogWarning(ex, "Duplicate idempotency key {IdempotencyKey}; returning the existing payment", key);
 
                 _db.ChangeTracker.Clear();
                 var winner = await _db.Payments.AsNoTracking()
-                    .FirstOrDefaultAsync(o => o.IdempotencyKey == key, ct);
+                    .FirstOrDefaultAsync(p => p.IdempotencyKey == key, ct);
 
                 if (winner is null)
                     throw;
@@ -131,21 +141,21 @@ namespace DineBook.Application.Services
             }
 
             _logger.LogInformation(
-                "Order {GatewayOrderId} created for bill {BillId} (amount {Amount})",
-                order.GatewayOrderId, billId, order.Amount);
+                "Payment {GatewayOrderId} created for order {OrderId} (amount {Amount})",
+                payment.GatewayOrderId, orderId, payment.Amount);
 
-            return ToResult(order);
+            return ToResult(payment);
         }
 
         public async Task<Payment> GetOrderStatusAsync(string gatewayOrderId, CancellationToken ct = default)
         {
-            var order = await _db.Payments.FirstOrDefaultAsync(o => o.GatewayOrderId == gatewayOrderId, ct);
-            if (order is null)
+            var payment = await _db.Payments.FirstOrDefaultAsync(p => p.GatewayOrderId == gatewayOrderId, ct);
+            if (payment is null)
                 return null;
 
             // Already confirmed: no need to call Cashfree again
-            if (order.Status == PaymentStatus.Paid || order.Status == PaymentStatus.Refunded)
-                return order;
+            if (payment.Status == PaymentStatus.Paid || payment.Status == PaymentStatus.Refunded)
+                return payment;
 
             try
             {
@@ -157,10 +167,10 @@ namespace DineBook.Application.Services
             {
                 // Cashfree is unreachable or returned an error. Show the stored status;
                 // the webhook or the reaper will still update it later.
-                _logger.LogWarning(ex, "Status check failed for order {GatewayOrderId}", gatewayOrderId);
+                _logger.LogWarning(ex, "Status check failed for payment {GatewayOrderId}", gatewayOrderId);
             }
 
-            return order;
+            return payment;
         }
 
         public async Task<bool> HandleWebhookAsync(string rawBody, string timestamp, string signature, CancellationToken ct = default)
@@ -181,19 +191,19 @@ namespace DineBook.Application.Services
             if (string.IsNullOrWhiteSpace(gatewayOrderId))
                 return true;
 
-            var order = await _db.Payments.AsNoTracking().FirstOrDefaultAsync(o => o.GatewayOrderId == gatewayOrderId, ct);
-            if (order is null)
+            var payment = await _db.Payments.AsNoTracking().FirstOrDefaultAsync(p => p.GatewayOrderId == gatewayOrderId, ct);
+            if (payment is null)
             {
-                _logger.LogWarning("Webhook for unknown order {GatewayOrderId}", gatewayOrderId);
+                _logger.LogWarning("Webhook for unknown payment {GatewayOrderId}", gatewayOrderId);
                 return true;
             }
 
             // The signature proves Cashfree sent it, not that the customer paid the right amount
-            if (paidAmount != order.Amount)
+            if (paidAmount != payment.Amount)
             {
                 _logger.LogError(
-                    "Amount mismatch for order {GatewayOrderId}: expected {Expected}, webhook reported {Paid}",
-                    gatewayOrderId, order.Amount, paidAmount);
+                    "Amount mismatch for payment {GatewayOrderId}: expected {Expected}, webhook reported {Paid}",
+                    gatewayOrderId, payment.Amount, paidAmount);
                 return true; // signed, but never mark paid
             }
 
@@ -203,7 +213,7 @@ namespace DineBook.Application.Services
             }
             catch (DomainException ex)
             {
-                _logger.LogWarning(ex, "Webhook could not change order {GatewayOrderId}", gatewayOrderId);
+                _logger.LogWarning(ex, "Webhook could not change payment {GatewayOrderId}", gatewayOrderId);
             }
 
             return true;
@@ -211,81 +221,74 @@ namespace DineBook.Application.Services
 
         public async Task<bool> MarkPaidAsync(string gatewayOrderId, CancellationToken ct = default)
         {
-            var order = await _db.Payments.FirstOrDefaultAsync(o => o.GatewayOrderId == gatewayOrderId, ct);
-            if (order is null || !order.MarkAsPaid())
+            var payment = await _db.Payments.FirstOrDefaultAsync(p => p.GatewayOrderId == gatewayOrderId, ct);
+            if (payment is null || !payment.MarkAsPaid())
                 return false;
 
-            // The bill follows its payment. Both changes are saved together.
-            var bill = await _db.Bills.FirstOrDefaultAsync(b => b.Id == order.BillId, ct);
-            bill?.MarkAsPaid();
-
             await _db.SaveChangesAsync(ct);
-            _logger.LogInformation("Order {GatewayOrderId} marked paid", gatewayOrderId);
+            _logger.LogInformation("Payment {GatewayOrderId} marked paid", gatewayOrderId);
 
             await SendEmailSafelyAsync(
-                new PaymentReceivedEmailModel(order.CustomerEmail, order.GatewayOrderId, order.Amount), ct);
+                new PaymentReceivedEmailModel(payment.CustomerEmail, payment.GatewayOrderId, payment.Amount), ct);
 
             return true;
         }
 
         public async Task<Payment> RefundAsync(string gatewayOrderId, CancellationToken ct = default)
         {
-            var order = await _db.Payments.FirstOrDefaultAsync(o => o.GatewayOrderId == gatewayOrderId, ct);
-            if (order is null)
+            var payment = await _db.Payments.FirstOrDefaultAsync(p => p.GatewayOrderId == gatewayOrderId, ct);
+            if (payment is null)
                 return null;
 
-            if (order.Status == PaymentStatus.Refunded)
-                return order;
+            if (payment.Status == PaymentStatus.Refunded)
+                return payment;
 
             // The refund id is stored before calling Cashfree, so a retry reuses the same id.
             // Cashfree rejects a duplicate id, which means a refund can never be issued twice.
-            if (order.RefundId is null)
+            if (payment.RefundId is null)
             {
-                order.RecordRefundRequest($"rfnd_{Guid.NewGuid():N}"); // throws unless the order is paid
+                payment.RecordRefundRequest($"rfnd_{Guid.NewGuid():N}"); // throws unless the payment is paid
                 await _db.SaveChangesAsync(ct);
             }
 
-            var refundId = order.RefundId;
+            var refundId = payment.RefundId;
 
             RefundResult result;
             try
             {
                 result = await _gateway.CreateRefundAsync(
-                    order.GatewayOrderId, refundId, order.Amount, "Refund issued by merchant", ct);
+                    payment.GatewayOrderId, refundId, payment.Amount, "Refund issued by merchant", ct);
             }
             catch (InvalidOperationException)
             {
                 // Cashfree already has this refund id from an earlier attempt. Read its status instead.
-                result = await _gateway.GetRefundStatusAsync(order.GatewayOrderId, refundId, ct);
+                result = await _gateway.GetRefundStatusAsync(payment.GatewayOrderId, refundId, ct);
             }
 
             if (result.IsSuccess)
             {
-                if (order.MarkAsRefunded())
+                if (payment.MarkAsRefunded())
                 {
-                    var bill = await _db.Bills.FirstOrDefaultAsync(b => b.Id == order.BillId, ct);
-                    bill?.MarkAsRefunded();
-
                     await _db.SaveChangesAsync(ct);
-                    _logger.LogInformation("Order {GatewayOrderId} refunded (refund {RefundId})", gatewayOrderId, refundId);
+                    _logger.LogInformation("Payment {GatewayOrderId} refunded (refund {RefundId})", gatewayOrderId, refundId);
 
                     await SendEmailSafelyAsync(
-                        new RefundIssuedEmailModel(order.CustomerEmail, order.GatewayOrderId, order.Amount), ct);
+                        new RefundIssuedEmailModel(payment.CustomerEmail, payment.GatewayOrderId, payment.Amount), ct);
                 }
 
-                return order;
+                return payment;
             }
 
             if (result.Status == "CANCELLED")
             {
                 // Cashfree cancelled this attempt, so the next request may use a new refund id
-                order.ClearRefundRequest();
+                payment.ClearRefundRequest();
                 await _db.SaveChangesAsync(ct);
             }
 
-            // PENDING: the order stays Paid with its refund id. Call RefundAsync again later to reconcile.
-            _logger.LogInformation("Refund {RefundId} for order {GatewayOrderId} is {Status}", refundId, gatewayOrderId, result.Status);
-            return order;
+            // PENDING: the payment stays Paid with its refund id. Call RefundAsync again later to reconcile.
+            _logger.LogInformation("Refund {RefundId} for payment {GatewayOrderId} is {Status}", refundId, gatewayOrderId, result.Status);
+            return payment;
         }
 
         private async Task SendEmailSafelyAsync(BaseEmailModel message, CancellationToken ct)
@@ -301,7 +304,7 @@ namespace DineBook.Application.Services
             }
         }
 
-        private static PaymentOrderResult ToResult(Payment order) =>
-            new PaymentOrderResult(order.GatewayOrderId, order.PaymentSessionId, order.Amount, "INR");
+        private static PaymentOrderResult ToResult(Payment payment) =>
+            new PaymentOrderResult(payment.GatewayOrderId, payment.PaymentSessionId, payment.Amount, "INR");
     }
 }

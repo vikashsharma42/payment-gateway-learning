@@ -24,6 +24,7 @@ namespace DineBook.Infrastructure.Database.Configurations
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Navigation(nameof(Orders.Items)).UsePropertyAccessMode(PropertyAccessMode.Field);
+            builder.Navigation(nameof(Orders.Payments)).UsePropertyAccessMode(PropertyAccessMode.Field);
         }
     }
 }

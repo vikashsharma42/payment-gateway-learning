@@ -6,8 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using DineBook.Application.Configuration;
 using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities.Organization;
-using DineBook.Domain.Entities.Payments;
+using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Infrastructure.Database;
 using DineBook.Web.Infrastructure;
@@ -58,17 +57,18 @@ namespace DineBook.Web.Pages
         public string Phone { get; set; } = string.Empty;
 
         // One key per checkout form. A double submit or a "back" resubmit sends the same key,
-        // so the customer gets the same order instead of a new one.
+        // so the customer gets the same payment instead of a new one.
         [BindProperty]
         public string IdempotencyKey { get; set; } = string.Empty;
 
-        public Bill Bill { get; private set; }
+        // The food order being paid. Its items, categories and prices are shown as the bill.
+        public Orders Order { get; private set; }
 
         public string ReservationCode { get; private set; } = string.Empty;
 
         public string RestaurantName { get; private set; } = string.Empty;
 
-        // Null when there is no live payment session for this bill
+        // Null when there is no live payment session for this order
         public PendingPayment Pending { get; private set; }
 
         public string CashfreeMode =>
@@ -78,10 +78,10 @@ namespace DineBook.Web.Pages
 
         public async Task<IActionResult> OnGetAsync(long id, CancellationToken ct)
         {
-            if (!await LoadBillAsync(id, ct))
+            if (!await LoadOrderAsync(id, ct))
                 return NotFound();
 
-            if (Bill.Status != PaymentStatus.Pending)
+            if (Order.Status == OrderStatus.Cancelled || Order.IsPaid)
                 return RedirectToSettled();
 
             Pending = ReadPending(id);
@@ -91,10 +91,10 @@ namespace DineBook.Web.Pages
 
         public async Task<IActionResult> OnPostAsync(long id, CancellationToken ct)
         {
-            if (!await LoadBillAsync(id, ct))
+            if (!await LoadOrderAsync(id, ct))
                 return NotFound();
 
-            if (Bill.Status != PaymentStatus.Pending)
+            if (Order.Status == OrderStatus.Cancelled || Order.IsPaid)
                 return RedirectToSettled();
 
             if (!ModelState.IsValid)
@@ -111,7 +111,7 @@ namespace DineBook.Web.Pages
                 // Built from configuration, never from the Host header
                 var returnUrl = $"{_site.PublicBaseUrl.TrimEnd('/')}/Payment/Result";
 
-                // The amount is read from the bill inside PaymentService, never from the form
+                // The amount is read from the order inside PaymentService, never from the form
                 var session = await _payments.CreateOrderAsync(
                     id, Email.Trim(), Phone.Trim(), returnUrl, IdempotencyKey, ct);
 
@@ -121,26 +121,26 @@ namespace DineBook.Web.Pages
                 var pending = new PendingPayment(
                     id, session.OrderId, session.PaymentSessionId, session.Amount, DateTimeOffset.UtcNow);
 
-                // Post/Redirect/Get: a refresh shows this session instead of creating another order
+                // Post/Redirect/Get: a refresh shows this session instead of creating another payment
                 TempData[PendingKey] = JsonSerializer.Serialize(pending);
                 return RedirectToPage(new { id });
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 // Log the error, but never the email or phone
-                _logger.LogError(ex, "Failed to start payment for bill {BillId}", id);
+                _logger.LogError(ex, "Failed to start payment for order {OrderId}", id);
                 ToastError("Payment could not be started. Please try again.");
                 return Page();
             }
         }
 
-        private PendingPayment ReadPending(long billId)
+        private PendingPayment ReadPending(long orderId)
         {
             if (TempData.Peek(PendingKey) is not string json)
                 return null;
 
             var pending = JsonSerializer.Deserialize<PendingPayment>(json);
-            if (pending is null || pending.BillId != billId)
+            if (pending is null || pending.FoodOrderId != orderId)
                 return null;
 
             if (DateTimeOffset.UtcNow - pending.CreatedUtc > SessionLifetime)
@@ -149,29 +149,29 @@ namespace DineBook.Web.Pages
             return pending;
         }
 
-        private async Task<bool> LoadBillAsync(long id, CancellationToken ct)
+        private async Task<bool> LoadOrderAsync(long id, CancellationToken ct)
         {
-            Bill = await _db.Bills
+            Order = await _db.Orders
                 .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.Id == id, ct);
+                .Include(o => o.Items)
+                .ThenInclude(i => i.MenuItem)
+                .Include(o => o.Payments)
+                .Include(o => o.Restaurant)
+                .Include(o => o.Reservation)
+                .FirstOrDefaultAsync(o => o.Id == id, ct);
 
-            if (Bill is null)
+            if (Order is null)
                 return false;
 
-            var reservation = await _db.Reservations
-                .AsNoTracking()
-                .Include(r => r.Restaurant)
-                .FirstOrDefaultAsync(r => r.Id == Bill.ReservationId, ct);
-
-            ReservationCode = reservation?.Code ?? string.Empty;
-            RestaurantName = reservation?.Restaurant?.Name ?? string.Empty;
+            ReservationCode = Order.Reservation?.Code ?? string.Empty;
+            RestaurantName = Order.Restaurant?.Name ?? string.Empty;
             return true;
         }
 
-        // A paid or refunded bill needs no checkout: show the booking instead
+        // A paid or cancelled order needs no checkout: show the booking instead
         private RedirectToPageResult RedirectToSettled()
         {
-            ToastSuccess("This bill has already been settled.");
+            ToastSuccess("This order has already been paid or cancelled.");
             return string.IsNullOrEmpty(ReservationCode)
                 ? RedirectToPage("/Index")
                 : RedirectToPage("/Reservations/Details", new { code = ReservationCode });
@@ -179,7 +179,7 @@ namespace DineBook.Web.Pages
     }
 
     public sealed record PendingPayment(
-        long BillId,
+        long FoodOrderId,
         string OrderId,
         string SessionId,
         decimal Amount,

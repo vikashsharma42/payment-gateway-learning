@@ -1,13 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities.Dining;
-using DineBook.Domain.Entities.Menu;
-using DineBook.Domain.Entities.Organization;
+using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Exceptions;
 using DineBook.Web.Helpers;
@@ -51,6 +50,9 @@ namespace DineBook.Web.Pages.Reservations
         public string PayPhone { get; set; } = string.Empty;
 
         public Reservation Reservation { get; private set; }
+
+        // Unpaid orders of this booking, loaded after the guest enters the booking phone number
+        public IReadOnlyList<Orders> PayableOrders { get; private set; } = Array.Empty<Orders>();
 
         // Guests can pay once the booking is not cancelled or missed
         public bool CanPay => Reservation is not null
@@ -119,13 +121,40 @@ namespace DineBook.Web.Pages.Reservations
             return RedirectToPage(new { code = Code });
         }
 
-        // Bills the food ordered for this booking, then moves on to payment
+        // Step 1: the guest proves the booking with the phone number, then picks which order to pay
         public async Task<IActionResult> OnPostPayAsync(CancellationToken ct)
         {
             try
             {
-                var bill = await _payments.GetOrCreateBillAsync(Code, PayPhone, ct);
-                return RedirectToPage("/Checkout", new { id = bill.Id });
+                var orders = await _payments.GetPayableOrdersAsync(Code, PayPhone, ct);
+                PayableOrders = orders.Where(o => !o.IsPaid).ToList();
+
+                if (PayableOrders.Count == 0)
+                    ToastSuccess("All food orders for this booking are already paid.");
+
+                await LoadAsync(ct);
+                return Page();
+            }
+            catch (DomainException ex)
+            {
+                ToastError(ex.Message);
+                return RedirectToPage(new { code = Code });
+            }
+        }
+
+        // Step 2: the guest chose one order. Its amount is read from the order on the checkout page.
+        public async Task<IActionResult> OnPostPayOrderAsync(long orderId, CancellationToken ct)
+        {
+            try
+            {
+                var orders = await _payments.GetPayableOrdersAsync(Code, PayPhone, ct);
+                if (!orders.Any(o => o.Id == orderId && !o.IsPaid))
+                {
+                    ToastError("That order cannot be paid.");
+                    return RedirectToPage(new { code = Code });
+                }
+
+                return RedirectToPage("/Checkout", new { id = orderId });
             }
             catch (DomainException ex)
             {

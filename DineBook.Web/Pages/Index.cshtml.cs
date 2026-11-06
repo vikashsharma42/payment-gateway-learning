@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities.Organization;
+using DineBook.Domain.Entities;
 
 namespace DineBook.Web.Pages
 {

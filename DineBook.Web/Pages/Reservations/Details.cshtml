@@ -108,8 +108,50 @@
             <input type="hidden" name="Code" value="@Model.Reservation.Code" />
             <div class="input-group">
                 <input name="PayPhone" type="tel" class="form-control" placeholder="Phone number" aria-label="Phone number" required />
-                <button type="submit" class="btn btn-brand">Pay bill</button>
+                <button type="submit" class="btn btn-brand">Find my orders</button>
             </div>
+        </div>
+    </form>
+}
+
+@if (Model.PayableOrders.Count > 0)
+{
+    <form method="post" asp-page-handler="PayOrder" class="card shadow-sm mt-4" style="max-width: 36rem;" data-submit-once>
+        <div class="card-body">
+            <h2 class="h6">Choose an order to pay</h2>
+            <input type="hidden" name="Code" value="@Model.Reservation.Code" />
+            <input type="hidden" name="PayPhone" value="@Model.PayPhone" />
+
+            @foreach (var order in Model.PayableOrders)
+            {
+                <div class="border-top pt-3 mt-3">
+                    <table class="table table-sm align-middle mb-2">
+                        <thead>
+                            <tr>
+                                <th scope="col">Category</th>
+                                <th scope="col">Item</th>
+                                <th scope="col" class="text-end">Qty</th>
+                                <th scope="col" class="text-end">Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var line in order.Items)
+                            {
+                                <tr>
+                                    <td class="small text-muted">@line.MenuItem?.Category</td>
+                                    <td>@line.ItemName</td>
+                                    <td class="text-end">@line.Quantity</td>
+                                    <td class="text-end">@Money.Inr(line.LineTotal())</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <strong>Total @Money.Inr(order.Total())</strong>
+                        <button type="submit" name="orderId" value="@order.Id" class="btn btn-brand">Pay this order</button>
+                    </div>
+                </div>
+            }
         </div>
     </form>
 }

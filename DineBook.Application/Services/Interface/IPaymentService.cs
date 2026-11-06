@@ -1,4 +1,5 @@
 using DineBook.Domain.Entities;
+using System.Collections.Generic;
 using DineBook.Payments.Gateway;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,18 +12,19 @@ namespace DineBook.Application.Services.Interface
     public interface IPaymentService
     {
         /// <summary>
-        /// Bills the food ordered for a booking. The caller must give the booking's phone number.
-        /// An unpaid bill for the same amount is reused.
+        /// Returns the food orders of a booking that can be paid (not cancelled), with their items and payments.
+        /// The caller must give the booking's phone number. Throws when the booking or phone does not match.
         /// </summary>
-        Task<Bill> GetOrCreateBillAsync(string reservationCode, string phone, CancellationToken ct = default);
+        Task<IReadOnlyList<Orders>> GetPayableOrdersAsync(string reservationCode, string phone, CancellationToken ct = default);
 
         /// <summary>
-        /// Creates a gateway order for the bill's server-side amount and stores a pending Payment.
-        /// The same idempotency key always returns the same order.
-        /// Returns null when the bill does not exist.
+        /// Creates a gateway order for one food order's server-side total and stores a pending Payment.
+        /// The same idempotency key always returns the same order. A pending payment that is still
+        /// fresh is reused, so two checkouts for one order cannot both be charged.
+        /// Returns null when the food order does not exist.
         /// </summary>
         Task<PaymentOrderResult> CreateOrderAsync(
-            long billId,
+            long orderId,
             string customerEmail,
             string customerPhone,
             string returnUrl,
@@ -42,7 +44,7 @@ namespace DineBook.Application.Services.Interface
         Task<bool> HandleWebhookAsync(string rawBody, string timestamp, string signature, CancellationToken ct = default);
 
         /// <summary>
-        /// Marks a pending order paid and sends the receipt email. Returns true only when the status changed.
+        /// Marks a pending payment paid and sends the receipt email. Returns true only when the status changed.
         /// </summary>
         Task<bool> MarkPaidAsync(string gatewayOrderId, CancellationToken ct = default);
 

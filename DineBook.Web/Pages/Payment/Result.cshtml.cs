@@ -2,7 +2,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using DineBook.Application.Services.Interface;
-using PaymentRecord = DineBook.Domain.Entities.Payments.Payment;
+using PaymentRecord = DineBook.Domain.Entities.Payment;
 using DineBook.Domain.Enums;
 using DineBook.Web.Infrastructure;
 

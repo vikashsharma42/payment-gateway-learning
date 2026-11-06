@@ -7,21 +7,31 @@ using System;
 namespace DineBook.Domain.Entities
 {
     // One gateway payment attempt for a bill. The gateway order id ties it to Cashfree.
+    // One gateway payment attempt for one food order. The gateway order id ties it to Cashfree.
     public class Payment : Entity, IAuditableEntity
     {
+        // The amount is the order total at the moment of payment, never a value passed in from outside
         public Payment(
-            decimal amount,
+            Orders order,
             string gatewayOrderId,
             string paymentSessionId,
             string idempotencyKey,
             string customerEmail)
         {
+            DomainValidation<Orders>.Ensure(order).IsNotNull();
+            DomainValidation<long>.Ensure(order.Id).IsGreaterThan(0);
+            DomainValidation<bool>.Ensure(order.Status != OrderStatus.Cancelled)
+                .IsTrue("A cancelled order cannot be paid.");
+            DomainValidation<bool>.Ensure(order.IsPaid).IsFalse("This order has already been paid.");
+
+            var amount = order.Total();
             DomainValidation<decimal>.Ensure(amount).IsGreaterThan(0);
             DomainValidation<string>.Ensure(gatewayOrderId).IsNotNullOrWhiteSpace();
             DomainValidation<string>.Ensure(paymentSessionId).IsNotNullOrWhiteSpace();
             DomainValidation<string>.Ensure(idempotencyKey).IsNotNullOrWhiteSpace();
             DomainValidation<string>.Ensure(customerEmail).IsNotNullOrWhiteSpace();
 
+            OrderId = order.Id;
             PublicId = Guid.NewGuid();
             Amount = amount;
             GatewayOrderId = gatewayOrderId.Trim();
@@ -30,6 +40,8 @@ namespace DineBook.Domain.Entities
             CustomerEmail = customerEmail.Trim();
             Status = PaymentStatus.Pending;
         }
+
+        public long OrderId { get; private set; }
 
         public Guid PublicId { get; private set; }
 
@@ -55,6 +67,8 @@ namespace DineBook.Domain.Entities
         public DateTimeOffset UpdatedDateTime { get; set; }
 
         public string UpdatedBy { get; set; }
+
+        public virtual Orders Order { get; private set; }
 
         // Returns true only when the status actually changed.
         // Duplicate webhooks or repeated status checks return false and change nothing.

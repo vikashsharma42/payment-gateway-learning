@@ -12,6 +12,12 @@ namespace DineBook.Infrastructure.Database.Configurations
             builder.Property(x => x.Amount).HasPrecision(18, 2);
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20);
 
+            // Many payment attempts can belong to one order. Restrict: a paid order is never deleted with its payments.
+            builder.HasOne(x => x.Order)
+                .WithMany(o => o.Payments)
+                .HasForeignKey(x => x.OrderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Fast webhook/status lookup, and duplicate Cashfree orders are rejected by the database
             builder.HasIndex(x => x.GatewayOrderId).IsUnique();
 

@@ -1,12 +1,12 @@
-using System.ComponentModel.DataAnnotations;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.AspNetCore.RateLimiting;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Enums;
 using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.RateLimiting;
+using System.ComponentModel.DataAnnotations;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace DineBook.Web.Pages
 {
@@ -70,7 +70,8 @@ namespace DineBook.Web.Pages
         }
 
         // Where each role starts. Access rules are enforced by the page folders, not here.
-        private IActionResult LandingPageFor(UserRole role) =>
+        // Where each role starts. Access rules are enforced by the page folders, not here.
+        private RedirectToPageResult LandingPageFor(UserRole role) =>
             role == UserRole.Admin
                 ? RedirectToPage("/Admin/Index")
                 : RedirectToPage("/Index");

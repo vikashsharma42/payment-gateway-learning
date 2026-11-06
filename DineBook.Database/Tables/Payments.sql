@@ -1,7 +1,7 @@
--- One gateway payment attempt for a bill (replaces the old product Orders table)
+-- One gateway payment attempt for one food order
 CREATE TABLE Payments (
     Id               BIGINT IDENTITY(1, 1) NOT NULL,
-    BillId           BIGINT NOT NULL,
+    OrderId          BIGINT NOT NULL,
     PublicId         UNIQUEIDENTIFIER NOT NULL,
     Amount           DECIMAL(18, 2) NOT NULL,
     GatewayOrderId   NVARCHAR(100) NOT NULL,
@@ -15,13 +15,13 @@ CREATE TABLE Payments (
     UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Payments_UpdatedDateTime DEFAULT SYSUTCDATETIME(),
     UpdatedBy        NVARCHAR(256) NULL,
     CONSTRAINT PK_Payments PRIMARY KEY (Id),
-    CONSTRAINT FK_Payments_Bills FOREIGN KEY (BillId) REFERENCES Bills (Id),
+    CONSTRAINT FK_Payments_Orders FOREIGN KEY (OrderId) REFERENCES Orders (Id),
     CONSTRAINT UQ_Payments_GatewayOrderId UNIQUE (GatewayOrderId),
     CONSTRAINT UQ_Payments_PublicId UNIQUE (PublicId),
     CONSTRAINT CK_Payments_Status CHECK (Status IN ('Pending', 'Paid', 'Failed', 'Refunded'))
 );
 
-CREATE NONCLUSTERED INDEX IX_Payments_BillId ON Payments (BillId);
+CREATE NONCLUSTERED INDEX IX_Payments_OrderId ON Payments (OrderId);
 
 CREATE UNIQUE NONCLUSTERED INDEX UX_Payments_IdempotencyKey
     ON Payments (IdempotencyKey)

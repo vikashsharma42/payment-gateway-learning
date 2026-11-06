@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities.Organization;
+using DineBook.Domain.Entities;
 using DineBook.Domain.Exceptions;
 using DineBook.Web.Infrastructure;
 

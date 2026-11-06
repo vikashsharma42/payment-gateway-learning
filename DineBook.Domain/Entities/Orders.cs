@@ -13,7 +13,7 @@ namespace DineBook.Domain.Entities
     {
         public Orders(long restaurantId)
         {
-            DomainValidation<long>.Ensure(restaurantId, "Restaurant").IsGreaterThan(0, "Restaurant is required.");
+            DomainValidation<long>.Ensure(restaurantId, "Restaurant").IsGreaterThan(0);
 
             RestaurantId = restaurantId;
             Status = OrderStatus.Placed;
@@ -42,14 +42,19 @@ namespace DineBook.Domain.Entities
 
         public decimal Total() => _items.Sum(i => i.LineTotal());
 
+        private readonly List<Payment> _payments = [];
+        public IReadOnlyCollection<Payment> Payments => _payments.AsReadOnly();
+
+        // True once a payment for this order has succeeded. Needs Payments to be loaded.
+        public bool IsPaid => _payments.Any(p => p.Status == PaymentStatus.Paid);
+
         // The dish must be available and on this order's restaurant menu. Each dish appears at most once,
         // with 1 to 20 units. The name and price are copied from the menu item.
         public void AddOrderItem(MenuItem menuItem, int quantity)
         {
-            DomainValidation<MenuItem>.Ensure(menuItem, "Item").IsNotNull("One of the items was not found.");
+            DomainValidation<MenuItem>.Ensure(menuItem, "Item").IsNotNull();
 
-            DomainValidation<long>.Ensure(menuItem.RestaurantId, nameof(menuItem))
-                .IsEqualTo(RestaurantId, "This item is not on the menu of this restaurant.");
+            DomainValidation<long>.Ensure(menuItem.RestaurantId, nameof(menuItem)).IsEqualTo(RestaurantId);
             DomainValidation<bool>.Ensure(menuItem.IsAvailable).IsTrue($"{menuItem.Name} is not available right now.");
             DomainValidation<bool>.Ensure(_items.Any(i => i.MenuItemId == menuItem.Id))
                 .IsFalse("Each item can appear only once in an order.");
@@ -63,7 +68,12 @@ namespace DineBook.Domain.Entities
 
         public void MarkServed() => MoveFrom(OrderStatus.Placed, OrderStatus.Served, "Only placed orders can be served.");
 
-        public void Cancel() => MoveFrom(OrderStatus.Placed, OrderStatus.Cancelled, "Only placed orders can be cancelled.");
+        public void Cancel()
+        {
+            DomainValidation<bool>.Ensure(IsPaid).IsFalse("A paid order cannot be cancelled.");
+
+            MoveFrom(OrderStatus.Placed, OrderStatus.Cancelled, "Only placed orders can be cancelled.");
+        }
 
         // Called by Reservation.AddFoodOrder
         internal void AssignReservation(long reservationId) => ReservationId = reservationId;
