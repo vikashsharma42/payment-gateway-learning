@@ -1,13 +1,13 @@
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities.Payments;
+using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Exceptions;
 using DineBook.Email;
 using DineBook.Email.EmailModels;
 using DineBook.Infrastructure.Database;
 using DineBook.Payments.Gateway;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Net.Http;

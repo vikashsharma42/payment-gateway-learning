@@ -1,9 +1,8 @@
+using DineBook.Domain.Entities;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using DineBook.Domain.Entities.Dining;
-using DineBook.Domain.Entities.Organization;
 
 namespace DineBook.Application.Services.Interface
 {

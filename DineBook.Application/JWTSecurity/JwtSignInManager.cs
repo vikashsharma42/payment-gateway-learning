@@ -1,3 +1,11 @@
+using DineBook.Application.Security;
+using DineBook.Domain.Entities;
+using DineBook.Infrastructure.Database;
+using DineBook.Infrastructure.Database.Security;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -7,14 +15,6 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using DineBook.Application.Security;
-using DineBook.Domain.Identity;
-using DineBook.Infrastructure.Database;
-using DineBook.Infrastructure.Database.Security;
 
 namespace DineBook.Application.JWTSecurity
 {

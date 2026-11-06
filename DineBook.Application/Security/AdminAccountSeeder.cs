@@ -1,11 +1,11 @@
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using DineBook.Application.Configuration;
-using DineBook.Domain.Identity;
+using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Infrastructure.Database;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace DineBook.Application.Security
 {

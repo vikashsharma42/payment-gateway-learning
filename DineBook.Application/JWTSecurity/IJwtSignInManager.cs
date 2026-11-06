@@ -1,6 +1,6 @@
+using DineBook.Domain.Entities;
 using System.Threading;
 using System.Threading.Tasks;
-using DineBook.Domain.Identity;
 
 namespace DineBook.Application.JWTSecurity
 {

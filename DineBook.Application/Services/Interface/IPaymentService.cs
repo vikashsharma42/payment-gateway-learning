@@ -1,4 +1,4 @@
-using DineBook.Domain.Entities.Payments;
+using DineBook.Domain.Entities;
 using DineBook.Payments.Gateway;
 using System.Threading;
 using System.Threading.Tasks;

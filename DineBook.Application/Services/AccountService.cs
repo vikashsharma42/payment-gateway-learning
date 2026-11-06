@@ -1,11 +1,11 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using DineBook.Application.JWTSecurity;
 using DineBook.Application.Security;
 using DineBook.Application.Services.Interface;
 using DineBook.Infrastructure.Database;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace DineBook.Application.Services
 {

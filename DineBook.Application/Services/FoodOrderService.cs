@@ -1,15 +1,12 @@
-using System;
+using DineBook.Application.Services.Interface;
+using DineBook.Domain.Entities;
+using DineBook.Domain.Exceptions;
+using DineBook.Infrastructure.Database;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities.Dining;
-using DineBook.Domain.Entities.Menu;
-using DineBook.Domain.Entities.Ordering;
-using DineBook.Domain.Exceptions;
-using DineBook.Infrastructure.Database;
 
 namespace DineBook.Application.Services
 {

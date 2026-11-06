@@ -1,3 +1,14 @@
+using DineBook.Application.Configuration;
+using DineBook.Application.Services.Interface;
+using DineBook.Domain.Entities;
+using DineBook.Domain.Enums;
+using DineBook.Domain.Exceptions;
+using DineBook.Email;
+using DineBook.Email.EmailModels;
+using DineBook.Infrastructure.Database;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -5,19 +16,6 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using DineBook.Application.Configuration;
-using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities.Customers;
-using DineBook.Domain.Entities.Dining;
-using DineBook.Domain.Entities.Organization;
-using DineBook.Domain.Enums;
-using DineBook.Domain.Exceptions;
-using DineBook.Email;
-using DineBook.Email.EmailModels;
-using DineBook.Infrastructure.Database;
 
 namespace DineBook.Application.Services
 {
