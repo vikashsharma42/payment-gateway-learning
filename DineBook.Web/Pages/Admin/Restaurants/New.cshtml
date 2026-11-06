@@ -1,0 +1,68 @@
+@page
+@model NewModel
+@{
+    ViewData["Title"] = "Admin · New restaurant";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a asp-page="/Admin/Index">Restaurants</a></li>
+        <li class="breadcrumb-item active" aria-current="page">New</li>
+    </ol>
+</nav>
+
+<h1 class="h2 mb-4">New restaurant</h1>
+
+<div class="card shadow-sm" style="max-width: 40rem;">
+    <div class="card-body p-4">
+        <form method="post" data-submit-once>
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label"></label>
+                <input asp-for="Name" class="form-control" />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Street" class="form-label"></label>
+                <input asp-for="Street" class="form-control" />
+                <span asp-validation-for="Street" class="text-danger small"></span>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label asp-for="City" class="form-label"></label>
+                    <input asp-for="City" class="form-control" />
+                    <span asp-validation-for="City" class="text-danger small"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="State" class="form-label"></label>
+                    <input asp-for="State" class="form-control" />
+                    <span asp-validation-for="State" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Pincode" class="form-label"></label>
+                <input asp-for="Pincode" class="form-control" inputmode="numeric" maxlength="6" />
+                <span asp-validation-for="Pincode" class="text-danger small"></span>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-sm-6">
+                    <label asp-for="OpensAt" class="form-label"></label>
+                    <input asp-for="OpensAt" type="time" class="form-control" />
+                    <span asp-validation-for="OpensAt" class="text-danger small"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="ClosesAt" class="form-label"></label>
+                    <input asp-for="ClosesAt" type="time" class="form-control" />
+                    <span asp-validation-for="ClosesAt" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-brand btn-lg w-100">Create restaurant</button>
+        </form>
+    </div>
+</div>

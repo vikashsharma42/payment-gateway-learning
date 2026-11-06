@@ -1,0 +1,39 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Restaurants";
+}
+
+<section class="hero mb-4 mb-md-5">
+    <h1 class="display-6">Book a table</h1>
+    <p class="lead mb-0">Choose a restaurant and a time. You get a booking code straight away.</p>
+</section>
+
+@if (Model.Restaurants.Count == 0)
+{
+    <div class="card p-4 text-center text-muted">
+        No restaurants are open for booking right now.
+    </div>
+}
+else
+{
+    <div class="row row-cols-1 row-cols-md-2 g-4">
+        @foreach (var restaurant in Model.Restaurants)
+        {
+            <div class="col">
+                <article class="card h-100 shadow-sm">
+                    <div class="card-body d-flex flex-column">
+                        <h2 class="h5 mb-1">@restaurant.Name</h2>
+                        <p class="small text-muted mb-1">@restaurant.Address.Street, @restaurant.Address.City</p>
+                        <p class="small mb-1">Open @restaurant.OpensAt.ToString("HH:mm") to @restaurant.ClosesAt.ToString("HH:mm")</p>
+                        <p class="small text-muted mb-3">@restaurant.Tables.Count tables</p>
+
+                        <a class="btn btn-brand mt-auto" asp-page="/Restaurants/Book" asp-route-id="@restaurant.Id">
+                            Book a table<span class="visually-hidden">: @restaurant.Name</span>
+                        </a>
+                    </div>
+                </article>
+            </div>
+        }
+    </div>
+}

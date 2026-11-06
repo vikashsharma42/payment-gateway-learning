@@ -1,0 +1,90 @@
+@page "{id:long}"
+@model BookModel
+@{
+    ViewData["Title"] = $"Book at {Model.Restaurant.Name}";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a asp-page="/Index">Restaurants</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.Restaurant.Name</li>
+    </ol>
+</nav>
+
+<h1 class="h2 mb-4">Book a table at @Model.Restaurant.Name</h1>
+
+<form method="get" class="card card-body shadow-sm mb-4">
+    <div class="row g-3 align-items-end">
+        <div class="col-sm-5">
+            <label class="form-label" for="Date">Date</label>
+            <input id="Date" name="Date" type="date" class="form-control"
+                   value="@Model.Date?.ToString("yyyy-MM-dd")" min="@Model.Today.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-sm-4">
+            <label class="form-label" for="Guests">Guests</label>
+            <input id="Guests" name="Guests" type="number" min="1" max="10" class="form-control" value="@Model.Guests" />
+        </div>
+        <div class="col-sm-3">
+            <button class="btn btn-outline-primary w-100" type="submit">Show times</button>
+        </div>
+    </div>
+</form>
+
+@if (Model.Date is not null)
+{
+    if (Model.Slots.Count == 0)
+    {
+        <div class="alert alert-warning" role="status">
+            No tables are free for @Model.Guests guests on this day. Try another date or party size.
+        </div>
+    }
+    else
+    {
+        <form method="post" data-submit-once class="card card-body shadow-sm">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+            <input type="hidden" name="Date" value="@Model.Date.Value.ToString("yyyy-MM-dd")" />
+            <input type="hidden" name="Guests" value="@Model.Guests" />
+
+            <fieldset class="mb-4">
+                <legend class="h6">Choose a time</legend>
+                <div class="d-flex flex-wrap gap-2">
+                    @foreach (var slot in Model.Slots)
+                    {
+                        <input type="radio" class="btn-check" name="StartsAt" id="slot-@slot.ToString("HHmm")"
+                               value="@slot.ToString("s")" autocomplete="off" required />
+                        <label class="btn btn-outline-primary" for="slot-@slot.ToString("HHmm")">@slot.ToString("HH:mm")</label>
+                    }
+                </div>
+                <span asp-validation-for="StartsAt" class="text-danger small"></span>
+            </fieldset>
+
+            <div class="mb-3">
+                <label asp-for="CustomerName" class="form-label"></label>
+                <input asp-for="CustomerName" class="form-control" autocomplete="name" />
+                <span asp-validation-for="CustomerName" class="text-danger small"></span>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label asp-for="CustomerPhone" class="form-label"></label>
+                    <input asp-for="CustomerPhone" type="tel" class="form-control" autocomplete="tel" inputmode="tel" />
+                    <span asp-validation-for="CustomerPhone" class="text-danger small"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="CustomerEmail" class="form-label"></label>
+                    <input asp-for="CustomerEmail" type="email" class="form-control" autocomplete="email" />
+                    <span asp-validation-for="CustomerEmail" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="SpecialRequests" class="form-label"></label>
+                <textarea asp-for="SpecialRequests" class="form-control" rows="2" maxlength="200"></textarea>
+                <span asp-validation-for="SpecialRequests" class="text-danger small"></span>
+            </div>
+
+            <button type="submit" class="btn btn-brand btn-lg w-100">Confirm booking</button>
+        </form>
+    }
+}

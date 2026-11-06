@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+		<AnalysisLevel>latest-all</AnalysisLevel>
+		<!-- Suppress NuGet package vulnerability warnings -->
+		<NoWarn>$(NoWarn);NU1902;NU1903</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- ASP.NET Core framework services -->
+		<FrameworkReference Include="Microsoft.AspNetCore.App" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\DineBook.Common\DineBook.Common.csproj" />
+		<ProjectReference Include="..\DineBook.Domain\DineBook.Domain.csproj" />
+		<ProjectReference Include="..\DineBook.Infrastructure\DineBook.Infrastructure.csproj" />
+		<ProjectReference Include="..\DineBook.Payments\DineBook.Payments.csproj" />
+		<ProjectReference Include="..\DineBook.Email\DineBook.Email.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<!-- JWT sign-in -->
+		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
+	</ItemGroup>
+
+</Project>

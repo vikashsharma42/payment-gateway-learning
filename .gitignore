@@ -1,0 +1,78 @@
+# Build output
+**/bin/
+**/obj/
+**/publish/
+**/TestResults/
+
+# Visual Studio / IDE
+.vs/
+.vscode/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.jfm
+*.dbmdl
+
+# Rider / ReSharper
+_ReSharper*/
+*.DotSettings.user
+
+# Git
+.git/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+
+# OS Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Environment Files
+.env
+.env.*
+!.env.example
+
+# ASP.NET configuration files containing secrets
+appsettings.Local.json
+appsettings.Development.json
+appsettings.Staging.json
+appsettings.Production.json
+appsettings.*.local.json
+
+# Temporary Files
+tmp/
+temp/
+*.tmp
+*.cache
+
+# NuGet
+nupkg/
+*.nupkg
+
+# .NET Tools
+dotnet-tools.json
+
+# Swap Files
+*.swp
+*.*~
+
+# Build Configurations
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+build/
+bld/
+
+# MSBuild Logs
+msbuild.log
+msbuild.err
+msbuild.wrn

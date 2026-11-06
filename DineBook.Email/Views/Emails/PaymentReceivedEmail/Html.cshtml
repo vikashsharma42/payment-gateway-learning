@@ -1,0 +1,21 @@
+@model PaymentReceivedEmailModel
+@{
+    Layout = "/Views/Shared/_EmailLayout.cshtml";
+    ViewData["Title"] = "Payment received";
+}
+<h1 style="margin:0 0 12px 0;font-size:22px;">Payment received</h1>
+<p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;color:#334155;">Hi there,</p>
+<p style="margin:0 0 20px 0;font-size:15px;line-height:1.6;color:#334155;">Thank you for your order. We have received your payment.</p>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+    <tr>
+        <td style="padding:14px 16px;font-size:14px;color:#64748b;">Order ID</td>
+        <td align="right" style="padding:14px 16px;font-size:14px;font-weight:bold;">@Model.OrderReference</td>
+    </tr>
+    <tr>
+        <td style="padding:14px 16px;font-size:14px;color:#64748b;border-top:1px solid #e2e8f0;">Amount paid</td>
+        <td align="right" style="padding:14px 16px;font-size:14px;font-weight:bold;border-top:1px solid #e2e8f0;">@Model.Amount</td>
+    </tr>
+</table>
+
+<p style="margin:20px 0 0 0;font-size:15px;line-height:1.6;color:#334155;">Please keep this email for your records. If you have a question about this payment, contact Stupro support and quote your order ID.</p>

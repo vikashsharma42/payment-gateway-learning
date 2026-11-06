@@ -1,0 +1,51 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Admin · Restaurants";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2 mb-0">Restaurants</h1>
+    <div class="d-flex gap-2">
+        <a asp-page="/Admin/Users/Index" class="btn btn-outline-secondary">Users</a>
+        <a asp-page="/Admin/Restaurants/New" class="btn btn-brand">New restaurant</a>
+        <form method="post" asp-page="/Admin/Logout">
+            <button type="submit" class="btn btn-outline-secondary">Sign out</button>
+        </form>
+    </div>
+</div>
+
+@if (Model.Restaurants.Count == 0)
+{
+    <div class="card p-4 text-center text-muted">No restaurants yet. Create the first one.</div>
+}
+else
+{
+    <div class="table-responsive card shadow-sm">
+        <table class="table mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">City</th>
+                    <th scope="col">Hours</th>
+                    <th scope="col" class="text-center">Tables</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var restaurant in Model.Restaurants)
+                {
+                    <tr>
+                        <td>@restaurant.Name</td>
+                        <td>@restaurant.Address.City</td>
+                        <td>@restaurant.OpensAt.ToString("HH:mm") to @restaurant.ClosesAt.ToString("HH:mm")</td>
+                        <td class="text-center">@restaurant.Tables.Count</td>
+                        <td class="text-end">
+                            <a asp-page="/Admin/Restaurants/Manage" asp-route-id="@restaurant.Id" class="btn btn-sm btn-outline-primary">Manage</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9;">
+        <tr>
+            <td align="center" style="padding:24px 12px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;">
+                    <tr>
+                        <td style="padding:28px 32px 0 32px;font-size:20px;font-weight:bold;color:#4f46e5;">Stupro</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:20px 32px 28px 32px;">
+                            @RenderBody()
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding:24px 32px 28px 32px;font-size:12px;color:#64748b;line-height:1.5;border-top:1px solid #e2e8f0;">
+                            This is an automated message from Stupro. Never share your order ID or payment details with anyone you do not trust.<br />
+                            &copy; @DateTime.UtcNow.Year Stupro. All rights reserved.
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

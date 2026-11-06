@@ -1,0 +1,38 @@
+@page
+@model ResultModel
+@{
+    ViewData["Title"] = "Payment status";
+
+    var badge = Model.CurrentOrder.Status switch
+    {
+        PaymentStatus.Paid => "text-bg-success",
+        PaymentStatus.Refunded => "text-bg-secondary",
+        PaymentStatus.Failed => "text-bg-danger",
+        _ => "text-bg-warning"
+    };
+}
+
+<h1 class="h2 mb-4">Payment status</h1>
+
+<div class="card shadow-sm" style="max-width: 32rem;">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-5">Status</dt>
+            <dd class="col-7"><span class="badge @badge">@Model.CurrentOrder.Status</span></dd>
+
+            <dt class="col-5">Order reference</dt>
+            <dd class="col-7"><code>@Model.CurrentOrder.GatewayOrderId</code></dd>
+
+            <dt class="col-5">Amount</dt>
+            <dd class="col-7">@Money.Inr(Model.CurrentOrder.Amount)</dd>
+        </dl>
+    </div>
+</div>
+
+<div class="d-flex gap-2 mt-4">
+    @if (Model.CurrentOrder.Status == PaymentStatus.Pending)
+    {
+        <a asp-page="/Payment/Result" asp-route-order_id="@Model.OrderId" class="btn btn-outline-primary">Check again</a>
+    }
+    <a asp-page="/Index" class="btn btn-outline-secondary">Back to restaurants</a>
+</div>

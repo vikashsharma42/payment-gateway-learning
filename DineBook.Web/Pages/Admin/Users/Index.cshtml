@@ -1,0 +1,119 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Admin · Users";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h2 mb-0">Users</h1>
+    <div class="d-flex gap-2">
+        <a asp-page="/Admin/Index" class="btn btn-outline-secondary">Restaurants</a>
+        <button type="button" class="btn btn-brand" data-bs-toggle="modal" data-bs-target="#createUserModal">Add user</button>
+    </div>
+</div>
+
+@if (Model.Users.Count == 0)
+{
+    <div class="card p-4 text-center text-muted">No users yet.</div>
+}
+else
+{
+    <div class="table-responsive card shadow-sm">
+        <table class="table mb-0 align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Role</th>
+                    <th scope="col">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var user in Model.Users)
+                {
+                    <tr>
+                        <td>@user.FullName</td>
+                        <td>@user.Email</td>
+                        <td>@user.Role</td>
+                        <td>
+                            @if (user.IsActive)
+                            {
+                                <span class="badge text-bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge text-bg-secondary">Inactive</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- Popup for creating staff, manager and admin accounts -->
+<div class="modal fade" id="createUserModal" tabindex="-1" aria-labelledby="createUserLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Create" data-submit-once>
+                <div class="modal-header">
+                    <h2 class="h5 modal-title" id="createUserLabel">Add user</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6">
+                            <label asp-for="Input.FirstName" class="form-label"></label>
+                            <input asp-for="Input.FirstName" class="form-control" />
+                            <span asp-validation-for="Input.FirstName" class="text-danger small"></span>
+                        </div>
+                        <div class="col-sm-6">
+                            <label asp-for="Input.LastName" class="form-label"></label>
+                            <input asp-for="Input.LastName" class="form-control" />
+                            <span asp-validation-for="Input.LastName" class="text-danger small"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Email" class="form-label"></label>
+                        <input asp-for="Input.Email" type="email" class="form-control" autocomplete="off"
+                               data-check-url="@Url.Page("/Admin/Users/Index", "IsEmailAvailable")" />
+                        <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.Role" class="form-label"></label>
+                        <select asp-for="Input.Role" asp-items="Model.RoleOptions" class="form-select"></select>
+                        <span asp-validation-for="Input.Role" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-1">
+                        <label asp-for="Input.Password" class="form-label"></label>
+                        <input asp-for="Input.Password" class="form-control" autocomplete="new-password" />
+                        <div class="form-text">At least 12 characters. Ask the user to change it after first sign-in.</div>
+                        <span asp-validation-for="Input.Password" class="text-danger small"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-brand">Create user</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/email-availability.js" asp-append-version="true" defer></script>
+    @if (Model.ShowCreateModal)
+    {
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                new bootstrap.Modal(document.getElementById('createUserModal')).show();
+            });
+        </script>
+    }
+}

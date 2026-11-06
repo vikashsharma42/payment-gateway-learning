@@ -1,0 +1,26 @@
+echo '#!/bin/bash
+
+# Get the current branch name
+branch=$(git rev-parse --abbrev-ref HEAD)
+
+# Fetch the latest changes from the remote
+git fetch origin $branch
+
+# Compare local branch with the remote branch
+LOCAL=$(git rev-parse @)
+REMOTE=$(git rev-parse @{u})
+BASE=$(git merge-base @ @{u})
+
+if [ $LOCAL = $REMOTE ]; then
+    echo "Your branch is up-to-date with the remote branch."
+    exit 0
+elif [ $LOCAL = $BASE ]; then
+    echo "Your branch is behind the remote branch. Please pull the latest changes before pushing."
+    exit 1
+elif [ $REMOTE = $BASE ]; then
+    echo "Your branch is ahead of the remote branch. You can push your changes."
+    exit 0
+else
+    echo "Your branch has diverged from the remote branch. Please pull the latest changes before pushing."
+    exit 1
+fi' > .githooks/pre-push

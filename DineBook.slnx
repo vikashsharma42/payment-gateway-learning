@@ -1,0 +1,15 @@
+<Solution>
+ <!--<Project Path="DineBook.API/DineBook.API.csproj" />-->
+  <Project Path="DineBook.Application/DineBook.Application.csproj" />
+  <Project Path="DineBook.Database/DineBook.Database.sqlproj" Id="8765629f-5162-4d8a-aa77-90a5160994dd">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="DineBook.Common/DineBook.Common.csproj" />  
+  <Project Path="DineBook.Domain/DineBook.Domain.csproj" />
+  <Project Path="DineBook.Email/DineBook.Email.csproj" />
+  <!--<Project Path="DineBook.Tests/DineBook.Tests.csproj" />-->
+  <Project Path="DineBook.Infrastructure/DineBook.Infrastructure.csproj" />
+  <Project Path="DineBook.Payments/DineBook.Payments.csproj" />
+  <Project Path="DineBook.Web/DineBook.Web.csproj" />
+</Solution>
