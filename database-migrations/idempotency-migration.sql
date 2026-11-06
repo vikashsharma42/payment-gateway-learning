@@ -1,9 +1,9 @@
 /* ---------------------------------------------------------------
    Migration: idempotency keys, payment session id, longer ImageUrl
-   Run once against ProductShop on (localdb)\ProjectModels.
+   Run once against DineBook on (localdb)\ProjectModels.
    Safe to re-run: each step checks whether it is already applied.
    --------------------------------------------------------------- */
-USE ProductShop;
+USE DineBook;
 GO
 
 IF COL_LENGTH('dbo.Orders', 'PaymentSessionId') IS NULL

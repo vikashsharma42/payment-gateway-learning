@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net10.0</TargetFramework>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
+		<AnalysisLevel>latest-all</AnalysisLevel>
+		<!-- Suppress NuGet package vulnerability warnings -->
+		<NoWarn>$(NoWarn);NU1902;NU1903</NoWarn>
+	</PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\DineBook.Common\DineBook.Common.csproj" />
+  </ItemGroup>
+
+</Project>

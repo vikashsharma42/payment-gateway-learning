@@ -1,9 +1,9 @@
 /* ---------------------------------------------------------------
    Migration: customer email, refund id, and the Refunded status.
-   Run once against ProductShop on (localdb)\ProjectModels, after
+   Run once against DineBook on (localdb)\ProjectModels, after
    idempotency-migration.sql. Safe to re-run.
    --------------------------------------------------------------- */
-USE ProductShop;
+USE DineBook;
 GO
 
 IF COL_LENGTH('dbo.Orders', 'CustomerEmail') IS NULL

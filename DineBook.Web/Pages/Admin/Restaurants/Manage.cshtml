@@ -1,0 +1,141 @@
+@page "{id:long}"
+@model ManageModel
+@{
+    ViewData["Title"] = $"Admin · {Model.Restaurant.Name}";
+}
+
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item"><a asp-page="/Admin/Index">Restaurants</a></li>
+        <li class="breadcrumb-item active" aria-current="page">@Model.Restaurant.Name</li>
+    </ol>
+</nav>
+
+<h1 class="h2 mb-1">@Model.Restaurant.Name</h1>
+<p class="text-muted mb-4">@Model.Restaurant.Address.Street, @Model.Restaurant.Address.City · open @Model.Restaurant.OpensAt.ToString("HH:mm") to @Model.Restaurant.ClosesAt.ToString("HH:mm")</p>
+
+<div class="row g-4">
+    <section class="col-lg-5" aria-labelledby="tables-heading">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 id="tables-heading" class="h5">Tables</h2>
+
+                @if (Model.Restaurant.Tables.Count == 0)
+                {
+                    <p class="text-muted">No tables yet. Customers cannot book until you add one.</p>
+                }
+                else
+                {
+                    <ul class="list-group mb-3">
+                        @foreach (var table in Model.Restaurant.Tables)
+                        {
+                            <li class="list-group-item d-flex justify-content-between">
+                                <span>@table.Label</span>
+                                <span class="text-muted">seats @table.Capacity</span>
+                            </li>
+                        }
+                    </ul>
+                }
+
+                <form method="post" asp-page-handler="AddTable" data-submit-once>
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-6">
+                            <label asp-for="TableLabel" class="form-label"></label>
+                            <input asp-for="TableLabel" class="form-control" maxlength="20" />
+                        </div>
+                        <div class="col-3">
+                            <label asp-for="TableCapacity" class="form-label"></label>
+                            <input asp-for="TableCapacity" type="number" min="1" max="20" class="form-control" />
+                        </div>
+                        <div class="col-3">
+                            <button type="submit" class="btn btn-outline-primary w-100">Add table</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <section class="col-lg-7" aria-labelledby="menu-heading">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h2 id="menu-heading" class="h5">Menu</h2>
+
+                @if (Model.Menu.Count == 0)
+                {
+                    <p class="text-muted">The menu is empty.</p>
+                }
+                else
+                {
+                    <div class="table-responsive mb-3">
+                        <table class="table align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th scope="col">Item</th>
+                                    <th scope="col">Category</th>
+                                    <th scope="col" class="text-end">Price</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Menu)
+                                {
+                                    <tr>
+                                        <td>@item.Name</td>
+                                        <td>@item.Category</td>
+                                        <td class="text-end">@Money.Inr(item.Price)</td>
+                                        <td>
+                                            @if (item.IsAvailable)
+                                            {
+                                                <span class="badge text-bg-success">Available</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge text-bg-secondary">Hidden</span>
+                                            }
+                                        </td>
+                                        <td class="text-end">
+                                            <form method="post" asp-page-handler="ToggleItem" class="d-inline">
+                                                <input type="hidden" name="itemId" value="@item.Id" />
+                                                <input type="hidden" name="available" value="@(!item.IsAvailable)" />
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary">
+                                                    @(item.IsAvailable ? "Hide" : "Show")<span class="visually-hidden">: @item.Name</span>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                <h3 class="h6">Add a dish</h3>
+                <form method="post" asp-page-handler="AddItem" data-submit-once>
+                    <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-6">
+                            <label asp-for="ItemName" class="form-label"></label>
+                            <input asp-for="ItemName" class="form-control" maxlength="100" />
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="ItemCategory" class="form-label"></label>
+                            <input asp-for="ItemCategory" class="form-control" maxlength="50" placeholder="Mains" />
+                        </div>
+                        <div class="col-md-3">
+                            <label asp-for="ItemPrice" class="form-label"></label>
+                            <input asp-for="ItemPrice" type="number" step="0.01" min="0.01" max="100000" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <label asp-for="ItemDescription" class="form-label"></label>
+                        <input asp-for="ItemDescription" class="form-control" maxlength="300" />
+                    </div>
+                    <button type="submit" class="btn btn-brand">Add dish</button>
+                </form>
+            </div>
+        </div>
+    </section>
+</div>

@@ -1,120 +1,99 @@
-# ProductShop Architecture
+# DineBook - Architecture
 
-ProductShop follows the layered structure used in the Nexora Intelligence API. The goal is a clear separation between business rules, data access, external services, and presentation, without adding repositories or other patterns the project does not need.
+DineBook lets a customer reserve a table at a restaurant and, for that booking, order food:
+many dishes in one order, placed in one action.
 
-## Dependency graph
+## Bounded contexts
 
-```
-ProductShop.API ─────┐
-                     ├──► ProductShop.Application ──► ProductShop.Payments
-ProductShop.Web ─────┤                 │
-                     │                 ▼
-                     └──────► ProductShop.Infrastructure ──► ProductShop.Domain
-```
+| Context      | Domain folder (DineBook.Domain/Entities)  | Owns                                                        |
+|--------------|-------------------------------------------|-------------------------------------------------------------|
+| Identity     | Identity                                  | ApplicationUser (sign-in account, role, active flag)        |
+| Organization | Organization                              | Restaurant (status, tables, menu categories, dishes)        |
+| Dining       | Dining                                    | RestaurantTable, Reservation, ReservationPolicy, ReservationRules |
+| Menu         | Menu                                      | MenuCategory, MenuItem                                      |
+| Ordering     | Ordering                                  | Orders (aggregate root), OrderItems                         |
+| Payments     | Payments                                  | Bill (aggregate root), Payment (gateway attempt for a bill) |
+| Customers    | Customers                                 | Customer (guest, matched by phone)                          |
+| Email        | DineBook.Email                            | Razor email templates, Brevo sender                         |
+| Shared       | DineBook.Common                           | ValueObject base, IDomainEvent                              |
 
-- Dependencies point inward. `ProductShop.Domain` references nothing.
-- `ProductShop.Payments` references nothing from this solution. It only depends on framework packages.
-- `ProductShop.Web` references Application and Infrastructure. Product pages read the database directly, and the checkout pages call `IPaymentService`.
-- `ProductShop.API` is the composition root for the API. Its `Startup.cs` wires all layers.
+DineBook.Domain also holds `Abstractions` (BaseEntity, AggregateRoot, IAuditableEntity), `Enums`,
+`Exceptions` (DomainException, DomainValidation) and `ValueObjects` (Money, Address).
 
-## Layers
+Entities follow one style: public constructor that checks its input with `DomainValidation<T>.Ensure(...)` (all rules live in that one class, e.g. `IsNotNullOrWhiteSpace`, `HasMaxLength`, `IsEmail`, `IsPhoneNumber`, `IsBetween`, `IsEqualTo`, `IsTrue`; entities never throw their own exceptions),
+private setters, a virtual navigation property next to each foreign key (`[ForeignKey]`), and children held in a
+private `List<T>` exposed as `IReadOnlyCollection<T>`, added through the parent (`customer.AddReservation`,
+`restaurant.AddTable`, `order.AddOrderItem`). Every entity implements `IAuditableEntity`
+(CreatedDateTime, CreatedBy, UpdatedDateTime, UpdatedBy); `ApplicationDbContext` fills them on save, using
+`ICurrentUserProvider` (Web registers one that reads the signed-in email) or "system" when none is registered. `UserRefreshToken` (a hashed refresh token) is a persistence record, so it
+lives in DineBook.Infrastructure/Database/Security, not in the Domain.
 
-### Domain
-- `Entities/Product` and `Entities/Order` keep their state private and change it through methods.
-- `Order.MarkAsPaid()` returns `false` for an already paid order. This makes webhook and status handling idempotent.
-- Invalid operations throw `DomainException`. The API maps it to HTTP 400.
+Layers, outside in: Web / API -> Application (use cases) -> Domain (rules) and Infrastructure (EF Core).
+Domain has no framework or database references.
 
-### Infrastructure
-- `ApplicationDbContext` is the only EF Core context.
-- Configurations live in `Database/Configurations`, one class per entity. Products are seeded there.
-- `AddApplicationDatabase` registers SQLite using `ConnectionStrings:DbConnection`.
+## Aggregates
 
-### Payments
-- `IPaymentGateway` is the abstraction. Application code never references Cashfree types.
-- `CashfreeGateway` calls the Cashfree REST API with `HttpClient` and verifies webhook signatures with HMAC-SHA256.
-- `AddCashfreePayments` binds `CashfreeOptions` and validates the secrets at startup.
+- **Reservation** (root): one booking, identified by an 8-character code. Confirmed, Seated, Completed, Cancelled, or NoShow.
+  It holds a table for `DurationMinutes`. Only Confirmed and Seated bookings block a table.
+- **Bill** (root): what a booking owes for its non-cancelled orders. The amount is fixed when the bill is created.
+  A `Payment` is one Cashfree attempt to pay a bill; a paid payment marks the bill paid.
+- **MenuItem** (root): one dish for one restaurant, with availability and price.
+- **Orders** (root): all dishes ordered for one reservation at one time.
+  - `Orders.AddOrderItem(menuItem, quantity)` adds one dish; `Reservation.AddFoodOrder` attaches the order to the booking.
+  - Rules: at least one item, at most 30 different items, 1 to 20 units per item, each item at most once
+    (the service merges duplicates first), every item available and on the same restaurant's menu.
+  - Name and price are copied into each `OrderItems`, so later menu edits do not change past orders.
 
-### Application
-- `IPaymentService` / `PaymentService` implement the payment use cases:
-  - `CreateOrderAsync`: read the price from the database, create the gateway order, save a `Pending` order.
-  - `GetOrderStatusAsync`: confirm with the gateway and mark the order paid.
-  - `HandleWebhookAsync`: verify the signature, then mark the order paid.
+## Main flows
 
-### API
-- `Configuration/` holds the service and middleware setup, following the Nexora pattern.
-- `Controllers/ProductsController` queries `ApplicationDbContext` directly.
-- `Controllers/PaymentsController` calls `IPaymentService`.
-- `DataObjects/` holds request and response records, so entities are never returned directly from payment endpoints.
-- `Middleware/ExceptionHandlingMiddleware` returns ProblemDetails responses.
+**Table booking** (`ReservationService.BookAsync`)
+1. Check the rules: party size, notice period, advance window, opening hours.
+2. Inside a serializable transaction (SQL Server), load overlapping blocking bookings.
+3. Pick the best-fit table: the smallest active table that seats the party and is free for the whole slot.
+4. Save, then send the confirmation email. Email failure is logged and does not undo the booking.
 
-### Web
-- Razor Pages read `ApplicationDbContext` directly.
-- `Shared/_Layout.cshtml` provides the Bootstrap layout.
+**Food order** (`FoodOrderService.PlaceOrderAsync`)
+1. Find the booking by code and check the phone number. Unknown code and wrong phone give the same message.
+2. Check that the booking still accepts food (Confirmed or Seated, before it ends).
+3. Merge duplicate lines, load the items for this restaurant only, and build the order with `new Orders(...)` and `AddOrderItem`.
+4. Save the order in one transaction.
 
-## Request flows
+**Cancel booking**: needs the code and the phone number. Only Confirmed bookings can be cancelled.
 
-### Product listing
-```
-GET /api/products  →  ProductsController  →  ApplicationDbContext (AsNoTracking)  →  JSON
-GET /               →  IndexModel.OnGetAsync  →  ApplicationDbContext             →  Razor view
-```
+## Security decisions
 
-### Create order
-```
-POST /api/payments/create-order
-  → PaymentsController
-  → PaymentService.CreateOrderAsync
-      ├── ApplicationDbContext: load Product (price from DB)
-      ├── IPaymentGateway.CreateOrderAsync  → Cashfree
-      └── ApplicationDbContext: save Order (Pending)
-  → 200 { orderId, paymentSessionId, amount, currency }
-```
+- The booking code alone cannot change a booking. Cancel and order both need the phone number.
+- Anti-forgery tokens on every form; rate limit (`checkout` policy) on POSTs that change data.
+- Emails never log the recipient address. Email errors are logged with the subject only.
+- Cashfree secrets and the Brevo API key live in user-secrets, not in appsettings.
 
-### Status check
-```
-GET /api/payments/status/{orderId}
-  → PaymentService.GetOrderStatusAsync
-      ├── load Order
-      ├── IPaymentGateway.GetOrderStatusAsync → Cashfree
-      └── if PAID and MarkAsPaid() returns true → save
-```
+## Admin
 
-### Webhook
-```
-POST /api/payments/webhook
-  → PaymentService.HandleWebhookAsync
-      ├── IPaymentGateway.VerifyWebhookSignature(rawBody, timestamp, signature)
-      ├── if invalid → 400
-      └── if PAYMENT_SUCCESS_WEBHOOK → load Order → MarkAsPaid() → save
-```
+- Routes: `/Admin/Login`, `/Admin` (restaurant list), `/Admin/Restaurants/New`, `/Admin/Restaurants/{id}` (tables and menu).
+- Login: email and password (`/Admin/Login`). Passwords are stored only as PBKDF2 hashes (`PasswordHasher`).
+  A successful login issues a JWT access token (15 minutes) and a refresh token (7 days). Both travel in
+  HttpOnly, Secure, SameSite=Strict cookies (`dinebook.access`, `dinebook.refresh`), never in page scripts.
+  Login is rate limited per IP, and the error message is the same for an unknown email, a wrong password and
+  a deactivated account.
+- JWT bearer (`JwtBearerSetup`): reads the access cookie; when it has expired, the refresh token is rotated
+  and new cookies are set. A token is rejected when its `jti` is blacklisted (sign-out) or the user is no
+  longer active (`IUserActiveCache`). Not signed in: redirect to `/Admin/Login?returnUrl=...`. Wrong role:
+  redirect to `/Admin/Login?denied=1`.
+- Sign-out (`/Admin/Logout`, POST) revokes the user's refresh tokens, blacklists the access token and clears the cookies.
+- Authorization: every page under `/Admin` requires the `AdminOnly` policy (role `Admin`), except sign-in and sign-out.
+- First admin: when no admin exists, `AdminAccountSeeder` creates one from `Admin:Email` and `Admin:Password` (user-secrets).
+- Use cases live in `RestaurantAdminService` (Application), not in the pages. The domain rules
+  (duplicate table labels, capacity, price, opening hours) apply to admin input as they do everywhere.
+- The app will not start without `Jwt:Key` (at least 32 characters, in user-secrets). `Admin:Password`, when set, must be at least 12 characters.
 
-### Razor checkout
-```
-GET  /Checkout/{id}   →  CheckoutModel.OnGetAsync      → product details + form
-POST /Checkout/{id}   →  CheckoutModel.OnPostAsync
-                          → IPaymentService.CreateOrderAsync (price from DB, Pending order)
-                          → page shows "Pay" button with paymentSessionId
-Browser: Cashfree JS SDK checkout (redirectTarget: _self)
-GET  /Payment/Result?order_id=...  →  ResultModel.OnGetAsync
-                          → IPaymentService.GetOrderStatusAsync (confirms with Cashfree)
-```
+## Configuration
 
-## Design decisions
+- `Dining` section: time zone, max party size, minimum notice, advance days, default duration, slot length.
+- `Email` section: `Enabled`, `SenderEmail`, `SenderName`. `ApiKey` in user-secrets.
+- `Cashfree` and `Site` sections for the legacy payment flow.
 
-| Decision | Reason |
-|----------|--------|
-| No repository | Keeps the code smaller. The controllers and pages use `ApplicationDbContext` directly, as requested. |
-| Application service for payments only | Payment logic spans the gateway, the database, and domain rules, so it needs one place. Product reads are simple queries. |
-| `IPaymentGateway` abstraction | Makes a second gateway possible without changing `PaymentService` or the controllers. |
-| `Startup.cs` + `Program.cs` | Matches the Nexora project. Services are grouped by extension methods. |
-| Shared user-secrets for API and Web | Both projects need the Cashfree keys, and one secret store avoids duplicating them. |
-| Prices from the database | The client sends only a `productId`. The price can never be set by the browser. |
-| Idempotent `MarkAsPaid()` | Cashfree can send the same webhook more than once. |
+## Not built yet
 
-## Adding a second payment gateway
-
-1. Create `ProductShop.Payments/<Provider>/<Provider>Gateway.cs` that implements `IPaymentGateway`.
-2. Add an `Add<Provider>Payments` extension method next to `AddCashfreePayments`.
-3. Replace the registration in `Startup.cs`.
-
-`PaymentService` and the controllers stay the same.
+- Payment or deposit for food orders (orders are pay-at-table for now).
+- Kitchen or staff screens (seat, serve, no-show). The domain methods exist, but no UI calls them.
+- Email confirmation for food orders. Reminder emails before a booking.

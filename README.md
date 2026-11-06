@@ -1,4 +1,4 @@
-# ProductShop
+# DineBook
 
 A .NET 10 project with a Razor Pages product storefront, a Web API for frontend consumption, and Cashfree payment gateway integration (sandbox mode).
 
@@ -7,34 +7,34 @@ The project follows the same layered structure as the Nexora Intelligence API: D
 ## 1. Solution structure
 
 ```
-ProductShop/
-├── ProductShop.slnx
+DineBook/
+├── DineBook.slnx
 ├── README.md
 ├── architecture.md
 ├── .gitignore
 ├── .editorconfig
-├── ProductShop.Domain/                         (no dependencies)
+├── DineBook.Domain/                         (no dependencies)
 │   ├── Abstractions/BaseEntity.cs
 │   ├── Entities/Product.cs                     (ChangePrice)
 │   ├── Entities/Order.cs                       (MarkAsPaid, MarkAsFailed)
 │   ├── Enum/OrderStatus.cs
 │   └── Exceptions/DomainException.cs
-├── ProductShop.Infrastructure/                 (EF Core + SQLite)
+├── DineBook.Infrastructure/                 (EF Core + SQLite)
 │   ├── Database/ApplicationDbContext.cs
 │   ├── Database/Configurations/ProductConfiguration.cs   (10 seed products)
 │   ├── Database/Configurations/OrderConfiguration.cs
 │   └── DependencyInjection/IServiceCollectionExtensions.cs (AddApplicationDatabase)
-├── ProductShop.Payments/                       (gateway integration)
+├── DineBook.Payments/                       (gateway integration)
 │   ├── Configuration/CashfreeOptions.cs
 │   ├── Gateway/IPaymentGateway.cs
 │   ├── Gateway/PaymentResults.cs
 │   ├── Cashfree/CashfreeGateway.cs
 │   └── DependencyInjection/IServiceCollectionExtensions.cs (AddCashfreePayments)
-├── ProductShop.Application/                    (use cases)
+├── DineBook.Application/                    (use cases)
 │   ├── Services/PaymentService.cs
 │   ├── Services/Interface/IPaymentService.cs
-│   └── DependencyInjection/IServiceCollectionExtensions.cs (AddProductShopApplication)
-├── ProductShop.API/                            (Web API)
+│   └── DependencyInjection/IServiceCollectionExtensions.cs (AddDineBookApplication)
+├── DineBook.API/                            (Web API)
 │   ├── Program.cs, Startup.cs
 │   ├── appsettings.json
 │   ├── Configuration/IServiceCollectionExtension.cs      (CORS, JSON, OpenAPI)
@@ -44,7 +44,7 @@ ProductShop/
 │   ├── DataObjects/Request/CreateOrderRequest.cs
 │   ├── DataObjects/Response/ProductResponse.cs, CreateOrderResponse.cs, OrderStatusResponse.cs
 │   └── Middleware/ExceptionHandlingMiddleware.cs
-└── ProductShop.Web/                            (Razor Pages)
+└── DineBook.Web/                            (Razor Pages)
     ├── Program.cs, Startup.cs
     ├── appsettings.json
     ├── Pages/Index.cshtml(.cs)                           (direct DB, Buy button)
@@ -73,7 +73,7 @@ ProductShop/
 
 ## 4. First-time setup
 
-Run every command from the **solution folder** (where `ProductShop.slnx` is). The SQLite file `productshop.db` is created relative to the current directory, so using one folder for all commands keeps Web and API on the same database.
+Run every command from the **solution folder** (where `DineBook.slnx` is). The SQLite file `productshop.db` is created relative to the current directory, so using one folder for all commands keeps Web and API on the same database.
 
 ### Step 1: Restore and build
 ```bash
@@ -83,17 +83,20 @@ dotnet build
 
 ### Step 2: Create the database
 ```bash
-dotnet ef migrations add InitialCreate --project ProductShop.Infrastructure --startup-project ProductShop.API --output-dir Database/Migrations
-dotnet ef database update --project ProductShop.Infrastructure --startup-project ProductShop.API
+dotnet ef migrations add InitialCreate --project DineBook.Infrastructure --startup-project DineBook.API --output-dir Database/Migrations
+dotnet ef database update --project DineBook.Infrastructure --startup-project DineBook.API
 ```
 
 This creates `productshop.db` with the `Products` and `Orders` tables and the 10 seed products. After every model change, run `migrations add` again with a new name, then `database update`.
 
 ### Step 3: Set Cashfree test secrets (shared by API and Web)
-`ProductShop.API` and `ProductShop.Web` use the same `UserSecretsId`, so you set the secrets once:
+`DineBook.API` and `DineBook.Web` use the same `UserSecretsId`, so you set the secrets once:
 
 ```bash
-cd ProductShop.API
+cd DineBook.API
+dotnet user-secrets set "Jwt:Key" "a-random-string-of-at-least-32-characters"
+dotnet user-secrets set "Admin:Email" "you@example.com"
+dotnet user-secrets set "Admin:Password" "a-password-of-at-least-12-characters"
 dotnet user-secrets set "Cashfree:AppId" "your_test_app_id"
 dotnet user-secrets set "Cashfree:SecretKey" "your_test_secret_key"
 cd ..
@@ -105,10 +108,10 @@ Both projects read these values. Never put them in `appsettings.json` or commit 
 
 ```bash
 # Terminal 1: Razor Pages website (products, checkout, payment result)
-dotnet run --project ProductShop.Web      # http://localhost:5080
+dotnet run --project DineBook.Web      # http://localhost:5080
 
 # Terminal 2: Web API
-dotnet run --project ProductShop.API      # http://localhost:5200
+dotnet run --project DineBook.API      # http://localhost:5200
 ```
 
 Visual Studio: set **Multiple Startup Projects** (Web and API), or start them separately.
@@ -165,7 +168,7 @@ Errors use RFC 7807 ProblemDetails. A business rule violation returns 400, and a
 
 ## 8. Changing product data
 
-Seed products are in `ProductShop.Infrastructure/Database/Configurations/ProductConfiguration.cs`. Changes there only apply to a new database. For an existing database, either update the `Products` table directly (for example, with DB Browser for SQLite), or add a migration.
+Seed products are in `DineBook.Infrastructure/Database/Configurations/ProductConfiguration.cs`. Changes there only apply to a new database. For an existing database, either update the `Products` table directly (for example, with DB Browser for SQLite), or add a migration.
 
 ## 9. Webhook testing (local)
 
@@ -179,6 +182,8 @@ Cashfree cannot reach `localhost`. Options:
 |-----|---------|---------|
 | `ConnectionStrings:DbConnection` | API, Web | SQLite connection string |
 | `Cors:Origins` | API | Allowed frontend origins |
+| `Jwt:Key` | Web (user-secrets) | Signs sign-in tokens. At least 32 characters. The app will not start without it |
+| `Admin:Email`, `Admin:Password` | Web (user-secrets) | First admin account, created when no admin exists |
 | `Cashfree:AppId`, `Cashfree:SecretKey` | API and Web (shared user-secrets) | Cashfree credentials |
 | `Cashfree:Environment` | API, Web | `sandbox` or `production` (keep `sandbox`) |
 
@@ -186,11 +191,11 @@ Cashfree cannot reach `localhost`. Options:
 
 | Problem | Solution |
 |---------|----------|
-| `Cashfree:AppId and Cashfree:SecretKey must be set` | Run the `user-secrets set` commands in `ProductShop.API` (Step 3). |
+| `Cashfree:AppId and Cashfree:SecretKey must be set` | Run the `user-secrets set` commands in `DineBook.API` (Step 3). |
 | `no such table: Products` | Run the migration commands (Step 2). |
 | Web and API show different data | Run both from the solution folder so they share `productshop.db`. |
 | `dotnet ef` not found | `dotnet tool install --global dotnet-ef`, then restart the terminal. |
-| CORS error in the frontend | Add your frontend origin to `Cors:Origins` in `ProductShop.API/appsettings.json`. |
+| CORS error in the frontend | Add your frontend origin to `Cors:Origins` in `DineBook.API/appsettings.json`. |
 | HTTPS certificate warning | `dotnet dev-certs https --trust` |
 | Images not loading | Needs internet access to `picsum.photos`. |
 

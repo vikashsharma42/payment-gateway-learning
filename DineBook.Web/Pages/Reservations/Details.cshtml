@@ -1,0 +1,119 @@
+@page
+@model DetailsModel
+@{
+    ViewData["Title"] = "Your booking";
+
+    var badge = Model.Reservation.Status switch
+    {
+        DineBook.Domain.Enums.ReservationStatus.Confirmed => "text-bg-success",
+        DineBook.Domain.Enums.ReservationStatus.Seated => "text-bg-primary",
+        DineBook.Domain.Enums.ReservationStatus.Completed => "text-bg-secondary",
+        _ => "text-bg-danger"
+    };
+    var isConfirmed = Model.Reservation.Status == DineBook.Domain.Enums.ReservationStatus.Confirmed;
+}
+
+<h1 class="h2 mb-4">Your booking</h1>
+
+<div class="card shadow-sm" style="max-width: 36rem;">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-5">Booking code</dt>
+            <dd class="col-7"><code class="fs-5">@Model.Reservation.Code</code></dd>
+
+            <dt class="col-5">Restaurant</dt>
+            <dd class="col-7">@(Model.Restaurant?.Name ?? "—")</dd>
+
+            <dt class="col-5">When</dt>
+            <dd class="col-7">@Model.Reservation.StartsAt.ToString("ddd, dd MMM yyyy") at @Model.Reservation.StartsAt.ToString("HH:mm")</dd>
+
+            <dt class="col-5">Guests</dt>
+            <dd class="col-7">@Model.Reservation.Guests</dd>
+
+            <dt class="col-5">Name</dt>
+            <dd class="col-7">@Model.Reservation.CustomerName</dd>
+
+            <dt class="col-5">Status</dt>
+            <dd class="col-7"><span class="badge @badge">@Model.Reservation.Status</span></dd>
+        </dl>
+    </div>
+</div>
+
+@if (isConfirmed)
+{
+    <form method="post" asp-page-handler="Cancel" class="card shadow-sm mt-4" style="max-width: 36rem;" data-submit-once>
+        <div class="card-body">
+            <h2 class="h6">Cancel this booking</h2>
+            <p class="small text-muted">Enter the phone number used for the booking to cancel it.</p>
+            <input type="hidden" name="Code" value="@Model.Reservation.Code" />
+            <div class="input-group">
+                <input name="Phone" type="tel" class="form-control" placeholder="Phone number" aria-label="Phone number" required />
+                <button type="submit" class="btn btn-outline-danger">Cancel booking</button>
+            </div>
+        </div>
+    </form>
+}
+
+@if (Model.CanOrderFood && Model.Menu.Count > 0)
+{
+    <form method="post" asp-page-handler="Order" class="card shadow-sm mt-4" style="max-width: 36rem;" data-submit-once>
+        <div class="card-body">
+            <h2 class="h5">Pre-order your food</h2>
+            <p class="small text-muted">Add as many dishes as you like in one order. Enter the phone number used for the booking.</p>
+            <input type="hidden" name="Code" value="@Model.Reservation.Code" />
+
+            <div class="mb-3">
+                <label class="form-label" for="OrderPhone">Phone number</label>
+                <input id="OrderPhone" name="OrderPhone" type="tel" class="form-control" required />
+            </div>
+
+            <table class="table align-middle mb-3">
+                <tbody>
+                    @{ string lastCategory = null; }
+                    @foreach (var item in Model.Menu)
+                    {
+                        if (item.Category != lastCategory)
+                        {
+                            lastCategory = item.Category;
+                            <tr class="table-light">
+                                <th colspan="3" scope="colgroup">@item.Category</th>
+                            </tr>
+                        }
+                        <tr>
+                            <td>
+                                @item.Name
+                                <div class="small text-muted">@item.Description</div>
+                            </td>
+                            <td class="text-end">@Money.Inr(item.Price)</td>
+                            <td style="width: 6rem;">
+                                <input type="number" class="form-control form-control-sm" name="qty_@item.Id"
+                                       min="0" max="20" value="0" aria-label="Quantity of @item.Name" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            <button type="submit" class="btn btn-brand w-100">Place order</button>
+        </div>
+    </form>
+}
+
+@if (Model.CanPay)
+{
+    <form method="post" asp-page-handler="Pay" class="card shadow-sm mt-4" style="max-width: 36rem;" data-submit-once>
+        <div class="card-body">
+            <h2 class="h6">Pay your bill</h2>
+            <p class="small text-muted">Pay for the food you ordered. Enter the phone number used for the booking.</p>
+            <input type="hidden" name="Code" value="@Model.Reservation.Code" />
+            <div class="input-group">
+                <input name="PayPhone" type="tel" class="form-control" placeholder="Phone number" aria-label="Phone number" required />
+                <button type="submit" class="btn btn-brand">Pay bill</button>
+            </div>
+        </div>
+    </form>
+}
+
+<div class="d-flex gap-2 mt-4">
+    <a asp-page="/Index" class="btn btn-outline-secondary">Back to restaurants</a>
+</div>
