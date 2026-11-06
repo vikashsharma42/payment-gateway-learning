@@ -108,39 +108,58 @@ namespace DineBook.Application.Services
 
             ReservationRules.EnsureBookable(restaurant, policy, request.Guests, request.StartsAt, LocalNow());
 
-            // On SQL Server, serializable isolation stops two bookings from taking the same table at once.
-            // The in-memory provider used in tests has no transactions.
-            await using var transaction = _db.Database.IsRelational()
-                ? await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
-                : null;
+            Reservation reservation = null;
 
-            var existing = await LoadBlockingAsync(
-                restaurant.Id, request.StartsAt - LookBack, request.StartsAt.AddMinutes(policy.DurationMinutes), ct);
+            // SQL Server retry execution strategy
+            var strategy = _db.Database.CreateExecutionStrategy();
 
-            var table = ReservationRules.PickTable(
-                restaurant.Tables, existing, request.Guests, request.StartsAt, policy.DurationMinutes)
-                ?? throw new DomainException("No table is free at that time for this party size.");
+            await strategy.ExecuteAsync(async () =>
+            {
+                // Transaction must be created inside the execution strategy.
+                await using var transaction = _db.Database.IsRelational()
+                    ? await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+                    : null;
 
-            var reservation = new Reservation(
-                await NewCodeAsync(ct),
-                restaurant.Id,
-                table.Id,
-                request.CustomerName,
-                request.CustomerPhone,
-                request.CustomerEmail,
-                request.Guests,
-                request.StartsAt,
-                policy.DurationMinutes,
-                request.SpecialRequests);
+                var existing = await LoadBlockingAsync(
+                    restaurant.Id,
+                    request.StartsAt - LookBack,
+                    request.StartsAt.AddMinutes(policy.DurationMinutes),
+                    ct);
 
-            var customer = await FindOrCreateCustomerAsync(reservation, ct);
-            customer.AddReservation(reservation);
+                var table = ReservationRules.PickTable(
+                    restaurant.Tables,
+                    existing,
+                    request.Guests,
+                    request.StartsAt,
+                    policy.DurationMinutes)
+                    ?? throw new DomainException("No table is free at that time for this party size.");
 
-            _db.Reservations.Add(reservation);
-            await _db.SaveChangesAsync(ct);
+                var newReservation = new Reservation(
+                    await NewCodeAsync(ct),
+                    restaurant.Id,
+                    table.Id,
+                    request.CustomerName,
+                    request.CustomerPhone,
+                    request.CustomerEmail,
+                    request.Guests,
+                    request.StartsAt,
+                    policy.DurationMinutes,
+                    request.SpecialRequests);
 
-            if (transaction is not null)
-                await transaction.CommitAsync(ct);
+                var customer = await FindOrCreateCustomerAsync(
+                    newReservation, ct);
+
+                customer.AddReservation(newReservation);
+
+                _db.Reservations.Add(newReservation);
+
+                await _db.SaveChangesAsync(ct);
+
+                if (transaction is not null)
+                    await transaction.CommitAsync(ct);
+
+                reservation = newReservation;
+            });
 
             // Sent only after the booking is saved
             await SendSafelyAsync(new ReservationConfirmedEmailModel(

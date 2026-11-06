@@ -59,8 +59,7 @@ namespace DineBook.Web.Pages
             if (!ModelState.IsValid)
                 return Page();
 
-            var user = await _authentication.LoginAsync(
-                Email, Password, ct);
+            var user = await _authentication.LoginAsync(Email, Password, ct);
 
             if (user is null)
             {
@@ -68,11 +67,8 @@ namespace DineBook.Web.Pages
                 return Page();
             }
 
-            if (!string.IsNullOrEmpty(ReturnUrl) &&
-                Url.IsLocalUrl(ReturnUrl))
-            {
+            if (!string.IsNullOrEmpty(ReturnUrl) && Url.IsLocalUrl(ReturnUrl))
                 return LocalRedirect(ReturnUrl);
-            }
 
             return LandingPageFor(user.Role);
         }

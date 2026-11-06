@@ -26,15 +26,15 @@ namespace DineBook.Domain.Entities
             Email = email.Trim().ToLowerInvariant();
         }
 
+        // Set when the customer also has a sign-in account
+        public long? ApplicationUserId { get; private set; }
+
         public string Name { get; private set; }
 
         // Digits only
         public string Phone { get; private set; }
 
         public string Email { get; private set; }
-
-        // Set when the customer also has a sign-in account
-        public long? ApplicationUserId { get; private set; }
 
         public DateTimeOffset CreatedDateTime { get; set; }
 
@@ -43,6 +43,8 @@ namespace DineBook.Domain.Entities
         public DateTimeOffset UpdatedDateTime { get; set; }
 
         public string UpdatedBy { get; set; }
+
+        public virtual ApplicationUser ApplicationUser { get; set; }
 
         private readonly List<Reservation> _reservations = [];
         public IReadOnlyCollection<Reservation> Reservations => _reservations.AsReadOnly();

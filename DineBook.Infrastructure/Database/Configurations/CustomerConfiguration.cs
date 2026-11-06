@@ -1,3 +1,4 @@
+
 using DineBook.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -13,12 +14,13 @@ namespace DineBook.Infrastructure.Database.Configurations
             // One customer per phone number
             builder.HasIndex(x => x.Phone).IsUnique();
 
-            builder.Navigation(nameof(Customer.Reservations)).UsePropertyAccessMode(PropertyAccessMode.Field);
+            builder.Navigation(x => x.Reservations).UsePropertyAccessMode(PropertyAccessMode.Field);
 
-            // Optional link to a sign-in account. A user is never deleted while a customer points at it.
-            builder.HasOne<ApplicationUser>()
+            // Optional relationship with ApplicationUser
+            builder.HasOne(x => x.ApplicationUser)
                 .WithMany()
                 .HasForeignKey(x => x.ApplicationUserId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

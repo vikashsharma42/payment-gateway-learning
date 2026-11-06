@@ -12,6 +12,7 @@ using DineBook.Payments.DependencyInjection;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.CookiePolicy;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -70,8 +71,7 @@ namespace DineBook.Web
             // Rate limiting for checkout POST requests
             services.AddRateLimiter(options =>
             {
-                options.RejectionStatusCode =
-                    StatusCodes.Status429TooManyRequests;
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
                 options.AddPolicy("checkout", context =>
                     context.Request.Method == HttpMethods.Post
@@ -113,9 +113,27 @@ namespace DineBook.Web
             // Database scripts must already be applied
             SeedDataAsync(app.ApplicationServices).GetAwaiter().GetResult();
 
-            if (!_environment.IsDevelopment())
+            if (_environment.IsDevelopment())
             {
-                app.UseExceptionHandler("/Error");
+                app.UseDeveloperExceptionPage(new DeveloperExceptionPageOptions
+                {
+                    SourceCodeLineCount = 5
+                });
+            }
+            else
+            {
+                app.UseExceptionHandler("/Error/500");
+                app.UseStatusCodePagesWithReExecute("/Error/{0}");
+
+                // Configure cookie policies for security
+                app.UseCookiePolicy(new CookiePolicyOptions
+                {
+                    HttpOnly = HttpOnlyPolicy.Always,
+                    MinimumSameSitePolicy = SameSiteMode.Strict,
+                    Secure = CookieSecurePolicy.Always
+                });
+
+                app.UseResponseCaching();
                 app.UseHsts();
             }
 

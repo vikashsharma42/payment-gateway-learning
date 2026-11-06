@@ -1,17 +1,46 @@
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using System.Diagnostics;
+using Microsoft.AspNetCore.OutputCaching;
 
 namespace DineBook.Web.Pages
 {
-    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+    [OutputCache]
     public class ErrorModel : PageModel
     {
-        public string RequestId { get; set; }
+        public int ErrorStatusCode { get; set; }
 
-        public void OnGet()
+        public string ErrorMessage { get; set; }
+
+        public void OnGet(int statusCode)
         {
-            RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
+            ErrorStatusCode = statusCode;
+
+            switch (statusCode)
+            {
+                case StatusCodes.Status400BadRequest:
+                    ErrorMessage = "Bad Request";
+                    break;
+
+                case StatusCodes.Status401Unauthorized:
+                    ErrorMessage = "Unauthorized";
+                    break;
+
+                case StatusCodes.Status403Forbidden:
+                    ErrorMessage = "Forbidden";
+                    break;
+
+                case StatusCodes.Status404NotFound:
+                    ErrorMessage = "Not Found";
+                    break;
+
+                case StatusCodes.Status500InternalServerError:
+                    ErrorMessage = "Internal Server Error";
+                    break;
+
+                case StatusCodes.Status503ServiceUnavailable:
+                    ErrorMessage = "Website is down for maintenance";
+                    break;
+            }
         }
     }
 }
