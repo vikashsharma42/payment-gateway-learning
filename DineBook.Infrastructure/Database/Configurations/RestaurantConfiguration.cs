@@ -1,9 +1,6 @@
+using DineBook.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using DineBook.Domain.Entities.Menu;
-using DineBook.Domain.Entities.Ordering;
-using DineBook.Domain.Entities.Organization;
 
 namespace DineBook.Infrastructure.Database.Configurations
 {
@@ -11,16 +8,8 @@ namespace DineBook.Infrastructure.Database.Configurations
     {
         public void Configure(EntityTypeBuilder<Restaurant> builder)
         {
-            builder.ToTable("Restaurants");
-            builder.Property(x => x.Name).HasMaxLength(Restaurant.MaxNameLength).IsRequired();
+            builder.ToTable(nameof(Restaurant));
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
-            builder.Property(x => x.Phone).HasMaxLength(Restaurant.MaxPhoneLength).IsRequired();
-            builder.Property(x => x.Description).HasMaxLength(Restaurant.MaxDescriptionLength).IsRequired();
-            builder.Property(x => x.Cuisine).HasMaxLength(Restaurant.MaxCuisineLength).IsRequired();
-            builder.Property(x => x.CreatedDateTime).IsRequired();
-            builder.Property(x => x.CreatedBy).HasMaxLength(256);
-            builder.Property(x => x.UpdatedDateTime).IsRequired();
-            builder.Property(x => x.UpdatedBy).HasMaxLength(256);
 
             builder.OwnsOne(x => x.Address, a => ValueObjectMappings.MapAddress(a));
 

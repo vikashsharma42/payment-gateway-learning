@@ -1,7 +1,6 @@
+using DineBook.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using DineBook.Domain.Entities.Dining;
 
 namespace DineBook.Infrastructure.Database.Configurations
 {
@@ -9,20 +8,9 @@ namespace DineBook.Infrastructure.Database.Configurations
     {
         public void Configure(EntityTypeBuilder<Reservation> builder)
         {
-            builder.ToTable("Reservations");
-
-            builder.Property(x => x.Code).HasMaxLength(Reservation.CodeLength).IsRequired();
+            builder.ToTable(nameof(Reservation));
             builder.HasIndex(x => x.Code).IsUnique();
-
-            builder.Property(x => x.CustomerName).HasMaxLength(100).IsRequired();
-            builder.Property(x => x.CustomerPhone).HasMaxLength(15).IsRequired();
-            builder.Property(x => x.CustomerEmail).HasMaxLength(254).IsRequired();
-            builder.Property(x => x.SpecialRequests).HasMaxLength(Reservation.MaxSpecialRequestsLength).IsRequired();
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
-            builder.Property(x => x.CreatedDateTime).IsRequired();
-            builder.Property(x => x.CreatedBy).HasMaxLength(256);
-            builder.Property(x => x.UpdatedDateTime).IsRequired();
-            builder.Property(x => x.UpdatedBy).HasMaxLength(256);
 
             // Restrict, not cascade: a restaurant and its tables both lead here, and SQL Server
             // rejects two cascade paths to the same row. Reservations are kept for history.

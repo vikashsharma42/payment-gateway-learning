@@ -7,7 +7,7 @@ many dishes in one order, placed in one action.
 
 | Context      | Domain folder (DineBook.Domain/Entities)  | Owns                                                        |
 |--------------|-------------------------------------------|-------------------------------------------------------------|
-| Identity     | Identity                                  | ApplicationUser (sign-in account, role, active flag)        |
+| Identity     | Identity (`DineBook.Domain/Identity`)     | ApplicationUser (sign-in account, role, active flag)        |
 | Organization | Organization                              | Restaurant (status, tables, menu categories, dishes)        |
 | Dining       | Dining                                    | RestaurantTable, Reservation, ReservationPolicy, ReservationRules |
 | Menu         | Menu                                      | MenuCategory, MenuItem                                      |
@@ -17,8 +17,8 @@ many dishes in one order, placed in one action.
 | Email        | DineBook.Email                            | Razor email templates, Brevo sender                         |
 | Shared       | DineBook.Common                           | ValueObject base, IDomainEvent                              |
 
-DineBook.Domain also holds `Abstractions` (BaseEntity, AggregateRoot, IAuditableEntity), `Enums`,
-`Exceptions` (DomainException, DomainValidation) and `ValueObjects` (Money, Address).
+DineBook.Domain also holds `Abstractions` (Entity, AggregateRoot, IAuditableEntity), `Enums`,
+`Exceptions` (DomainException), `Validation` (DomainValidation) and `ValueObjects` (Money, Address).
 
 Entities follow one style: public constructor that checks its input with `DomainValidation<T>.Ensure(...)` (all rules live in that one class, e.g. `IsNotNullOrWhiteSpace`, `HasMaxLength`, `IsEmail`, `IsPhoneNumber`, `IsBetween`, `IsEqualTo`, `IsTrue`; entities never throw their own exceptions),
 private setters, a virtual navigation property next to each foreign key (`[ForeignKey]`), and children held in a

@@ -1,16 +1,13 @@
-using DineBook.Domain.Abstractions;
-using DineBook.Domain.Entities.Ordering;
-using DineBook.Domain.Enums;
-using DineBook.Domain.Exceptions;
-using System;
-using System.ComponentModel.DataAnnotations.Schema;
 
-namespace DineBook.Domain.Entities.Payments
+using DineBook.Domain.Abstractions;
+using DineBook.Domain.Enums;
+using DineBook.Domain.Validation;
+using System;
+
+namespace DineBook.Domain.Entities
 {
-    /// <summary>
-    /// One gateway payment attempt for a bill. The gateway order id ties it to Cashfree.
-    /// </summary>
-    public class Payment : BaseEntity, IAuditableEntity
+    // One gateway payment attempt for a bill. The gateway order id ties it to Cashfree.
+    public class Payment : Entity, IAuditableEntity
     {
         public Payment(
             decimal amount,
@@ -33,8 +30,6 @@ namespace DineBook.Domain.Entities.Payments
             CustomerEmail = customerEmail.Trim();
             Status = PaymentStatus.Pending;
         }
-
-        public long OrderId { get; private set; }
 
         public Guid PublicId { get; private set; }
 
@@ -61,10 +56,6 @@ namespace DineBook.Domain.Entities.Payments
 
         public string UpdatedBy { get; set; }
 
-
-        [ForeignKey(nameof(OrderId))]
-        public virtual Orders Order { get; private set; }
-
         // Returns true only when the status actually changed.
         // Duplicate webhooks or repeated status checks return false and change nothing.
         public bool MarkAsPaid()
@@ -80,7 +71,8 @@ namespace DineBook.Domain.Entities.Payments
 
         public void MarkAsFailed()
         {
-            DomainValidation<PaymentStatus>.Ensure(Status).IsNotEqualTo(PaymentStatus.Paid);
+            DomainValidation<PaymentStatus>.Ensure(Status)
+                .IsNotEqualTo(PaymentStatus.Paid);
 
             Status = PaymentStatus.Failed;
         }
@@ -88,7 +80,7 @@ namespace DineBook.Domain.Entities.Payments
         // Records the refund id before calling the gateway. Only paid payments can be refunded.
         public void RecordRefundRequest(string refundId)
         {
-            DomainValidation<string>.Ensure(refundId, "Refund id").IsNotNullOrWhiteSpace();
+            DomainValidation<string>.Ensure(refundId).IsNotNullOrWhiteSpace();
             DomainValidation<PaymentStatus>.Ensure(Status).IsEqualTo(PaymentStatus.Paid);
             DomainValidation<bool>.Ensure(RefundId is null || RefundId == refundId)
                 .IsTrue("This payment already has a different refund in progress.");

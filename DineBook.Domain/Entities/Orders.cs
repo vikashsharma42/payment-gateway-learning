@@ -1,25 +1,16 @@
+using DineBook.Domain.Abstractions;
+using DineBook.Domain.Enums;
+using DineBook.Domain.Validation;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
-using DineBook.Domain.Abstractions;
-using DineBook.Domain.Entities.Dining;
-using DineBook.Domain.Entities.Menu;
-using DineBook.Domain.Entities.Organization;
-using DineBook.Domain.Enums;
-using DineBook.Domain.Exceptions;
 
-namespace DineBook.Domain.Entities.Ordering
+namespace DineBook.Domain.Entities
 {
-    /// <summary>
-    /// Food ordered for one reservation (a restaurant order). One order can hold many items.
-    /// Added through <see cref="Reservation.AddFoodOrder"/>.
-    /// </summary>
-    public class Orders : AggregateRoot, IAuditableEntity
+    // Food ordered for one reservation (a restaurant order). One order can hold many items.
+    // Added through Reservation.AddFoodOrder.
+    public class Orders : Entity, IAuditableEntity
     {
-        public const int MaxItems = 30;
-        public const int MaxQuantityPerItem = 20;
-
         public Orders(long restaurantId)
         {
             DomainValidation<long>.Ensure(restaurantId, "Restaurant").IsGreaterThan(0, "Restaurant is required.");
@@ -42,10 +33,8 @@ namespace DineBook.Domain.Entities.Ordering
 
         public string UpdatedBy { get; set; }
 
-        [ForeignKey(nameof(ReservationId))]
         public virtual Reservation Reservation { get; private set; }
 
-        [ForeignKey(nameof(RestaurantId))]
         public virtual Restaurant Restaurant { get; private set; }
 
         private readonly List<OrderItems> _items = [];
@@ -53,10 +42,8 @@ namespace DineBook.Domain.Entities.Ordering
 
         public decimal Total() => _items.Sum(i => i.LineTotal());
 
-        /// <summary>
-        /// Adds a dish. It must be available and on the menu of this order's restaurant. Each dish appears at most once,
-        /// with 1 to 20 units. The name and price are copied from the menu item.
-        /// </summary>
+        // The dish must be available and on this order's restaurant menu. Each dish appears at most once,
+        // with 1 to 20 units. The name and price are copied from the menu item.
         public void AddOrderItem(MenuItem menuItem, int quantity)
         {
             DomainValidation<MenuItem>.Ensure(menuItem, "Item").IsNotNull("One of the items was not found.");
@@ -67,9 +54,9 @@ namespace DineBook.Domain.Entities.Ordering
             DomainValidation<bool>.Ensure(_items.Any(i => i.MenuItemId == menuItem.Id))
                 .IsFalse("Each item can appear only once in an order.");
             DomainValidation<int>.Ensure(quantity)
-                .IsBetween(1, MaxQuantityPerItem, $"Quantity for {menuItem.Name} must be between 1 and {MaxQuantityPerItem}.");
+                .IsBetween(1, 20, $"Quantity for {menuItem.Name} must be between 1 and 20.");
             DomainValidation<int>.Ensure(_items.Count)
-                .IsLessThanOrEqualTo(MaxItems - 1, $"An order can have at most {MaxItems} different items.");
+                .IsLessThanOrEqualTo(29, $"An order can have at most 30 different items.");
 
             _items.Add(new OrderItems(menuItem.Id, menuItem.Name, menuItem.Price, quantity));
         }

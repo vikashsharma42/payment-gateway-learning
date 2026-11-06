@@ -41,20 +41,13 @@ namespace DineBook.Web
             services.AddAdminAccountOptions(_configuration);
 
             // The token travels in an HttpOnly cookie, see JwtBearerSetup
-            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer();
+            services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+                .AddJwtBearer();
             services.AddSingleton<IConfigureOptions<JwtBearerOptions>, JwtBearerSetup>();
 
             services.AddAuthorization(options =>
             {
                 options.AddPolicy("AdminOnly", policy => policy.RequireRole(nameof(UserRole.Admin)));
-            });
-
-            // Everything under /Admin needs the admin role, except the sign-in and sign-out pages
-            services.AddRazorPages(options =>
-            {
-                options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
-                options.Conventions.AllowAnonymousToPage("/Admin/Login");
-                options.Conventions.AllowAnonymousToPage("/Admin/Logout");
             });
 
             // TempData carries the pending payment and toasts. Keep it out of scripts' reach and HTTPS-only.

@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using DineBook.Application.Configuration;
-using DineBook.Domain.Entities.Identity;
+using DineBook.Domain.Identity;
 using DineBook.Domain.Enums;
 using DineBook.Infrastructure.Database;
 

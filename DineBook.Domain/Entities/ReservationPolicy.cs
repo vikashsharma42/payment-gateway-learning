@@ -1,8 +1,6 @@
-namespace DineBook.Domain.Entities.Dining
+namespace DineBook.Domain.Entities
 {
-    /// <summary>
-    /// Booking rules. The application layer builds this from the "Dining" configuration section.
-    /// </summary>
+    // Booking rules. The application layer builds this from the "Dining" configuration section.
     public sealed record ReservationPolicy(
         int MaxGuests,
         int MinNoticeMinutes,

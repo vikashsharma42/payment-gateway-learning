@@ -36,6 +36,9 @@ namespace DineBook.Application.DependencyInjection
             services.AddScoped<IJwtSignInManager, JwtSignInManager>();
             services.AddScoped<IUserActiveCache, UserActiveCache>();
             services.AddScoped<IAccountService, AccountService>();
+
+            // Sign-up: public customer registration and admin-created staff accounts
+            services.AddScoped<IRegistrationService, RegistrationService>();
             services.AddScoped<AdminAccountSeeder>();
 
             return services;

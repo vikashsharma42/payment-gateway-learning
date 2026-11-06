@@ -1,25 +1,31 @@
 using DineBook.Domain.Abstractions;
-using DineBook.Domain.Entities.Dining;
-using DineBook.Domain.Entities.Menu;
 using DineBook.Domain.Enums;
-using DineBook.Domain.Exceptions;
+using DineBook.Domain.Validation;
 using DineBook.Domain.ValueObjects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace DineBook.Domain.Entities.Organization
+namespace DineBook.Domain.Entities
 {
-    /// <summary>
-    /// A restaurant and the tables and menu it owns.
-    /// </summary>
-    public class Restaurant : AggregateRoot, IAuditableEntity
+    // A restaurant and the tables and menu it owns.
+    public class Restaurant : Entity, IAuditableEntity
     {
+        public const int MaxNameLength = 100;
+        public const int MaxPhoneLength = 15;
+        public const int MaxDescriptionLength = 500;
+        public const int MaxCuisineLength = 50;
+
+        // Required by EF Core: Address is an owned value object and cannot be bound through the constructor
+        private Restaurant()
+        {
+        }
+
         public Restaurant(string name, Address address, TimeOnly opensAt, TimeOnly closesAt)
         {
-            DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace().HasMaxLength(100);
+            DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace().HasMaxLength(MaxNameLength);
             DomainValidation<Address>.Ensure(address).IsNotNull();
-            DomainValidation<TimeOnly>.Ensure(closesAt).IsDateNewerThan(opensAt);
+            DomainValidation<TimeOnly>.Ensure(closesAt).IsDateNewerThan(opensAt, "Closing time must be after opening time.");
 
             Name = name.Trim();
             Address = address;
@@ -33,6 +39,8 @@ namespace DineBook.Domain.Entities.Organization
 
         public string Name { get; private set; }
 
+        public Address Address { get; private set; }
+
         public TimeOnly OpensAt { get; private set; }
 
         public TimeOnly ClosesAt { get; private set; }
@@ -44,8 +52,6 @@ namespace DineBook.Domain.Entities.Organization
         public string Description { get; private set; }
 
         public string Cuisine { get; private set; }
-
-        public Address Address { get; private set; }
 
         public DateTimeOffset CreatedDateTime { get; set; }
 
@@ -73,9 +79,9 @@ namespace DineBook.Domain.Entities.Organization
 
         public void UpdateDetails(string phone, string description, string cuisine)
         {
-            DomainValidation<string>.Ensure(phone ?? string.Empty, nameof(phone)).HasMaxLength(15);
-            DomainValidation<string>.Ensure(description ?? string.Empty, nameof(description)).HasMaxLength(500);
-            DomainValidation<string>.Ensure(cuisine ?? string.Empty, nameof(cuisine)).HasMaxLength(50);
+            DomainValidation<string>.Ensure(phone ?? string.Empty, nameof(phone)).HasMaxLength(MaxPhoneLength);
+            DomainValidation<string>.Ensure(description ?? string.Empty, nameof(description)).HasMaxLength(MaxDescriptionLength);
+            DomainValidation<string>.Ensure(cuisine ?? string.Empty, nameof(cuisine)).HasMaxLength(MaxCuisineLength);
 
             Phone = (phone ?? string.Empty).Trim();
             Description = (description ?? string.Empty).Trim();

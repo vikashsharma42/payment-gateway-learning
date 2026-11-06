@@ -14,7 +14,7 @@ DineBook/
 ├── .gitignore
 ├── .editorconfig
 ├── DineBook.Domain/                         (no dependencies)
-│   ├── Abstractions/BaseEntity.cs
+│   ├── Abstractions/Entity.cs
 │   ├── Entities/Product.cs                     (ChangePrice)
 │   ├── Entities/Order.cs                       (MarkAsPaid, MarkAsFailed)
 │   ├── Enum/OrderStatus.cs

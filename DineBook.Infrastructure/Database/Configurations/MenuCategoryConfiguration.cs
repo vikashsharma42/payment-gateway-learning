@@ -1,6 +1,6 @@
+using DineBook.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using DineBook.Domain.Entities.Menu;
 
 namespace DineBook.Infrastructure.Database.Configurations
 {
@@ -8,12 +8,7 @@ namespace DineBook.Infrastructure.Database.Configurations
     {
         public void Configure(EntityTypeBuilder<MenuCategory> builder)
         {
-            builder.ToTable("MenuCategories");
-            builder.Property(x => x.Name).HasMaxLength(MenuCategory.MaxNameLength).IsRequired();
-            builder.Property(x => x.CreatedDateTime).IsRequired();
-            builder.Property(x => x.CreatedBy).HasMaxLength(256);
-            builder.Property(x => x.UpdatedDateTime).IsRequired();
-            builder.Property(x => x.UpdatedBy).HasMaxLength(256);
+            builder.ToTable(nameof(MenuCategory));
 
             // Many categories belong to one restaurant. Deleting a restaurant removes its categories.
             builder.HasOne(x => x.Restaurant)

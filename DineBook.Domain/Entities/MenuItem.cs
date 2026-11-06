@@ -1,26 +1,17 @@
-using System;
-using System.ComponentModel.DataAnnotations.Schema;
 using DineBook.Domain.Abstractions;
-using DineBook.Domain.Entities.Organization;
-using DineBook.Domain.Exceptions;
+using DineBook.Domain.Validation;
+using System;
 
-namespace DineBook.Domain.Entities.Menu
+namespace DineBook.Domain.Entities
 {
-    /// <summary>
-    /// A dish on one restaurant's menu. Orders copy the name and price, so later edits do not change past orders.
-    /// Added through <see cref="Restaurant.AddMenuItem"/>.
-    /// </summary>
-    public class MenuItem : AggregateRoot, IAuditableEntity
+    // A dish on one restaurant's menu. Orders copy the name and price, so later edits do not change past orders.
+    // Added through Restaurant.AddMenuItem.
+    public class MenuItem : Entity, IAuditableEntity
     {
-        public const int MaxNameLength = 100;
-        public const int MaxDescriptionLength = 300;
-        public const int MaxCategoryLength = MenuCategory.MaxNameLength;
-        public const decimal MaxPrice = 100000m;
-
         public MenuItem(string name, string description, decimal price)
         {
-            DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace().HasMaxLength(MaxNameLength);
-            DomainValidation<string>.Ensure(description ?? string.Empty, nameof(description)).HasMaxLength(MaxDescriptionLength);
+            DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace().HasMaxLength(100);
+            DomainValidation<string>.Ensure(description ?? string.Empty, nameof(description)).HasMaxLength(300);
             EnsurePrice(price);
 
             Name = name.Trim();
@@ -58,10 +49,8 @@ namespace DineBook.Domain.Entities.Menu
 
         public string UpdatedBy { get; set; }
 
-        [ForeignKey(nameof(RestaurantId))]
         public virtual Restaurant Restaurant { get; private set; }
 
-        [ForeignKey(nameof(MenuCategoryId))]
         public virtual MenuCategory MenuCategory { get; private set; }
 
         public void ChangePrice(decimal price)
@@ -90,6 +79,6 @@ namespace DineBook.Domain.Entities.Menu
         private static void EnsurePrice(decimal price) =>
             DomainValidation<decimal>.Ensure(price)
                 .IsGreaterThan(0m, "Price must be greater than zero and at most 100000.")
-                .IsLessThanOrEqualTo(MaxPrice, "Price must be greater than zero and at most 100000.");
+                .IsLessThanOrEqualTo(100000m, "Price must be greater than zero and at most 100000.");
     }
 }

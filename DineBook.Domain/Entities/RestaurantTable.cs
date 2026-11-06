@@ -1,17 +1,13 @@
-using System;
-using System.ComponentModel.DataAnnotations.Schema;
 using DineBook.Domain.Abstractions;
-using DineBook.Domain.Entities.Organization;
 using DineBook.Domain.Enums;
-using DineBook.Domain.Exceptions;
+using DineBook.Domain.Validation;
+using System;
 
-namespace DineBook.Domain.Entities.Dining
+namespace DineBook.Domain.Entities
 {
-    /// <summary>
-    /// A table inside one restaurant. Added through <see cref="Restaurant.AddTable"/>, which keeps labels unique.
-    /// Removal is a soft delete, so past bookings keep their table.
-    /// </summary>
-    public class RestaurantTable : BaseEntity, IAuditableEntity
+    // A table inside one restaurant. Added through Restaurant.AddTable, which keeps labels unique.
+    // Removal is a soft delete, so past bookings keep their table.
+    public class RestaurantTable : Entity, IAuditableEntity
     {
         public const int MaxLabelLength = 20;
         public const int MaxLocationLength = 50;
@@ -57,7 +53,6 @@ namespace DineBook.Domain.Entities.Dining
         // Tables that are out of service are not offered for new bookings
         public bool IsActive => Status != TableStatus.OutOfService;
 
-        [ForeignKey(nameof(RestaurantId))]
         public virtual Restaurant Restaurant { get; private set; }
 
         public void Activate()

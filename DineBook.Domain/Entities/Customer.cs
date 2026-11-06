@@ -1,17 +1,14 @@
+using DineBook.Domain.Abstractions;
+using DineBook.Domain.Validation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using DineBook.Domain.Abstractions;
-using DineBook.Domain.Entities.Dining;
-using DineBook.Domain.Exceptions;
 
-namespace DineBook.Domain.Entities.Customers
+namespace DineBook.Domain.Entities
 {
-    /// <summary>
-    /// A guest who books tables. Identified by phone number, the same second factor bookings already use.
-    /// Reservations keep their own copy of the contact details, so later changes here do not rewrite history.
-    /// </summary>
-    public class Customer : AggregateRoot, IAuditableEntity
+    // A guest who books tables. Identified by phone number, the same second factor bookings already use.
+    // Reservations keep their own copy of the contact details, so later changes here do not rewrite history.
+    public class Customer : Entity, IAuditableEntity
     {
         public const int MaxNameLength = 100;
         public const int MaxEmailLength = 254;

@@ -1,3 +1,4 @@
+using DineBook.Domain.Validation;
 using System.Collections.Generic;
 using DineBook.Common.Domain;
 using DineBook.Domain.Exceptions;

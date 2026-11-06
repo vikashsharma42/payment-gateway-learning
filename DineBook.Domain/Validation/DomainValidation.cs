@@ -1,3 +1,4 @@
+using DineBook.Domain.Exceptions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -5,7 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace DineBook.Domain.Exceptions
+namespace DineBook.Domain.Validation
 {
     /// <summary>
     /// Fluent guard checks, so entities never hand-write their own rules. A failed check throws

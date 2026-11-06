@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using DineBook.Application.Security;
-using DineBook.Domain.Entities.Identity;
+using DineBook.Domain.Identity;
 using DineBook.Infrastructure.Database;
 using DineBook.Infrastructure.Database.Security;
 

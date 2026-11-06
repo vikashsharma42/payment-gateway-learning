@@ -1,14 +1,12 @@
-using System;
 using DineBook.Domain.Abstractions;
 using DineBook.Domain.Enums;
-using DineBook.Domain.Exceptions;
+using DineBook.Domain.Validation;
+using System;
 
-namespace DineBook.Domain.Entities.Identity
+namespace DineBook.Domain.Entities
 {
-    /// <summary>
-    /// A person who can sign in. The password is never stored: only the hash produced by the application layer.
-    /// </summary>
-    public class ApplicationUser : AggregateRoot, IAuditableEntity
+    // A person who can sign in. The password is never stored: only the hash produced by the application layer.
+    public class ApplicationUser : Entity, IAuditableEntity
     {
         public const int MaxEmailLength = 254;
         public const int MaxNameLength = 100;
@@ -53,7 +51,7 @@ namespace DineBook.Domain.Entities.Identity
 
         public string FullName => $"{FirstName} {LastName}".Trim();
 
-        // Emails are stored trimmed and lower-case, so one account per address
+        // Stored trimmed and lower-case, so one account per address
         public static string NormalizeEmail(string email) =>
             (email ?? string.Empty).Trim().ToLowerInvariant();
 

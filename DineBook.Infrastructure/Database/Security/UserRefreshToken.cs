@@ -8,11 +8,6 @@ namespace DineBook.Infrastructure.Database.Security
     /// </summary>
     public class UserRefreshToken
     {
-        // Required by EF Core
-        private UserRefreshToken()
-        {
-        }
-
         public UserRefreshToken(string tokenHash, long applicationUserId, DateTimeOffset expiresAtUtc)
         {
             TokenHash = tokenHash;
@@ -24,7 +19,7 @@ namespace DineBook.Infrastructure.Database.Security
         public long Id { get; private set; }
 
         // SHA-256 of the raw token, as hex
-        public string TokenHash { get; private set; } = string.Empty;
+        public string TokenHash { get; private set; }
 
         public long ApplicationUserId { get; private set; }
 

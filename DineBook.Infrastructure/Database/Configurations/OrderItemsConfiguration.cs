@@ -1,6 +1,6 @@
+using DineBook.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using DineBook.Domain.Entities.Ordering;
 
 namespace DineBook.Infrastructure.Database.Configurations
 {
@@ -8,14 +8,8 @@ namespace DineBook.Infrastructure.Database.Configurations
     {
         public void Configure(EntityTypeBuilder<OrderItems> builder)
         {
-            builder.ToTable("OrderItems");
-            builder.Property(x => x.ItemName).HasMaxLength(100).IsRequired();
+            builder.ToTable(nameof(OrderItems));
             builder.Property(x => x.UnitPrice).HasPrecision(10, 2);
-            builder.Property(x => x.Quantity).IsRequired();
-            builder.Property(x => x.CreatedDateTime).IsRequired();
-            builder.Property(x => x.CreatedBy).HasMaxLength(256);
-            builder.Property(x => x.UpdatedDateTime).IsRequired();
-            builder.Property(x => x.UpdatedBy).HasMaxLength(256);
 
             // An item belongs to one order. Deleting the order removes its items.
             builder.HasOne(x => x.Order)

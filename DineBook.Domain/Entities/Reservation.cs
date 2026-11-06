@@ -1,20 +1,14 @@
+using DineBook.Domain.Abstractions;
+using DineBook.Domain.Enums;
+using DineBook.Domain.Validation;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
-using DineBook.Domain.Abstractions;
-using DineBook.Domain.Entities.Customers;
-using DineBook.Domain.Entities.Ordering;
-using DineBook.Domain.Entities.Organization;
-using DineBook.Domain.Enums;
-using DineBook.Domain.Exceptions;
 
-namespace DineBook.Domain.Entities.Dining
+namespace DineBook.Domain.Entities
 {
-    /// <summary>
-    /// One table booking, identified by a short code. It holds a table for its duration and collects the food ordered for it.
-    /// </summary>
-    public class Reservation : AggregateRoot, IAuditableEntity
+    // One table booking, identified by a short code. It holds a table for its duration and collects the food ordered for it.
+    public class Reservation : Entity, IAuditableEntity
     {
         public const int CodeLength = 8;
         public const int MinDurationMinutes = 30;
@@ -97,13 +91,10 @@ namespace DineBook.Domain.Entities.Dining
 
         public DateTime EndsAt => StartsAt.AddMinutes(DurationMinutes);
 
-        [ForeignKey(nameof(RestaurantId))]
         public virtual Restaurant Restaurant { get; private set; }
 
-        [ForeignKey(nameof(CustomerId))]
         public virtual Customer Customer { get; private set; }
 
-        [ForeignKey(nameof(TableId))]
         public virtual RestaurantTable Table { get; private set; }
 
         private readonly List<Orders> _foodOrders = [];
@@ -134,18 +125,14 @@ namespace DineBook.Domain.Entities.Dining
         public bool AcceptsFoodOrders(DateTime nowLocal) =>
             (Status == ReservationStatus.Confirmed || Status == ReservationStatus.Seated) && nowLocal < EndsAt;
 
-        /// <summary>
-        /// Adds one food order. The booking decides whether it still accepts food,
-        /// so no caller can order against a cancelled or finished booking.
-        /// </summary>
+        // The booking decides whether it still accepts food, so no caller can order against a cancelled or finished booking.
         public void AddFoodOrder(Orders order, DateTime nowLocal)
         {
             DomainValidation<Orders>.Ensure(order, "Order").IsNotNull();
 
             DomainValidation<bool>.Ensure(AcceptsFoodOrders(nowLocal))
                 .IsTrue("Food can only be ordered while your booking is active.");
-            DomainValidation<long>.Ensure(order.RestaurantId, nameof(order))
-                .IsEqualTo(RestaurantId, "This order is not for the restaurant of this booking.");
+            DomainValidation<long>.Ensure(order.RestaurantId, nameof(order)).IsEqualTo(RestaurantId);
 
             order.AssignReservation(Id);
             _foodOrders.Add(order);
@@ -155,7 +142,6 @@ namespace DineBook.Domain.Entities.Dining
         internal void AssignCustomer(Customer customer)
         {
             Customer = customer;
-
             // A new customer has no id yet. EF Core fills the foreign key when both are saved together.
             CustomerId = customer.Id == 0 ? null : customer.Id;
         }

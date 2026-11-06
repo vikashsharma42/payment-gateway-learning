@@ -1,16 +1,10 @@
+using DineBook.Domain.Abstractions;
+using DineBook.Domain.Entities;
+using DineBook.Infrastructure.Database.Security;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using DineBook.Domain.Abstractions;
-using DineBook.Domain.Entities.Customers;
-using DineBook.Domain.Entities.Dining;
-using DineBook.Domain.Entities.Identity;
-using DineBook.Domain.Entities.Menu;
-using DineBook.Domain.Entities.Ordering;
-using DineBook.Domain.Entities.Organization;
-using DineBook.Domain.Entities.Payments;
-using DineBook.Infrastructure.Database.Security;
 
 namespace DineBook.Infrastructure.Database
 {
@@ -42,9 +36,6 @@ namespace DineBook.Infrastructure.Database
         public DbSet<Orders> Orders => Set<Orders>();
 
         public DbSet<OrderItems> OrderItems => Set<OrderItems>();
-
-        // Bills and gateway payments
-        public DbSet<Bill> Bills => Set<Bill>();
 
         public DbSet<Payment> Payments => Set<Payment>();
 

@@ -1,7 +1,6 @@
+using DineBook.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using DineBook.Domain.Entities.Customers;
-using DineBook.Domain.Entities.Identity;
 
 namespace DineBook.Infrastructure.Database.Configurations
 {
@@ -9,14 +8,7 @@ namespace DineBook.Infrastructure.Database.Configurations
     {
         public void Configure(EntityTypeBuilder<Customer> builder)
         {
-            builder.ToTable("Customers");
-            builder.Property(x => x.Name).HasMaxLength(Customer.MaxNameLength).IsRequired();
-            builder.Property(x => x.Phone).HasMaxLength(Customer.MaxPhoneDigits).IsRequired();
-            builder.Property(x => x.Email).HasMaxLength(Customer.MaxEmailLength).IsRequired();
-            builder.Property(x => x.CreatedDateTime).IsRequired();
-            builder.Property(x => x.CreatedBy).HasMaxLength(256);
-            builder.Property(x => x.UpdatedDateTime).IsRequired();
-            builder.Property(x => x.UpdatedBy).HasMaxLength(256);
+            builder.ToTable(nameof(Customer));
 
             // One customer per phone number
             builder.HasIndex(x => x.Phone).IsUnique();

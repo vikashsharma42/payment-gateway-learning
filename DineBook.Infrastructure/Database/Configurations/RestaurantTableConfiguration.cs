@@ -1,7 +1,6 @@
+using DineBook.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using DineBook.Domain.Entities.Dining;
-using DineBook.Domain.Entities.Organization;
 
 namespace DineBook.Infrastructure.Database.Configurations
 {
@@ -9,18 +8,8 @@ namespace DineBook.Infrastructure.Database.Configurations
     {
         public void Configure(EntityTypeBuilder<RestaurantTable> builder)
         {
-            builder.ToTable("RestaurantTables");
-            builder.Property(x => x.Label).HasMaxLength(RestaurantTable.MaxLabelLength).IsRequired();
-            builder.Property(x => x.Location).HasMaxLength(RestaurantTable.MaxLocationLength).IsRequired();
-            builder.Property(x => x.Capacity).IsRequired();
+            builder.ToTable(nameof(RestaurantTable));
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
-
-            // IsActive is computed from Status
-            builder.Ignore(x => x.IsActive);
-            builder.Property(x => x.CreatedDateTime).IsRequired();
-            builder.Property(x => x.CreatedBy).HasMaxLength(256);
-            builder.Property(x => x.UpdatedDateTime).IsRequired();
-            builder.Property(x => x.UpdatedBy).HasMaxLength(256);
 
             // Many tables belong to one restaurant. Deleting a restaurant removes its tables.
             builder.HasOne(x => x.Restaurant)

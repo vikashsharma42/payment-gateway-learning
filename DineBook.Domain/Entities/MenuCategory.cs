@@ -1,22 +1,16 @@
+using DineBook.Domain.Abstractions;
+using DineBook.Domain.Validation;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
-using DineBook.Domain.Abstractions;
-using DineBook.Domain.Entities.Organization;
-using DineBook.Domain.Exceptions;
 
-namespace DineBook.Domain.Entities.Menu
+namespace DineBook.Domain.Entities
 {
-    /// <summary>
-    /// A section of one restaurant's menu, such as "Starters". Added through <see cref="Restaurant.AddMenuCategory"/>.
-    /// </summary>
-    public class MenuCategory : BaseEntity, IAuditableEntity
+    // A section of one restaurant's menu, such as "Starters". Added through Restaurant.AddMenuCategory.
+    public class MenuCategory : Entity, IAuditableEntity
     {
-        public const int MaxNameLength = 50;
-
         public MenuCategory(string name)
         {
-            DomainValidation<string>.Ensure(name, "Category").IsNotNullOrWhiteSpace().HasMaxLength(MaxNameLength);
+            DomainValidation<string>.Ensure(name, "Category").IsNotNullOrWhiteSpace().HasMaxLength(50);
 
             Name = name.Trim();
         }
@@ -33,7 +27,6 @@ namespace DineBook.Domain.Entities.Menu
 
         public string UpdatedBy { get; set; }
 
-        [ForeignKey(nameof(RestaurantId))]
         public virtual Restaurant Restaurant { get; private set; }
 
         private readonly List<MenuItem> _menuItems = [];

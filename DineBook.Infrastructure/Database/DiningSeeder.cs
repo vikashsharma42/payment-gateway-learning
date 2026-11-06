@@ -1,11 +1,9 @@
+using DineBook.Domain.Entities;
+using DineBook.Domain.ValueObjects;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
-using DineBook.Domain.Entities.Dining;
-using DineBook.Domain.Entities.Menu;
-using DineBook.Domain.Entities.Organization;
-using DineBook.Domain.ValueObjects;
 
 namespace DineBook.Infrastructure.Database
 {

@@ -1,5 +1,5 @@
-using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using DineBook.Domain.ValueObjects;
+using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DineBook.Infrastructure.Database.Configurations
 {

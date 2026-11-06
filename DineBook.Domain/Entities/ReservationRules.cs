@@ -1,15 +1,12 @@
+using DineBook.Domain.Enums;
+using DineBook.Domain.Validation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using DineBook.Domain.Entities.Organization;
-using DineBook.Domain.Enums;
-using DineBook.Domain.Exceptions;
 
-namespace DineBook.Domain.Entities.Dining
+namespace DineBook.Domain.Entities
 {
-    /// <summary>
-    /// Pure booking rules. No database access, so they can be tested directly.
-    /// </summary>
+    // Pure booking rules. No database access, so they can be tested directly.
     public static class ReservationRules
     {
         // Confirmed and seated bookings hold a table. Cancelled and no-shows do not.
