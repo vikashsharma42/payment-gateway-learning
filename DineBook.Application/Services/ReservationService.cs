@@ -173,7 +173,8 @@ namespace DineBook.Application.Services
             return reservation;
         }
 
-        public async Task<IReadOnlyList<Reservation>> GetBookingsAsync(IReadOnlyCollection<string> codes, string accountPhone, CancellationToken ct = default)
+        public async Task<IReadOnlyList<Reservation>> GetBookingsAsync(
+            IReadOnlyCollection<string> codes, string accountPhone, CancellationToken ct = default)
         {
             var normalizedCodes = (codes ?? Array.Empty<string>())
                 .Select(c => (c ?? string.Empty).Trim().ToUpperInvariant())
@@ -203,6 +204,15 @@ namespace DineBook.Application.Services
             var normalized = (code ?? string.Empty).Trim().ToUpperInvariant();
             var reservation = await _db.Reservations.FirstOrDefaultAsync(r => r.Code == normalized, ct)
                 ?? throw new DomainException("We could not find a booking with that code.");
+
+            // A booking with a paid food order is final: the money has been taken for food served on it
+            var hasPaidFood = await _db.Orders.AsNoTracking()
+                .Where(o => o.ReservationId == reservation.Id)
+                .SelectMany(o => o.Payments)
+                .AnyAsync(p => p.Status == PaymentStatus.Paid, ct);
+
+            if (hasPaidFood)
+                throw new DomainException("This booking has a paid food order and cannot be cancelled.");
 
             reservation.Cancel(phone);
             await _db.SaveChangesAsync(ct);

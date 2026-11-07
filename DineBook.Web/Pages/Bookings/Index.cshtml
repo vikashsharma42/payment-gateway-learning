@@ -11,7 +11,8 @@
 
 @if (Model.Bookings.Count == 0)
 {
-    <div class="card card-body shadow-sm text-center py-5">
+    <div class="card card-body shadow-sm empty-state">
+        <div class="empty-icon" aria-hidden="true">🗓️</div>
         <p class="fw-semibold mb-2">No bookings yet</p>
         <p class="text-muted small mb-0">
             @if (Model.IsSignedIn)
@@ -32,11 +33,11 @@ else
         {
             var booking = item.Booking;
             <div class="col-md-6">
-                <div class="card h-100 shadow-sm">
+                <div class="card h-100 shadow-sm booking-card">
                     <div class="card-body d-flex flex-column">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
-                                <h2 class="h5 mb-1">@booking.Restaurant?.Name</h2>
+                                <h2 class="h5 mb-1 booking-restaurant">@booking.Restaurant?.Name</h2>
                                 <div class="small text-muted">
                                     @booking.StartsAt.ToString("ddd, dd MMM yyyy") · @booking.StartsAt.ToString("HH:mm") · @booking.Guests guests
                                 </div>

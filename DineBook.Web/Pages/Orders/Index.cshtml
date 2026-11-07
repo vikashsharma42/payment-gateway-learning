@@ -8,7 +8,8 @@
 
 @if (Model.History.Count == 0)
 {
-    <div class="card card-body shadow-sm text-center py-5">
+    <div class="card card-body shadow-sm empty-state">
+        <div class="empty-icon" aria-hidden="true">🍽️</div>
         <p class="fw-semibold mb-2">No food orders yet</p>
         <p class="text-muted small mb-3">Dishes you order during a booking will appear here with their photos.</p>
         <a asp-page="/Bookings/Index" class="btn btn-outline-primary mx-auto">Go to my bookings</a>

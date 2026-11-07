@@ -2,6 +2,7 @@
 @model BookModel
 @{
     ViewData["Title"] = $"Book at {Model.Restaurant.Name}";
+    var hasSlots = Model.Date is not null && Model.Slots.Count > 0;
 }
 
 <nav aria-label="breadcrumb" class="mb-3">
@@ -11,21 +12,32 @@
     </ol>
 </nav>
 
-<h1 class="h2 mb-4">Book a table at @Model.Restaurant.Name</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-3">
+    <div>
+        <h1 class="h2 mb-1">@Model.Restaurant.Name</h1>
+        <p class="text-muted mb-0">Open @Model.Restaurant.OpensAt.ToString("HH:mm") to @Model.Restaurant.ClosesAt.ToString("HH:mm")</p>
+    </div>
+</div>
+
+<ol class="steps" aria-label="Booking steps">
+    <li class="done"><span class="num">1</span> Date and guests</li>
+    <li class="@(hasSlots ? "done" : "current")"><span class="num">2</span> Pick a time</li>
+    <li class="@(Model.Prefilled && hasSlots ? "current" : "")"><span class="num">3</span> Your details</li>
+</ol>
 
 <form method="get" class="card card-body shadow-sm mb-4">
     <div class="row g-3 align-items-end">
         <div class="col-sm-5">
-            <label class="form-label" for="Date">Date</label>
-            <input id="Date" name="Date" type="date" class="form-control"
+            <label class="form-label fw-semibold" for="Date">Date</label>
+            <input id="Date" name="Date" type="date" class="form-control form-control-lg"
                    value="@Model.Date?.ToString("yyyy-MM-dd")" min="@Model.Today.ToString("yyyy-MM-dd")" />
         </div>
         <div class="col-sm-4">
-            <label class="form-label" for="Guests">Guests</label>
-            <input id="Guests" name="Guests" type="number" min="1" max="10" class="form-control" value="@Model.Guests" />
+            <label class="form-label fw-semibold" for="Guests">Guests</label>
+            <input id="Guests" name="Guests" type="number" min="1" max="10" class="form-control form-control-lg" value="@Model.Guests" />
         </div>
         <div class="col-sm-3">
-            <button class="btn btn-outline-primary w-100" type="submit">Show times</button>
+            <button class="btn btn-brand btn-lg w-100" type="submit">Show times</button>
         </div>
     </div>
 </form>
@@ -43,19 +55,12 @@
         <form method="post" data-submit-once class="card card-body shadow-sm">
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
 
-            @if (Model.Prefilled)
-            {
-                <p class="alert alert-light border small mb-4">
-                    We filled in your details. Change them only if this table is for someone else.
-                </p>
-            }
-
             <input type="hidden" name="Date" value="@Model.Date.Value.ToString("yyyy-MM-dd")" />
             <input type="hidden" name="Guests" value="@Model.Guests" />
 
             <fieldset class="mb-4">
-                <legend class="h6">Choose a time</legend>
-                <div class="d-flex flex-wrap gap-2">
+                <legend class="h6 mb-2">Choose a time</legend>
+                <div class="d-flex flex-wrap gap-2 slot-chips">
                     @foreach (var slot in Model.Slots)
                     {
                         <input type="radio" class="btn-check" name="StartsAt" id="slot-@slot.ToString("HHmm")"
@@ -66,14 +71,22 @@
                 <span asp-validation-for="StartsAt" class="text-danger small"></span>
             </fieldset>
 
-            <div class="mb-3">
-                <label asp-for="CustomerName" class="form-label"></label>
-                <input asp-for="CustomerName" class="form-control" autocomplete="name" />
-                <span asp-validation-for="CustomerName" class="text-danger small"></span>
-            </div>
+            <h2 class="h6 mb-2">Your details</h2>
 
-            <div class="row g-3 mb-3">
-                <div class="col-sm-6">
+            @if (Model.Prefilled)
+            {
+                <p class="alert alert-light border small mb-3">
+                    We filled in your details. Change them only if this table is for someone else.
+                </p>
+            }
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label asp-for="CustomerName" class="form-label"></label>
+                    <input asp-for="CustomerName" class="form-control" autocomplete="name" />
+                    <span asp-validation-for="CustomerName" class="text-danger small"></span>
+                </div>
+                <div class="col-md-6">
                     <label asp-for="CustomerPhone" class="form-label"></label>
                     <div class="input-group phone-input">
                         <span class="input-group-text phone-prefix" aria-hidden="true">
@@ -83,19 +96,19 @@
                     </div>
                     <span asp-validation-for="CustomerPhone" class="text-danger small"></span>
                 </div>
-                <div class="col-sm-6">
+                <div class="col-md-6">
                     <label asp-for="CustomerEmail" class="form-label"></label>
                     <input asp-for="CustomerEmail" type="email" class="form-control" autocomplete="email" />
                     <span asp-validation-for="CustomerEmail" class="text-danger small"></span>
                 </div>
+                <div class="col-md-6">
+                    <label asp-for="SpecialRequests" class="form-label"></label>
+                    <input asp-for="SpecialRequests" class="form-control" maxlength="200" placeholder="Birthday, high chair, window seat…" />
+                    <span asp-validation-for="SpecialRequests" class="text-danger small"></span>
+                </div>
             </div>
 
-            <div class="mb-4">
-                <label asp-for="SpecialRequests" class="form-label"></label>
-                <textarea asp-for="SpecialRequests" class="form-control" rows="2" maxlength="200"></textarea>
-                <span asp-validation-for="SpecialRequests" class="text-danger small"></span>
-            </div>
-
+            <p class="small text-muted mt-3 mb-3">Your booking code comes with the confirmation. You can pre-order food from the booking page.</p>
             <button type="submit" class="btn btn-brand btn-lg w-100">Confirm booking</button>
         </form>
     }

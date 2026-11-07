@@ -1,16 +1,14 @@
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using DineBook.Application.Configuration;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
-using DineBook.Domain.Exceptions;
 using DineBook.Infrastructure.Database;
 using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using System;
 using System.Text.Json;
 using System.Threading;
@@ -31,30 +29,26 @@ namespace DineBook.Web.Pages
         private readonly IConfiguration _configuration;
         private readonly SiteOptions _site;
         private readonly BookingAccess _access;
-        private readonly ILogger<CheckoutModel> _logger;
 
         public CheckoutModel(
             ApplicationDbContext db,
             IPaymentService payments,
             IConfiguration configuration,
             IOptions<SiteOptions> site,
-            BookingAccess access,
-            ILogger<CheckoutModel> logger)
+            BookingAccess access)
         {
             _db = db;
             _payments = payments;
             _configuration = configuration;
             _site = site.Value;
             _access = access;
-            _logger = logger;
         }
 
-        // One key per page view. A double click or a "back" resubmit sends the same key, so the guest is charged once.
         [BindProperty]
         public string IdempotencyKey { get; set; } = string.Empty;
 
         // The food order being paid
-        public Orders Order { get; private set; }
+        public Domain.Entities.Orders Order { get; private set; }
 
         // The booking the bill belongs to. Its name, phone and email are used for the payment.
         public Reservation Booking { get; private set; }
@@ -95,33 +89,23 @@ namespace DineBook.Web.Pages
             if (string.IsNullOrWhiteSpace(IdempotencyKey))
                 IdempotencyKey = Guid.NewGuid().ToString("N");
 
-            try
-            {
-                // Built from configuration, never from the Host header
-                var returnUrl = $"{_site.PublicBaseUrl.TrimEnd('/')}/Payment/Result";
+            // Built from configuration, never from the Host header
+            var returnUrl = $"{_site.PublicBaseUrl.TrimEnd('/')}/Payment/Result";
 
-                // Contact details come from the booking, so nobody types them again.
-                // The amount is read from the order inside PaymentService, never from the form.
-                var session = await _payments.CreateOrderAsync(
-                    id, Booking.CustomerEmail, Booking.CustomerPhone, returnUrl, IdempotencyKey, ct);
+            // Contact details come from the booking, so nobody types them again.
+            // The amount is read from the order inside PaymentService, never from the form.
+            var session = await _payments.CreateOrderAsync(
+                id, Booking.CustomerEmail, Booking.CustomerPhone, returnUrl, IdempotencyKey, ct);
 
-                if (session is null)
-                    return NotFound();
+            if (session is null)
+                return NotFound();
 
-                var pending = new PendingPayment(
-                    id, session.OrderId, session.PaymentSessionId, session.Amount, DateTimeOffset.UtcNow);
+            var pending = new PendingPayment(
+                id, session.OrderId, session.PaymentSessionId, session.Amount, DateTimeOffset.UtcNow);
 
-                // Post/Redirect/Get: a refresh shows this session instead of creating another payment
-                TempData[PendingKey] = JsonSerializer.Serialize(pending);
-                return RedirectToPage(new { id });
-            }
-            catch (Exception ex) when (ex is not OperationCanceledException)
-            {
-                // Log the error, but never the email or phone
-                _logger.LogError(ex, "Failed to start payment for order {OrderId}", id);
-                ToastError(ex is DomainException ? ex.Message : "Payment could not be started. Please try again.");
-                return Page();
-            }
+            // Post/Redirect/Get: a refresh shows this session instead of creating another payment
+            TempData[PendingKey] = JsonSerializer.Serialize(pending);
+            return RedirectToPage(new { id });
         }
 
         private PendingPayment ReadPending(long orderId)

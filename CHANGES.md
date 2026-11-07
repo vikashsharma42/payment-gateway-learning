@@ -26,11 +26,21 @@
 - `MenuItem.ImageUrl` and `OrderItem.ImageUrl`. A new order copies the photo, so the history stays correct when the menu changes.
 - The seeder adds placeholder photos (picsum.photos) for sample dishes, and fills them into existing databases in development.
 
+## Payment webhook
+- New endpoint `POST /Payment/Webhook` (`Pages/Payment/Webhook.cshtml.cs`). It reads the raw body, passes it to `PaymentService.HandleWebhookAsync`, and returns 200 for valid events, 401 for a bad signature, 400 for malformed signed bodies, and 413 for bodies over 64 KB.
+- Register `https://<public-host>/Payment/Webhook` in the Cashfree dashboard.
+
 ## Phone input
 - Phone fields show the India flag and a +91 prefix (`wwwroot/img/flag-in.svg`). The value entered is still the 10-digit number.
 
 ## Known gaps
-- The Cashfree webhook is not wired (no endpoint calls `HandleWebhookAsync`). Payments are marked paid only when the result page checks the status.
 - Dish photos are placeholders. Set real URLs in `MenuItem.ImageUrl`. There is no admin screen for photos yet.
 - The API project (`DineBook.API`) is not in this version.
 - `/Admin/Login` does not issue JWT cookies. The JWT code is kept for the API.
+
+## Global error handling
+- `DomainExceptionMiddleware` (Web/Infrastructure) turns `DomainException` into a toast and a redirect, and gives webhook responses their status codes. It runs inside `UseExceptionHandler`, so it is global and covers every page, not only Razor Pages.
+- `GlobalExceptionHandler` logs unhandled errors once, then the error page is shown.
+- Page-level try/catch blocks were removed from Book, Details, Checkout, Registration, Webhook and the admin pages.
+- Kept on purpose (business logic, not UI): idempotency race in `PaymentService.CreateOrderAsync`, gateway fallback in `GetOrderStatusAsync`, email fail-safe (`SendEmailSafely`) so a failed email never undoes a booking or payment, refund resume in `RefundAsync`, and cookie parsing in `BookingAccess`.
+- Trade-off: on a failed registration or admin form, the message comes back as a toast, and the typed form values are not kept.

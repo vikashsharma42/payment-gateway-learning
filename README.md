@@ -103,7 +103,9 @@ A booking made on this browser opens without a phone number. If someone sends yo
 3. The browser opens Cashfree checkout with the payment session.
 4. After payment, `/Payment/Result` asks Cashfree for the status and marks the payment paid.
 
-**Not yet wired:** the Cashfree webhook. `PaymentService.HandleWebhookAsync` exists, but no web page or API endpoint calls it. Payments are marked paid only when the result page checks the status. Until the webhook is wired, a payment that succeeds but whose customer never returns to the site stays pending.
+**Webhook:** Cashfree calls `POST /Payment/Webhook` after each payment. The request is checked with the HMAC-SHA256 signature (`x-webhook-signature`, over `x-webhook-timestamp` plus the raw body) using `Cashfree:SecretKey`. A valid event marks the payment paid, but only if the amount matches. Unsigned or wrong-signature requests get 401. Malformed signed requests get 400. Repeated events are safe.
+
+Register the webhook URL in the Cashfree dashboard (sandbox first): `https://<your-public-host>/Payment/Webhook`. The public host must be reachable from the internet. For local testing, use a tunnel such as ngrok and set `Site:PublicBaseUrl` to match. The result page still checks the status as well, so a payment is also marked paid when the customer returns.
 
 ## 7. Configuration reference
 
@@ -131,8 +133,14 @@ A booking made on this browser opens without a phone number. If someone sends yo
 | My bookings is empty | You are signed out and made the booking on another browser, or the account phone differs from the booking phone. |
 | HTTPS certificate warning | `dotnet dev-certs https --trust` |
 
-## 9. Notes
+## 9. Errors
+
+- Rule violations (`DomainException`, for example "No table is free") are caught once by `DomainExceptionMiddleware`. The visitor sees the message as a toast. Form POSTs redirect back to the same page; GET requests go to the home page.
+- Payment webhooks (`/Payment/Webhook`) get status codes from the same middleware: 200 when the event is valid but needs no change, 400 for a malformed body.
+- Any other error is logged once by `GlobalExceptionHandler` (without form data) and the visitor sees the error page.
+
+## 10. Notes
 
 - Never commit secrets. Keep Cashfree keys and the admin password in user-secrets.
 - Test card: `4111 1111 1111 1111`, any future expiry, CVV `123`.
-- Do not trust the browser redirect alone in production. Wire the webhook before going live (section 6).
+- Do not trust the browser redirect alone in production. Configure the Cashfree webhook (section 6) before going live.

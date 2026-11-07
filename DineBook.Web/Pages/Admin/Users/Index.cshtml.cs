@@ -83,21 +83,12 @@ namespace DineBook.Web.Pages.Admin.Users
                 return Page();
             }
 
-            try
-            {
-                await _registration.CreateStaffUserAsync(new StaffUserRequest(
-                    Input.FirstName, Input.LastName, Input.Email, Input.Password, Input.Role), ct);
+            await _registration.CreateStaffUserAsync(new StaffUserRequest(
+                Input.FirstName, Input.LastName, Input.Email, Input.Password, Input.Role), ct);
 
-                ToastSuccess($"{Input.FirstName} {Input.LastName} was added as {Input.Role}.");
-                return RedirectToPage();
-            }
-            catch (DomainException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                await LoadAsync(ct);
-                ShowCreateModal = true;
-                return Page();
-            }
+            ToastSuccess($"{Input.FirstName} {Input.LastName} was added as {Input.Role}.");
+            return RedirectToPage();
+            
         }
 
         private async Task LoadAsync(CancellationToken ct)

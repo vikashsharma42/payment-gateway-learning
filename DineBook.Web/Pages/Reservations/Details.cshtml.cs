@@ -1,15 +1,14 @@
+using DineBook.Application.Services.Interface;
+using DineBook.Domain.Entities;
+using DineBook.Domain.Enums;
+using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities;
-using DineBook.Domain.Enums;
-using DineBook.Domain.Exceptions;
-using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Reservations
 {
@@ -50,13 +49,16 @@ namespace DineBook.Web.Pages.Reservations
         // True when this visitor may see and change the booking. Otherwise only the unlock form shows.
         public bool IsOwner { get; private set; }
 
-        public IReadOnlyList<Orders> FoodOrders { get; private set; } = Array.Empty<Orders>();
+        public IReadOnlyList<DineBook.Domain.Entities.Orders> FoodOrders { get; private set; } = Array.Empty<DineBook.Domain.Entities.Orders>();
 
         public IReadOnlyList<IGrouping<string, MenuItem>> MenuGroups { get; private set; } = Array.Empty<IGrouping<string, MenuItem>>();
 
         public bool CanOrderFood { get; private set; }
 
-        public bool CanCancel => Reservation?.Status == ReservationStatus.Confirmed;
+        // Cancelling is not allowed once any food order for this booking has been paid
+        public bool HasPaidFood => FoodOrders.Any(o => o.IsPaid);
+
+        public bool CanCancel => Reservation?.Status == ReservationStatus.Confirmed && !HasPaidFood;
 
         // Guests can pay until the booking is cancelled or marked as no-show
         public bool CanPay => Reservation is not null
@@ -107,16 +109,9 @@ namespace DineBook.Web.Pages.Reservations
                     selections.Add(new OrderItemRequest(item.Id, quantity));
             }
 
-            try
-            {
-                // The booking's own phone number is used as the proof, because ownership was checked above
-                var order = await _orders.PlaceOrderAsync(Code, booking.CustomerPhone, selections, ct);
-                ToastSuccess($"Order placed: {order.Items.Count} item(s), total {DineBook.Web.Helpers.Money.Inr(order.Total())}.");
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
-            }
+            // The booking's own phone number is used as the proof, because ownership was checked above
+            var order = await _orders.PlaceOrderAsync(Code, booking.CustomerPhone, selections, ct);
+            ToastSuccess($"Order placed: {order.Items.Count} item(s), total {DineBook.Web.Helpers.Money.Inr(order.Total())}.");
 
             return RedirectToPage(new { code = Code });
         }
@@ -127,15 +122,8 @@ namespace DineBook.Web.Pages.Reservations
             if (booking is null)
                 return RedirectToLocked();
 
-            try
-            {
-                await _reservations.CancelAsync(Code, booking.CustomerPhone, ct);
-                ToastSuccess("Your booking has been cancelled.");
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
-            }
+            await _reservations.CancelAsync(Code, booking.CustomerPhone, ct);
+            ToastSuccess("Your booking has been cancelled.");
 
             return RedirectToPage(new { code = Code });
         }
@@ -147,22 +135,14 @@ namespace DineBook.Web.Pages.Reservations
             if (booking is null)
                 return RedirectToLocked();
 
-            try
+            var payable = await _payments.GetPayableOrdersAsync(Code, booking.CustomerPhone, ct);
+            if (!payable.Any(o => o.Id == orderId && !o.IsPaid))
             {
-                var payable = await _payments.GetPayableOrdersAsync(Code, booking.CustomerPhone, ct);
-                if (!payable.Any(o => o.Id == orderId && !o.IsPaid))
-                {
-                    ToastError("That order cannot be paid.");
-                    return RedirectToPage(new { code = Code });
-                }
-
-                return RedirectToPage("/Checkout", new { id = orderId });
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
+                ToastError("That order cannot be paid.");
                 return RedirectToPage(new { code = Code });
             }
+
+            return RedirectToPage("/Checkout", new { id = orderId });
         }
 
         private async Task<Reservation> OwnedBookingAsync(CancellationToken ct)

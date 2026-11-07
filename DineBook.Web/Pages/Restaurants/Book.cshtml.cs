@@ -108,32 +108,24 @@ namespace DineBook.Web.Pages.Restaurants
                 return Page();
             }
 
-            try
-            {
-                var reservation = await _reservations.BookAsync(new BookingRequest(
-                    Id,
-                    StartsAt,
-                    Guests,
-                    CustomerName.Trim(),
-                    CustomerPhone.Trim(),
-                    CustomerEmail.Trim(),
-                    (SpecialRequests ?? string.Empty).Trim()),
-                    ct);
+            var reservation = await _reservations.BookAsync(new BookingRequest(
+                Id,
+                StartsAt,
+                Guests,
+                CustomerName.Trim(),
+                CustomerPhone.Trim(),
+                CustomerEmail.Trim(),
+                (SpecialRequests ?? string.Empty).Trim()),
+                ct);
 
-                // Remember the booking here so it appears under "My bookings" and the details are prefilled next time
-                _access.Remember(reservation, saveContact: true);
+            // Remember the booking here so it appears under "My bookings" and the details are prefilled next time
+            _access.Remember(reservation, saveContact: true);
 
-                ToastSuccess("Your table is booked.");
+            ToastSuccess("Your table is booked.");
 
-                // Post/Redirect/Get: a refresh does not book again
-                return RedirectToPage("/Reservations/Details", new { code = reservation.Code });
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
-                await LoadSlotsAsync(ct);
-                return Page();
-            }
+            // Post/Redirect/Get: a refresh does not book again
+            return RedirectToPage("/Reservations/Details", new { code = reservation.Code });
+            
         }
 
         private async Task LoadSlotsAsync(CancellationToken ct)
@@ -141,15 +133,8 @@ namespace DineBook.Web.Pages.Restaurants
             if (Date is null)
                 return;
 
-            try
-            {
-                Slots = await _reservations.GetAvailableSlotsAsync(Id, Date.Value, Guests, ct);
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
-                Slots = Array.Empty<DateTime>();
-            }
+            Slots = await _reservations.GetAvailableSlotsAsync(Id, Date.Value, Guests, ct);
+            
         }
     }
 }

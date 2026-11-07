@@ -62,19 +62,12 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             if (!ModelState.IsValid)
                 return Page();
 
-            try
-            {
-                var restaurant = await _admin.CreateRestaurantAsync(new CreateRestaurantRequest(
-                    Name, Street, City, State, Pincode, OpensAt, ClosesAt), ct);
+            var restaurant = await _admin.CreateRestaurantAsync(new CreateRestaurantRequest(
+                Name, Street, City, State, Pincode, OpensAt, ClosesAt), ct);
 
-                ToastSuccess("Restaurant created. Now add its tables and menu.");
-                return RedirectToPage("/Admin/Restaurants/Manage", new { id = restaurant.Id });
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
-                return Page();
-            }
+            ToastSuccess("Restaurant created. Now add its tables and menu.");
+            return RedirectToPage("/Admin/Restaurants/Manage", new { id = restaurant.Id });
+            
         }
     }
 }

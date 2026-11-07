@@ -1,9 +1,9 @@
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
-using DineBook.Domain.Enums;
 using DineBook.Domain.Exceptions;
 using DineBook.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
+using DineBook.Domain.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -75,7 +75,8 @@ namespace DineBook.Application.Services
                 .ToListAsync(ct);
         }
 
-        public async Task<IReadOnlyList<Orders>> GetOrdersForBookingsAsync(IReadOnlyCollection<long> reservationIds, CancellationToken ct = default)
+        public async Task<IReadOnlyList<Orders>> GetOrdersForBookingsAsync(
+            IReadOnlyCollection<long> reservationIds, CancellationToken ct = default)
         {
             var ids = (reservationIds ?? Array.Empty<long>()).ToList();
             if (ids.Count == 0)

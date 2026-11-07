@@ -110,3 +110,10 @@ Schema changes are plain SQL scripts in `DineBook.Infrastructure/Database/Script
 - `001_dish_images.sql`: adds `ImageUrl` to `MenuItem` and `OrderItem`, and fills in sample photos.
 
 Order items copy the dish name, price and photo when the order is placed, so past orders do not change when the menu does.
+
+## Payment webhook
+
+`POST /Payment/Webhook` (Razor Page, antiforgery disabled, since Cashfree is a server). It reads the raw body and the
+`x-webhook-signature` and `x-webhook-timestamp` headers and calls `PaymentService.HandleWebhookAsync`. The signature check
+(`CashfreeGateway.VerifyWebhookSignature`) is the only trust. Amount is compared with the stored payment, and a payment is
+marked paid only once (`Payment.MarkAsPaid` returns false on duplicates).

@@ -77,15 +77,9 @@ namespace DineBook.Web.Pages.Admin.Restaurants
                 return await ReloadAsync(ct);
             }
 
-            try
-            {
-                await _admin.AddTableAsync(Id, TableLabel.Trim(), TableCapacity, ct);
-                ToastSuccess($"Table {TableLabel.Trim()} added.");
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
-            }
+            await _admin.AddTableAsync(Id, TableLabel.Trim(), TableCapacity, ct);
+            ToastSuccess($"Table {TableLabel.Trim()} added.");
+            
 
             return RedirectToPage(new { id = Id });
         }
@@ -100,30 +94,18 @@ namespace DineBook.Web.Pages.Admin.Restaurants
                 return await ReloadAsync(ct);
             }
 
-            try
-            {
-                await _admin.AddMenuItemAsync(Id, ItemName, ItemDescription, ItemCategory, ItemPrice, ct);
-                ToastSuccess($"{ItemName.Trim()} added to the menu.");
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
-            }
+            await _admin.AddMenuItemAsync(Id, ItemName, ItemDescription, ItemCategory, ItemPrice, ct);
+            ToastSuccess($"{ItemName.Trim()} added to the menu.");
+            
 
             return RedirectToPage(new { id = Id });
         }
 
         public async Task<IActionResult> OnPostToggleItemAsync(long itemId, bool available, CancellationToken ct)
         {
-            try
-            {
-                await _admin.SetMenuItemAvailabilityAsync(itemId, available, ct);
-                ToastSuccess(available ? "Item is available again." : "Item hidden from customers.");
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
-            }
+            await _admin.SetMenuItemAvailabilityAsync(itemId, available, ct);
+            ToastSuccess(available ? "Item is available again." : "Item hidden from customers.");
+            
 
             return RedirectToPage(new { id = Id });
         }

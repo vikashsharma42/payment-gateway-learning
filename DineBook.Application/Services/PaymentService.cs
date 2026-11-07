@@ -207,14 +207,9 @@ namespace DineBook.Application.Services
                 return true; // signed, but never mark paid
             }
 
-            try
-            {
-                await MarkPaidAsync(gatewayOrderId, ct);
-            }
-            catch (DomainException ex)
-            {
-                _logger.LogWarning(ex, "Webhook could not change payment {GatewayOrderId}", gatewayOrderId);
-            }
+            // A payment that cannot change (already paid, failed) throws DomainException.
+            // DomainExceptionFilter acknowledges the webhook with 200 in that case.
+            await MarkPaidAsync(gatewayOrderId, ct);
 
             return true;
         }

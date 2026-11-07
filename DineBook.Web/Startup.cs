@@ -40,6 +40,9 @@ namespace DineBook.Web
             // Razor Pages
             services.AddRazorPages();
 
+            // Global error handling
+            services.AddExceptionHandler<GlobalExceptionHandler>();
+
             // Cookie Authentication for Razor Pages
             services
                 .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
@@ -137,6 +140,9 @@ namespace DineBook.Web
                 app.UseResponseCaching();
                 app.UseHsts();
             }
+
+            // Rule violations become messages. Placed inside UseExceptionHandler, so other errors still reach the error page.
+            app.UseMiddleware<DomainExceptionMiddleware>();
 
             app.UseSecurityHeaders();
             app.UseHttpsRedirection();

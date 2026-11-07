@@ -76,21 +76,14 @@ namespace DineBook.Web.Pages
             if (!ModelState.IsValid)
                 return Page();
 
-            try
-            {
-                var user = await _registration.RegisterCustomerAsync(new CustomerRegistrationRequest(
-                    Input.FirstName, Input.LastName, Input.Email, Input.Phone, Input.Password), ct);
+            var user = await _registration.RegisterCustomerAsync(new CustomerRegistrationRequest(
+                Input.FirstName, Input.LastName, Input.Email, Input.Phone, Input.Password), ct);
 
-                // Signed in straight away, with the same cookie as the sign-in page
-                await _auth.SignInAsync(user);
-                ToastSuccess("Welcome to DineBook! Your account is ready.");
-                return RedirectToPage("/Index");
-            }
-            catch (DomainException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                return Page();
-            }
+            // Signed in straight away, with the same cookie as the sign-in page
+            await _auth.SignInAsync(user);
+            ToastSuccess("Welcome to DineBook! Your account is ready.");
+            return RedirectToPage("/Index");
+            
         }
     }
 }

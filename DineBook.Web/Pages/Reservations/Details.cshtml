@@ -25,12 +25,12 @@
 </div>
 
 <div class="row g-4">
-    <div class="col-lg-5">
+    <div class="col-lg-4">
         <div class="card shadow-sm mb-4">
             <div class="card-body">
                 <dl class="row mb-0">
                     <dt class="col-5">Booking code</dt>
-                    <dd class="col-7"><code class="fs-5">@Model.Reservation.Code</code></dd>
+                    <dd class="col-7"><code class="fs-6">@Model.Reservation.Code</code></dd>
 
                     <dt class="col-5">When</dt>
                     <dd class="col-7">@Model.Reservation.StartsAt.ToString("ddd, dd MMM yyyy") at @Model.Reservation.StartsAt.ToString("HH:mm")</dd>
@@ -62,20 +62,8 @@
                 </div>
             </form>
         }
-        else if (Model.CanCancel)
+        else
         {
-            <form method="post" asp-page-handler="Cancel" class="card card-body shadow-sm" data-submit-once>
-                <input type="hidden" name="Code" value="@Model.Code" />
-                <h2 class="h6">Need to cancel?</h2>
-                <p class="text-muted small mb-2">You can cancel this booking any time before your visit.</p>
-                <button type="submit" class="btn btn-outline-danger">Cancel booking</button>
-            </form>
-        }
-    </div>
-
-    @if (Model.IsOwner)
-    {
-        <div class="col-lg-7">
             <section class="card shadow-sm mb-4" aria-labelledby="food-heading">
                 <div class="card-body">
                     <h2 id="food-heading" class="h5">Your food</h2>
@@ -106,7 +94,7 @@
                                     <li class="d-flex align-items-center gap-3 py-2">
                                         @if (!string.IsNullOrEmpty(line.ImageUrl))
                                         {
-                                            <img class="dish-thumb" src="@line.ImageUrl" alt="" loading="lazy" width="56" height="56" />
+                                            <img class="dish-thumb" src="@line.ImageUrl" alt="" loading="lazy" width="64" height="64" />
                                         }
                                         else
                                         {
@@ -138,49 +126,93 @@
                 </div>
             </section>
 
-            @if (Model.CanOrderFood && Model.MenuGroups.Count > 0)
+            @if (Model.HasPaidFood)
             {
-                <form method="post" asp-page-handler="Order" class="card shadow-sm mb-4" data-submit-once>
-                    <div class="card-body">
-                        <h2 class="h5">Add food</h2>
-                        <p class="text-muted small">Choose how many of each dish you want, then place the order.</p>
-                        <input type="hidden" name="Code" value="@Model.Code" />
-
-                        @foreach (var group in Model.MenuGroups)
-                        {
-                            <h3 class="h6 text-uppercase text-muted mt-3 mb-1">@group.Key</h3>
-                            <ul class="list-unstyled mb-0">
-                                @foreach (var item in group)
-                                {
-                                    <li class="d-flex align-items-center gap-3 py-2 border-bottom">
-                                        @if (!string.IsNullOrEmpty(item.ImageUrl))
-                                        {
-                                            <img class="dish-thumb" src="@item.ImageUrl" alt="" loading="lazy" width="56" height="56" />
-                                        }
-                                        else
-                                        {
-                                            <span class="dish-thumb dish-thumb--empty" aria-hidden="true">🍽️</span>
-                                        }
-                                        <span class="flex-grow-1">
-                                            <span class="fw-semibold">@item.Name</span>
-                                            @if (!string.IsNullOrEmpty(item.Description))
-                                            {
-                                                <span class="d-block small text-muted">@item.Description</span>
-                                            }
-                                            <span class="d-block small">@Money.Inr(item.Price)</span>
-                                        </span>
-                                        <label class="visually-hidden" for="qty_@item.Id">Quantity of @item.Name</label>
-                                        <input id="qty_@item.Id" type="number" class="form-control form-control-sm qty-input"
-                                               name="qty_@item.Id" min="0" max="20" value="0" />
-                                    </li>
-                                }
-                            </ul>
-                        }
-
-                        <button type="submit" class="btn btn-brand w-100 mt-4">Place order</button>
-                    </div>
+                <div class="alert alert-light border small mb-0">
+                    This booking has a paid food order, so it cannot be cancelled.
+                </div>
+            }
+            else if (Model.CanCancel)
+            {
+                <form method="post" asp-page-handler="Cancel" class="card card-body shadow-sm" data-submit-once>
+                    <input type="hidden" name="Code" value="@Model.Code" />
+                    <h2 class="h6">Need to cancel?</h2>
+                    <p class="text-muted small mb-2">You can cancel this booking any time before your visit.</p>
+                    <button type="submit" class="btn btn-outline-danger">Cancel booking</button>
                 </form>
             }
+        }
+    </div>
+
+    @if (Model.IsOwner && Model.CanOrderFood && Model.MenuGroups.Count > 0)
+    {
+        <div class="col-lg-8">
+            <form method="post" asp-page-handler="Order" data-submit-once>
+                <input type="hidden" name="Code" value="@Model.Code" />
+
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+                    <h2 class="h4 mb-0">Menu</h2>
+                    <input id="menuSearch" type="search" class="form-control menu-search" placeholder="Search dishes…"
+                           aria-label="Search dishes" />
+                </div>
+
+                <nav class="category-chips mb-2" aria-label="Menu categories">
+                    @foreach (var group in Model.MenuGroups)
+                    {
+                        <a class="category-chip" href="#cat-@group.Key.GetHashCode()">@group.Key</a>
+                    }
+                </nav>
+
+                <div class="menu-grid">
+                    @foreach (var group in Model.MenuGroups)
+                    {
+                        <section id="cat-@group.Key.GetHashCode()" class="menu-section" aria-labelledby="h-cat-@group.Key.GetHashCode()">
+                            <h3 id="h-cat-@group.Key.GetHashCode()" class="category-title">@group.Key</h3>
+                            <div class="menu-section-items">
+                                @foreach (var item in group)
+                                {
+                                    <div class="menu-card-col" data-name="@item.Name.ToLowerInvariant()" data-price="@item.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-label="@item.Name">
+                                        <article class="dish-card h-100">
+                                            <div class="dish-media">
+                                                @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                                {
+                                                    <img src="@item.ImageUrl" alt="@item.Name" loading="lazy" />
+                                                }
+                                                else
+                                                {
+                                                    <span class="dish-media-empty" aria-hidden="true">🍽️</span>
+                                                }
+                                            </div>
+                                            <div class="dish-body">
+                                                <h4 class="dish-name">@item.Name</h4>
+                                                <div class="dish-price">@Money.Inr(item.Price)</div>
+                                                @if (!string.IsNullOrEmpty(item.Description))
+                                                {
+                                                    <p class="dish-desc">@item.Description</p>
+                                                }
+                                                <div class="d-flex align-items-center justify-content-between mt-auto pt-2">
+                                                    <label class="visually-hidden" for="qty_@item.Id">Quantity of @item.Name</label>
+                                                    <input id="qty_@item.Id" type="number" class="form-control qty-input"
+                                                           name="qty_@item.Id" min="0" max="20" value="0" />
+                                                </div>
+                                            </div>
+                                        </article>
+                                    </div>
+                                }
+                            </div>
+                        </section>
+                    }
+
+                </div>
+
+                <div class="order-bar" id="orderBar">
+                    <div>
+                        <div class="fw-semibold" id="orderCount">No dishes selected</div>
+                        <div class="small text-muted" id="orderTotal">Choose quantities to see your total</div>
+                    </div>
+                    <button type="submit" class="btn btn-brand btn-lg" id="placeOrder" disabled>Place order</button>
+                </div>
+            </form>
         </div>
     }
 </div>
@@ -188,3 +220,7 @@
 <div class="mt-4">
     <a asp-page="/Bookings/Index" class="btn btn-outline-secondary">Back to my bookings</a>
 </div>
+
+@section Scripts {
+    <script src="~/js/menu.js" asp-append-version="true" defer></script>
+} 
