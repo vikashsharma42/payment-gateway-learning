@@ -13,6 +13,9 @@ namespace DineBook.Application.Services.Interface
     {
         Task<Restaurant> CreateRestaurantAsync(CreateRestaurantRequest request, CancellationToken ct = default);
 
+        /// <summary>Sets the GST percent and system access fee that the bills of this restaurant use.</summary>
+        Task UpdateChargesAsync(long restaurantId, decimal taxPercent, decimal systemAccessFee, CancellationToken ct = default);
+
         Task<RestaurantTable> AddTableAsync(long restaurantId, string label, int capacity, CancellationToken ct = default);
 
         Task RenameTableAsync(long restaurantId, long tableId, string label, CancellationToken ct = default);

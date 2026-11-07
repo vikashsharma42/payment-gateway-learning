@@ -1,4 +1,5 @@
 using DineBook.Application.Services.Interface;
+using DineBook.Web.Helpers;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using Microsoft.AspNetCore.DataProtection;
@@ -31,19 +32,22 @@ namespace DineBook.Web.Infrastructure
         private readonly ICustomerContactService _contacts;
         private readonly IReservationService _reservations;
         private readonly IFoodOrderService _orders;
+        private readonly BillingQueries _billing;
 
         public BookingAccess(
             IHttpContextAccessor http,
             IDataProtectionProvider protection,
             ICustomerContactService contacts,
             IReservationService reservations,
-            IFoodOrderService orders)
+            IFoodOrderService orders,
+            BillingQueries billing)
         {
             _http = http;
             _protector = protection.CreateProtector("DineBook.GuestBookings.v1");
             _contacts = contacts;
             _reservations = reservations;
             _orders = orders;
+            _billing = billing;
         }
 
         private HttpContext Context => _http.HttpContext ?? throw new InvalidOperationException("HTTP context is unavailable.");
@@ -111,9 +115,15 @@ namespace DineBook.Web.Infrastructure
 
             var orders = await _orders.GetOrdersForBookingsAsync(bookings.Select(b => b.Id).ToList(), ct);
 
-            return bookings
-                .Select(b => new BookingWithOrders(b, orders.Where(o => o.ReservationId == b.Id).ToList()))
-                .ToList();
+            var result = new List<BookingWithOrders>();
+            foreach (var booking in bookings)
+            {
+                // One database read per restaurant: its GST and system access fee
+                var charges = await _billing.GetChargesAsync(booking.RestaurantId, ct);
+                result.Add(new BookingWithOrders(booking, orders.Where(o => o.ReservationId == booking.Id).ToList(), charges));
+            }
+
+            return result;
         }
 
         private long? AccountId()
@@ -167,10 +177,13 @@ namespace DineBook.Web.Infrastructure
     }
 
     /// <summary>A booking with its food orders, for the bookings and order history pages.</summary>
-    public sealed record BookingWithOrders(Reservation Booking, IReadOnlyList<Orders> FoodOrders)
+    public sealed record BookingWithOrders(Reservation Booking, IReadOnlyList<Orders> FoodOrders, RestaurantCharges Charges)
     {
         public IReadOnlyList<Orders> UnpaidOrders => FoodOrders.Where(o => !o.IsPaid && o.Status != OrderStatus.Cancelled).ToList();
 
-        public decimal UnpaidTotal => UnpaidOrders.Sum(o => o.Total());
+        // The bill (items + system access fee + GST) of one food order
+        public Bill BillFor(Orders order) => BillCalculator.Calculate(order.Subtotal(), Charges);
+
+        public decimal UnpaidTotal => UnpaidOrders.Sum(o => BillFor(o).Total);
     }
 }

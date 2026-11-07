@@ -7,6 +7,10 @@
     var countEl = document.getElementById('orderCount');
     var totalEl = document.getElementById('orderTotal');
     var placeBtn = document.getElementById('placeOrder');
+    var fee = parseFloat(bar.dataset.fee) || 0;
+    var taxPercent = parseFloat(bar.dataset.tax) || 0;
+    var taxType = bar.dataset.taxType || 'GST';
+    function round2(n) { return Math.round(n * 100) / 100; }
     var inr = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' });
 
     function quantities() {
@@ -25,13 +29,18 @@
         var items = lines.reduce(function (sum, l) { return sum + l.qty; }, 0);
         var total = lines.reduce(function (sum, l) { return sum + l.qty * l.price; }, 0);
 
+        // Same formula as BillCalculator: GST applies to items + system access fee
+        var tax = round2((total + fee) * taxPercent / 100);
+        var grand = round2(total + fee + tax);
+
         if (items === 0) {
             countEl.textContent = 'No dishes selected';
             totalEl.textContent = 'Choose quantities to see your total';
             placeBtn.disabled = true;
         } else {
-            countEl.textContent = items + (items === 1 ? ' dish' : ' dishes') + ' selected';
-            totalEl.textContent = 'Total ' + inr.format(total);
+            countEl.textContent = items + (items === 1 ? ' dish' : ' dishes') + ' · Total ' + inr.format(grand);
+            totalEl.textContent = 'Items ' + inr.format(total) + ' + system fee ' + inr.format(fee)
+                + ' + ' + taxType + ' ' + taxPercent + '% ' + inr.format(tax);
             placeBtn.disabled = false;
         }
 

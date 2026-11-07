@@ -19,6 +19,9 @@ namespace DineBook.Infrastructure.Database.Configurations
             builder.Navigation(nameof(Restaurant.MenuCategories)).UsePropertyAccessMode(PropertyAccessMode.Field);
 
             // IsActive is computed from Status
+            builder.Property(x => x.TaxPercent).HasPrecision(5, 2);
+            builder.Property(x => x.SystemAccessFee).HasPrecision(10, 2);
+
             builder.Ignore(x => x.IsActive);
         }
     }

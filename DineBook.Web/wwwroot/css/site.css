@@ -489,16 +489,17 @@ main {
     width: 6rem;
 }
 
+/* Sticky inside the menu column, so it never covers the booking or bill on the left */
 .order-bar {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1030;
+    position: sticky;
+    bottom: 1rem;
+    z-index: 5;
+    margin-top: 1.5rem;
     background: #fff;
-    border-top: 1px solid var(--line);
-    box-shadow: 0 -6px 20px rgba(17, 24, 39, 0.08);
-    padding: 0.85rem max(1rem, calc((100% - 1320px) / 2 + 1rem));
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
+    padding: 0.85rem 1rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -591,33 +592,30 @@ main {
     }
 }
 
-/* Dish grid: fills the menu column, cards line up in equal columns */
+/* Menu: each category is its own grid of dish cards, filling the full menu column */
 .menu-grid {
+    display: block;
+    width: 100%;
+}
+
+.menu-section {
+    margin-bottom: 1.5rem;
+}
+
+.menu-section-items {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 1rem;
     align-items: stretch;
 }
 
-/* Keep the last dish above the fixed order bar */
-body:has(.order-bar) {
-    padding-bottom: 6rem;
-}
-
-/* Categories share one grid: heading spans the full row, dishes flow beneath it */
-.menu-section,
-.menu-section-items {
-    display: contents;
+.menu-section .menu-card-col {
+    min-width: 0;
 }
 
 .menu-grid .category-title {
-    grid-column: 1 / -1;
-    margin: 1.5rem 0 0;
+    margin: 0.5rem 0 0.75rem;
 }
-
-    .menu-grid .category-title:first-child {
-        margin-top: 0;
-    }
 
 .dish-card .qty-input {
     width: 100%;
@@ -625,4 +623,60 @@ body:has(.order-bar) {
     border-radius: 12px;
     text-align: center;
     font-weight: 700;
+}
+
+
+/* Bill breakdown: items, system access fee, GST and total */
+.bill {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.bill-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+.bill-row dt {
+    font-weight: 400;
+    color: var(--muted);
+}
+
+.bill-row dd {
+    margin: 0;
+    font-weight: 600;
+}
+
+.bill-total {
+    border-top: 1px solid var(--line);
+    padding-top: 0.5rem;
+    margin-top: 0.25rem;
+    font-size: 1.05rem;
+}
+
+.bill-total dt {
+    color: var(--ink);
+    font-weight: 700;
+}
+
+.bill-total dd {
+    font-weight: 800;
+    color: var(--brand);
+}
+
+/* Logo mark in the header */
+.brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.brand-mark {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
 }

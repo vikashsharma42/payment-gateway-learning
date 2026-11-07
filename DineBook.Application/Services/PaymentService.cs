@@ -66,7 +66,7 @@ namespace DineBook.Application.Services
         }
 
         public async Task<PaymentOrderResult> CreateOrderAsync(
-            long orderId, string customerEmail, string customerPhone, string returnUrl,
+            long orderId, decimal amount, string customerEmail, string customerPhone, string returnUrl,
             string idempotencyKey, CancellationToken ct = default)
         {
             if (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Trim().Length > 64)
@@ -108,16 +108,15 @@ namespace DineBook.Application.Services
                 return ToResult(pending);
 
             var session = await _gateway.CreateOrderAsync(
-                order.Total(),
+                amount,
                 $"cust_{Guid.NewGuid():N}",
                 customerEmail,
                 customerPhone,
                 returnUrl,
                 ct);
 
-            // The Payment constructor takes its amount from the order again, so both always agree
             var payment = new Payment(
-                order, session.OrderId, session.PaymentSessionId, key, customerEmail);
+                order, amount, session.OrderId, session.PaymentSessionId, key, customerEmail);
             _db.Payments.Add(payment);
 
             try

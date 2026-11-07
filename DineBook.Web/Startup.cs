@@ -101,6 +101,7 @@ namespace DineBook.Web
             services.AddScoped<IWebAuthenticationService, WebAuthenticationService>();
             services.AddScoped<ICurrentUserProvider, HttpContextCurrentUserProvider>();
             services.AddScoped<BookingAccess>();
+            services.AddScoped<BillingQueries>();
 
             // Site configuration
             services.AddSiteOptions(_configuration);

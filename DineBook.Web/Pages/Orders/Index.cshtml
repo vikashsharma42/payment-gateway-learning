@@ -67,10 +67,7 @@ else
                                     }
                                 </ul>
 
-                                <div class="d-flex justify-content-between">
-                                    <span>Total</span>
-                                    <strong>@DineBook.Web.Helpers.Money.Inr(order.Total())</strong>
-                                </div>
+                                @await Html.PartialAsync("_BillBreakdown", group.BillFor(order))
                             </div>
                         </div>
                     </div>

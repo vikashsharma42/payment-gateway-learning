@@ -3,6 +3,7 @@ using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Infrastructure.Database;
+using DineBook.Web.Helpers;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -19,7 +20,7 @@ namespace DineBook.Web.Pages
     [EnableRateLimiting("checkout")]
     public class CheckoutModel : AppPageModel
     {
-        private const string PendingKey = "PendingPayment";
+        public const string PendingKey = "PendingPayment";
 
         // Cashfree payment sessions expire. Confirm the lifetime in the Cashfree docs.
         private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(30);
@@ -54,6 +55,9 @@ namespace DineBook.Web.Pages
         public Reservation Booking { get; private set; }
 
         public string RestaurantName { get; private set; } = string.Empty;
+
+        // The bill: items + system access fee + GST, from the restaurant's row. Shown and charged.
+        public Bill Bill { get; private set; }
 
         public string ReservationCode => Booking?.Code ?? string.Empty;
 
@@ -95,7 +99,7 @@ namespace DineBook.Web.Pages
             // Contact details come from the booking, so nobody types them again.
             // The amount is read from the order inside PaymentService, never from the form.
             var session = await _payments.CreateOrderAsync(
-                id, Booking.CustomerEmail, Booking.CustomerPhone, returnUrl, IdempotencyKey, ct);
+                id, Bill.Total, Booking.CustomerEmail, Booking.CustomerPhone, returnUrl, IdempotencyKey, ct);
 
             if (session is null)
                 return NotFound();
@@ -140,6 +144,8 @@ namespace DineBook.Web.Pages
 
             Booking = Order.Reservation;
             RestaurantName = Order.Restaurant?.Name ?? string.Empty;
+            Bill = BillCalculator.Calculate(Order.Subtotal(),
+                new RestaurantCharges(Order.Restaurant.TaxPercent, Order.Restaurant.SystemAccessFee, Order.Restaurant.TaxType));
 
             return Booking is not null && await _access.OwnsAsync(Booking, ct);
         }

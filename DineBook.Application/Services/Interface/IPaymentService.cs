@@ -18,13 +18,15 @@ namespace DineBook.Application.Services.Interface
         Task<IReadOnlyList<Orders>> GetPayableOrdersAsync(string reservationCode, string phone, CancellationToken ct = default);
 
         /// <summary>
-        /// Creates a gateway order for one food order's server-side total and stores a pending Payment.
+        /// Creates a gateway order for one food order and stores a pending Payment. The amount is the bill total,
+        /// calculated on the server by the web layer from the order and the restaurant's charges.
         /// The same idempotency key always returns the same order. A pending payment that is still
         /// fresh is reused, so two checkouts for one order cannot both be charged.
         /// Returns null when the food order does not exist.
         /// </summary>
         Task<PaymentOrderResult> CreateOrderAsync(
             long orderId,
+            decimal amount,
             string customerEmail,
             string customerPhone,
             string returnUrl,

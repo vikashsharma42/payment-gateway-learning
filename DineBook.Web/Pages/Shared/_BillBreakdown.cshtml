@@ -1,0 +1,19 @@
+@model DineBook.Web.Helpers.Bill
+<dl class="bill mb-0" aria-label="Bill breakdown">
+    <div class="bill-row">
+        <dt>Items</dt>
+        <dd>@Money.Inr(Model.Subtotal)</dd>
+    </div>
+    <div class="bill-row">
+        <dt>System access fee</dt>
+        <dd>@Money.Inr(Model.SystemAccessFee)</dd>
+    </div>
+    <div class="bill-row">
+        <dt>@Model.TaxType (@Model.TaxPercent.ToString("0.##")%)</dt>
+        <dd>@Money.Inr(Model.Tax)</dd>
+    </div>
+    <div class="bill-row bill-total">
+        <dt>Total</dt>
+        <dd>@Money.Inr(Model.Total)</dd>
+    </div>
+</dl>

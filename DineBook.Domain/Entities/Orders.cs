@@ -40,7 +40,8 @@ namespace DineBook.Domain.Entities
         private readonly List<OrderItem> _items = [];
         public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
 
-        public decimal Total() => _items.Sum(i => i.LineTotal());
+        // Items only. The bill (system access fee and GST) is calculated in the web layer (BillCalculator).
+        public decimal Subtotal() => _items.Sum(i => i.LineTotal());
 
         private readonly List<Payment> _payments = [];
         public IReadOnlyCollection<Payment> Payments => _payments.AsReadOnly();

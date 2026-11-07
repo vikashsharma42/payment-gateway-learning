@@ -54,6 +54,13 @@ namespace DineBook.Web.Pages.Admin.Restaurants
         [Range(0.01, 100000, ErrorMessage = "Price must be between 0.01 and 100000.")]
         public decimal ItemPrice { get; set; }
 
+        // Bill charges form. Range is checked by the domain (UpdateCharges), so a bad value shows as a toast.
+        [BindProperty]
+        public decimal TaxPercent { get; set; }
+
+        [BindProperty]
+        public decimal SystemAccessFee { get; set; }
+
         public Restaurant Restaurant { get; private set; }
 
         public IReadOnlyList<MenuItem> Menu { get; private set; } = Array.Empty<MenuItem>();
@@ -97,6 +104,17 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             await _admin.AddMenuItemAsync(Id, ItemName, ItemDescription, ItemCategory, ItemPrice, ct);
             ToastSuccess($"{ItemName.Trim()} added to the menu.");
             
+
+            return RedirectToPage(new { id = Id });
+        }
+
+        public async Task<IActionResult> OnPostChargesAsync(CancellationToken ct)
+        {
+            RemoveItemFormErrors();
+            RemoveTableFormErrors();
+
+            await _admin.UpdateChargesAsync(Id, TaxPercent, SystemAccessFee, ct);
+            ToastSuccess("Charges saved. New bills at this restaurant use these rates.");
 
             return RedirectToPage(new { id = Id });
         }

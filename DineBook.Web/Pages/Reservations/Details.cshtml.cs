@@ -1,9 +1,13 @@
+using DineBook.Application.Configuration;
+using DineBook.Web.Helpers;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
+using System.Text.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -20,20 +24,31 @@ namespace DineBook.Web.Pages.Reservations
         private readonly IFoodOrderService _orders;
         private readonly IPaymentService _payments;
         private readonly BookingAccess _access;
+        private readonly SiteOptions _site;
 
         public DetailsModel(
             IReservationService reservations,
             IMenuService menu,
             IFoodOrderService orders,
             IPaymentService payments,
-            BookingAccess access)
+            BookingAccess access,
+            IOptions<SiteOptions> site)
         {
             _reservations = reservations;
             _menu = menu;
             _orders = orders;
             _payments = payments;
             _access = access;
+            _site = site.Value;
         }
+
+        // The restaurant's GST and system access fee, from the restaurant row loaded with the booking
+        public RestaurantCharges Charges => Restaurant is null
+            ? new RestaurantCharges(0m, 0m, "GST")
+            : new RestaurantCharges(Restaurant.TaxPercent, Restaurant.SystemAccessFee, Restaurant.TaxType);
+
+        // The bill of one food order, for the bill breakdown and the pay button
+        public Bill BillFor(DineBook.Domain.Entities.Orders order) => BillCalculator.Calculate(order.Subtotal(), Charges);
 
         [BindProperty(SupportsGet = true)]
         public string Code { get; set; } = string.Empty;
@@ -111,7 +126,7 @@ namespace DineBook.Web.Pages.Reservations
 
             // The booking's own phone number is used as the proof, because ownership was checked above
             var order = await _orders.PlaceOrderAsync(Code, booking.CustomerPhone, selections, ct);
-            ToastSuccess($"Order placed: {order.Items.Count} item(s), total {DineBook.Web.Helpers.Money.Inr(order.Total())}.");
+            ToastSuccess($"Order placed: {order.Items.Count} item(s). Pay for it below.");
 
             return RedirectToPage(new { code = Code });
         }
@@ -128,7 +143,8 @@ namespace DineBook.Web.Pages.Reservations
             return RedirectToPage(new { code = Code });
         }
 
-        // Pay one food order. Checkout reads the amount from the order, never from this form.
+        // One click to pay: the payment session is created here, and the checkout page opens the
+        // secure payment page straight away. The amount is calculated on the server, never taken from the form.
         public async Task<IActionResult> OnPostPayOrderAsync(long orderId, CancellationToken ct)
         {
             var booking = await OwnedBookingAsync(ct);
@@ -141,6 +157,21 @@ namespace DineBook.Web.Pages.Reservations
                 ToastError("That order cannot be paid.");
                 return RedirectToPage(new { code = Code });
             }
+
+            // The bill is calculated here, on the server, from the restaurant's current charges
+            var restaurant = await _reservations.GetRestaurantAsync(booking.RestaurantId, ct);
+            var charges = new RestaurantCharges(restaurant.TaxPercent, restaurant.SystemAccessFee, restaurant.TaxType);
+            var bill = BillCalculator.Calculate(payable.First(o => o.Id == orderId).Subtotal(), charges);
+
+            var returnUrl = $"{_site.PublicBaseUrl.TrimEnd('/')}/Payment/Result";
+            var session = await _payments.CreateOrderAsync(
+                orderId, bill.Total, booking.CustomerEmail, booking.CustomerPhone, returnUrl, Guid.NewGuid().ToString("N"), ct);
+
+            if (session is null)
+                return NotFound();
+
+            var pending = new PendingPayment(orderId, session.OrderId, session.PaymentSessionId, session.Amount, DateTimeOffset.UtcNow);
+            TempData[CheckoutModel.PendingKey] = JsonSerializer.Serialize(pending);
 
             return RedirectToPage("/Checkout", new { id = orderId });
         }

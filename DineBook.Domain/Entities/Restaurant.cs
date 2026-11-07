@@ -15,6 +15,10 @@ namespace DineBook.Domain.Entities
         public const int MaxPhoneLength = 15;
         public const int MaxDescriptionLength = 500;
         public const int MaxCuisineLength = 50;
+        public const decimal DefaultTaxPercent = 18.00m;
+        public const decimal DefaultSystemAccessFee = 10.00m;
+        public const decimal MaxTaxPercent = 28.00m;
+        public const decimal MaxSystemAccessFee = 500.00m;
 
         // Required by EF Core: Address is an owned value object and cannot be bound through the constructor
         private Restaurant()
@@ -35,6 +39,9 @@ namespace DineBook.Domain.Entities
             Phone = string.Empty;
             Description = string.Empty;
             Cuisine = string.Empty;
+            TaxPercent = DefaultTaxPercent;
+            SystemAccessFee = DefaultSystemAccessFee;
+            TaxType = "GST";
         }
 
         public string Name { get; private set; }
@@ -52,6 +59,25 @@ namespace DineBook.Domain.Entities
         public string Description { get; private set; }
 
         public string Cuisine { get; private set; }
+
+        // GST rate applied to each bill (percent), and the flat system access fee added per food order
+        public decimal TaxPercent { get; private set; }
+
+        public decimal SystemAccessFee { get; private set; }
+
+        // Label shown on the bill, for example GST or VAT
+        public string TaxType { get; private set; }
+
+        public void UpdateCharges(decimal taxPercent, decimal systemAccessFee)
+        {
+            DomainValidation<decimal>.Ensure(taxPercent, nameof(taxPercent))
+                .IsBetween(0m, MaxTaxPercent, $"Tax must be between 0% and {MaxTaxPercent}%.");
+            DomainValidation<decimal>.Ensure(systemAccessFee, nameof(systemAccessFee))
+                .IsBetween(0m, MaxSystemAccessFee, $"System access fee must be between 0 and {MaxSystemAccessFee}.");
+
+            TaxPercent = decimal.Round(taxPercent, 2, MidpointRounding.AwayFromZero);
+            SystemAccessFee = decimal.Round(systemAccessFee, 2, MidpointRounding.AwayFromZero);
+        }
 
         public DateTimeOffset CreatedDateTime { get; set; }
 

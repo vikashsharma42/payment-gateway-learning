@@ -14,6 +14,28 @@
 <h1 class="h2 mb-1">@Model.Restaurant.Name</h1>
 <p class="text-muted mb-4">@Model.Restaurant.Address.Street, @Model.Restaurant.Address.City · open @Model.Restaurant.OpensAt.ToString("HH:mm") to @Model.Restaurant.ClosesAt.ToString("HH:mm")</p>
 
+<section class="card shadow-sm mb-4" aria-labelledby="charges-heading">
+    <div class="card-body">
+        <h2 id="charges-heading" class="h5">Bill charges</h2>
+        <p class="text-muted small mb-3">Added to every food bill at this restaurant: items + system access fee + GST.</p>
+        <form method="post" asp-page-handler="Charges" class="row g-3 align-items-end" data-submit-once>
+            <div class="col-sm-4">
+                <label class="form-label" for="taxPercent">GST (%)</label>
+                <input id="taxPercent" name="TaxPercent" type="number" step="0.01" min="0" max="28" class="form-control"
+                       value="@Model.Restaurant.TaxPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)" required />
+            </div>
+            <div class="col-sm-4">
+                <label class="form-label" for="systemAccessFee">System access fee (₹ per order)</label>
+                <input id="systemAccessFee" name="SystemAccessFee" type="number" step="0.01" min="0" max="500" class="form-control"
+                       value="@Model.Restaurant.SystemAccessFee.ToString(System.Globalization.CultureInfo.InvariantCulture)" required />
+            </div>
+            <div class="col-sm-4">
+                <button type="submit" class="btn btn-brand w-100">Save charges</button>
+            </div>
+        </form>
+    </div>
+</section>
+
 <div class="row g-4">
     <section class="col-lg-5" aria-labelledby="tables-heading">
         <div class="card shadow-sm">

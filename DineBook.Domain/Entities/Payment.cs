@@ -15,6 +15,7 @@ namespace DineBook.Domain.Entities
 
         public Payment(
             Orders order,
+            decimal amount,
             string gatewayOrderId,
             string paymentSessionId,
             string idempotencyKey,
@@ -26,7 +27,7 @@ namespace DineBook.Domain.Entities
                 .IsTrue("A cancelled order cannot be paid.");
             DomainValidation<bool>.Ensure(order.IsPaid).IsFalse("This order has already been paid.");
 
-            var amount = order.Total();
+            // The amount is the bill total, calculated by BillCalculator from the restaurant's charges
             DomainValidation<decimal>.Ensure(amount).IsGreaterThan(0);
             DomainValidation<string>.Ensure(gatewayOrderId).IsNotNullOrWhiteSpace();
             DomainValidation<string>.Ensure(paymentSessionId).IsNotNullOrWhiteSpace();

@@ -37,6 +37,15 @@ namespace DineBook.Application.Services
             return restaurant;
         }
 
+        public async Task UpdateChargesAsync(long restaurantId, decimal taxPercent, decimal systemAccessFee, CancellationToken ct = default)
+        {
+            var restaurant = await _db.Restaurants.FirstOrDefaultAsync(r => r.Id == restaurantId, ct)
+                ?? throw new DomainException("Restaurant not found.");
+
+            restaurant.UpdateCharges(taxPercent, systemAccessFee);
+            await _db.SaveChangesAsync(ct);
+        }
+
         public async Task<RestaurantTable> AddTableAsync(long restaurantId, string label, int capacity, CancellationToken ct = default)
         {
             var restaurant = await LoadRestaurantAsync(restaurantId, ct);
