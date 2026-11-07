@@ -1,0 +1,65 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "My bookings";
+}
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <h1 class="h2 mb-0">My bookings</h1>
+    <a asp-page="/Index" class="btn btn-brand">Book a table</a>
+</div>
+
+@if (Model.Bookings.Count == 0)
+{
+    <div class="card card-body shadow-sm text-center py-5">
+        <p class="fw-semibold mb-2">No bookings yet</p>
+        <p class="text-muted small mb-0">
+            @if (Model.IsSignedIn)
+            {
+                <span>Bookings made with your phone number will appear here.</span>
+            }
+            else
+            {
+                <span>Bookings you make on this device will appear here. <a asp-page="/Login">Sign in</a> to see them everywhere.</span>
+            }
+        </p>
+    </div>
+}
+else
+{
+    <div class="row g-3">
+        @foreach (var item in Model.Bookings)
+        {
+            var booking = item.Booking;
+            <div class="col-md-6">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h2 class="h5 mb-1">@booking.Restaurant?.Name</h2>
+                                <div class="small text-muted">
+                                    @booking.StartsAt.ToString("ddd, dd MMM yyyy") · @booking.StartsAt.ToString("HH:mm") · @booking.Guests guests
+                                </div>
+                            </div>
+                            <span class="badge @IndexModel.BadgeFor(booking.Status)">@booking.Status</span>
+                        </div>
+                        <div class="small text-muted mb-3">Booking <code>@booking.Code</code></div>
+
+                        <div class="mt-auto">
+                            @if (item.UnpaidTotal > 0)
+                            {
+                                <div class="alert alert-warning py-2 small mb-2">To pay: @DineBook.Web.Helpers.Money.Inr(item.UnpaidTotal)</div>
+                            }
+                            else if (item.FoodOrders.Count > 0)
+                            {
+                                <div class="small text-success mb-2">All food is paid</div>
+                            }
+
+                            <a class="btn btn-outline-primary w-100" asp-page="/Reservations/Details" asp-route-code="@booking.Code">Open booking</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}

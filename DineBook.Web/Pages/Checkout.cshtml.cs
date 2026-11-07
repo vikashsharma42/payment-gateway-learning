@@ -8,10 +8,10 @@ using DineBook.Application.Configuration;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
+using DineBook.Domain.Exceptions;
 using DineBook.Infrastructure.Database;
 using DineBook.Web.Infrastructure;
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,6 +30,7 @@ namespace DineBook.Web.Pages
         private readonly IPaymentService _payments;
         private readonly IConfiguration _configuration;
         private readonly SiteOptions _site;
+        private readonly BookingAccess _access;
         private readonly ILogger<CheckoutModel> _logger;
 
         public CheckoutModel(
@@ -37,36 +38,30 @@ namespace DineBook.Web.Pages
             IPaymentService payments,
             IConfiguration configuration,
             IOptions<SiteOptions> site,
+            BookingAccess access,
             ILogger<CheckoutModel> logger)
         {
             _db = db;
             _payments = payments;
             _configuration = configuration;
             _site = site.Value;
+            _access = access;
             _logger = logger;
         }
 
-        [BindProperty]
-        [Required(ErrorMessage = "Email is required.")]
-        [EmailAddress]
-        public string Email { get; set; } = string.Empty;
-
-        [BindProperty]
-        [Required(ErrorMessage = "Phone is required.")]
-        [RegularExpression(@"^\+?[0-9 ]{10,15}$", ErrorMessage = "Enter a valid phone number.")]
-        public string Phone { get; set; } = string.Empty;
-
-        // One key per checkout form. A double submit or a "back" resubmit sends the same key,
-        // so the customer gets the same payment instead of a new one.
+        // One key per page view. A double click or a "back" resubmit sends the same key, so the guest is charged once.
         [BindProperty]
         public string IdempotencyKey { get; set; } = string.Empty;
 
-        // The food order being paid. Its items, categories and prices are shown as the bill.
+        // The food order being paid
         public Orders Order { get; private set; }
 
-        public string ReservationCode { get; private set; } = string.Empty;
+        // The booking the bill belongs to. Its name, phone and email are used for the payment.
+        public Reservation Booking { get; private set; }
 
         public string RestaurantName { get; private set; } = string.Empty;
+
+        public string ReservationCode => Booking?.Code ?? string.Empty;
 
         // Null when there is no live payment session for this order
         public PendingPayment Pending { get; private set; }
@@ -78,7 +73,7 @@ namespace DineBook.Web.Pages
 
         public async Task<IActionResult> OnGetAsync(long id, CancellationToken ct)
         {
-            if (!await LoadOrderAsync(id, ct))
+            if (!await LoadAsync(id, ct))
                 return NotFound();
 
             if (Order.Status == OrderStatus.Cancelled || Order.IsPaid)
@@ -91,17 +86,11 @@ namespace DineBook.Web.Pages
 
         public async Task<IActionResult> OnPostAsync(long id, CancellationToken ct)
         {
-            if (!await LoadOrderAsync(id, ct))
+            if (!await LoadAsync(id, ct))
                 return NotFound();
 
             if (Order.Status == OrderStatus.Cancelled || Order.IsPaid)
                 return RedirectToSettled();
-
-            if (!ModelState.IsValid)
-            {
-                ToastError("Please check your details and try again.");
-                return Page();
-            }
 
             if (string.IsNullOrWhiteSpace(IdempotencyKey))
                 IdempotencyKey = Guid.NewGuid().ToString("N");
@@ -111,9 +100,10 @@ namespace DineBook.Web.Pages
                 // Built from configuration, never from the Host header
                 var returnUrl = $"{_site.PublicBaseUrl.TrimEnd('/')}/Payment/Result";
 
-                // The amount is read from the order inside PaymentService, never from the form
+                // Contact details come from the booking, so nobody types them again.
+                // The amount is read from the order inside PaymentService, never from the form.
                 var session = await _payments.CreateOrderAsync(
-                    id, Email.Trim(), Phone.Trim(), returnUrl, IdempotencyKey, ct);
+                    id, Booking.CustomerEmail, Booking.CustomerPhone, returnUrl, IdempotencyKey, ct);
 
                 if (session is null)
                     return NotFound();
@@ -129,7 +119,7 @@ namespace DineBook.Web.Pages
             {
                 // Log the error, but never the email or phone
                 _logger.LogError(ex, "Failed to start payment for order {OrderId}", id);
-                ToastError("Payment could not be started. Please try again.");
+                ToastError(ex is DomainException ? ex.Message : "Payment could not be started. Please try again.");
                 return Page();
             }
         }
@@ -149,7 +139,8 @@ namespace DineBook.Web.Pages
             return pending;
         }
 
-        private async Task<bool> LoadOrderAsync(long id, CancellationToken ct)
+        // Loads the bill and checks the visitor owns its booking. Someone else's bill looks like "not found".
+        private async Task<bool> LoadAsync(long id, CancellationToken ct)
         {
             Order = await _db.Orders
                 .AsNoTracking()
@@ -163,9 +154,10 @@ namespace DineBook.Web.Pages
             if (Order is null)
                 return false;
 
-            ReservationCode = Order.Reservation?.Code ?? string.Empty;
+            Booking = Order.Reservation;
             RestaurantName = Order.Restaurant?.Name ?? string.Empty;
-            return true;
+
+            return Booking is not null && await _access.OwnsAsync(Booking, ct);
         }
 
         // A paid or cancelled order needs no checkout: show the booking instead
@@ -173,7 +165,7 @@ namespace DineBook.Web.Pages
         {
             ToastSuccess("This order has already been paid or cancelled.");
             return string.IsNullOrEmpty(ReservationCode)
-                ? RedirectToPage("/Index")
+                ? RedirectToPage("/Bookings/Index")
                 : RedirectToPage("/Reservations/Details", new { code = ReservationCode });
         }
     }

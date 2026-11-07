@@ -97,6 +97,7 @@ namespace DineBook.Web
             // Web-specific Cookie Authentication Service
             services.AddScoped<IWebAuthenticationService, WebAuthenticationService>();
             services.AddScoped<ICurrentUserProvider, HttpContextCurrentUserProvider>();
+            services.AddScoped<BookingAccess>();
 
             // Site configuration
             services.AddSiteOptions(_configuration);

@@ -32,7 +32,12 @@
 
             <div class="mb-3">
                 <label asp-for="Input.Phone" class="form-label"></label>
-                <input asp-for="Input.Phone" type="tel" class="form-control" autocomplete="tel" />
+                <div class="input-group phone-input">
+                        <span class="input-group-text phone-prefix" aria-hidden="true">
+                            <img src="~/img/flag-in.svg" alt="" width="24" height="16" /> +91
+                        </span>
+                        <input asp-for="Input.Phone" type="tel" class="form-control" autocomplete="tel" inputmode="tel" placeholder="98765 43210" />
+                    </div>
                 <div class="form-text">Used to match your bookings and to sign in to orders.</div>
                 <span asp-validation-for="Input.Phone" class="text-danger small"></span>
             </div>

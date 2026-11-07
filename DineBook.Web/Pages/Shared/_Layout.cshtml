@@ -19,13 +19,15 @@
             <a class="brand" asp-page="/Index">DineBook</a>
             <nav class="d-flex align-items-center gap-3">
                 <a class="link-light" asp-page="/Index">Restaurants</a>
+                <a class="link-light" asp-page="/Bookings/Index">My bookings</a>
+                <a class="link-light" asp-page="/Orders/Index">Orders</a>
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     @if (User.IsInRole("Admin"))
                     {
                         <a class="link-light" asp-page="/Admin/Index">Admin</a>
                     }
-                    <form method="post" asp-page="/Admin/Logout" class="d-inline">
+                    <form method="post" asp-page="/Logout" class="d-inline">
                         <button type="submit" class="btn btn-link link-light p-0 text-decoration-none">Sign out</button>
                     </form>
                 }

@@ -1,206 +1,138 @@
 # DineBook
 
-A .NET 10 project with a Razor Pages product storefront, a Web API for frontend consumption, and Cashfree payment gateway integration (sandbox mode).
+A .NET 10 restaurant table booking and food ordering site (Razor Pages), with Cashfree payments in sandbox mode.
 
-The project follows the same layered structure as the Nexora Intelligence API: Domain, Application, Infrastructure, Payments, and presentation (API and Web). See [architecture.md](architecture.md) for the design details.
+Guests book a table, pre-order food from the booking, and pay each food order separately. Customers see all their bookings and orders in one place. Admins manage restaurants, tables and menus.
+
+See [architecture.md](architecture.md) for the design and [CHANGES.md](CHANGES.md) for the latest update.
 
 ## 1. Solution structure
 
 ```
-DineBook/
-├── DineBook.slnx
-├── README.md
-├── architecture.md
-├── .gitignore
-├── .editorconfig
-├── DineBook.Domain/                         (no dependencies)
-│   ├── Abstractions/Entity.cs
-│   ├── Entities/Product.cs                     (ChangePrice)
-│   ├── Entities/Order.cs                       (MarkAsPaid, MarkAsFailed)
-│   ├── Enum/OrderStatus.cs
-│   └── Exceptions/DomainException.cs
-├── DineBook.Infrastructure/                 (EF Core + SQLite)
-│   ├── Database/ApplicationDbContext.cs
-│   ├── Database/Configurations/ProductConfiguration.cs   (10 seed products)
-│   ├── Database/Configurations/OrderConfiguration.cs
-│   └── DependencyInjection/IServiceCollectionExtensions.cs (AddApplicationDatabase)
-├── DineBook.Payments/                       (gateway integration)
-│   ├── Configuration/CashfreeOptions.cs
-│   ├── Gateway/IPaymentGateway.cs
-│   ├── Gateway/PaymentResults.cs
-│   ├── Cashfree/CashfreeGateway.cs
-│   └── DependencyInjection/IServiceCollectionExtensions.cs (AddCashfreePayments)
-├── DineBook.Application/                    (use cases)
-│   ├── Services/PaymentService.cs
-│   ├── Services/Interface/IPaymentService.cs
-│   └── DependencyInjection/IServiceCollectionExtensions.cs (AddDineBookApplication)
-├── DineBook.API/                            (Web API)
-│   ├── Program.cs, Startup.cs
-│   ├── appsettings.json
-│   ├── Configuration/IServiceCollectionExtension.cs      (CORS, JSON, OpenAPI)
-│   ├── Configuration/IApplicationBuilderExtension.cs     (middleware, endpoints)
-│   ├── Controllers/ProductsController.cs                 (direct DB)
-│   ├── Controllers/PaymentsController.cs                 (uses IPaymentService)
-│   ├── DataObjects/Request/CreateOrderRequest.cs
-│   ├── DataObjects/Response/ProductResponse.cs, CreateOrderResponse.cs, OrderStatusResponse.cs
-│   └── Middleware/ExceptionHandlingMiddleware.cs
-└── DineBook.Web/                            (Razor Pages)
-    ├── Program.cs, Startup.cs
-    ├── appsettings.json
-    ├── Pages/Index.cshtml(.cs)                           (direct DB, Buy button)
-    ├── Pages/Checkout.cshtml(.cs)                        (email/phone form, creates order, opens Cashfree)
-    ├── Pages/Payment/Result.cshtml(.cs)                  (status after payment)
-    ├── Pages/Error.cshtml(.cs), Pages/_ViewImports.cshtml, Pages/_ViewStart.cshtml
-    ├── Pages/Shared/_Layout.cshtml
-    └── wwwroot/
+DineBook.slnx
+├── DineBook.Domain/           Entities and rules (no dependencies)
+├── DineBook.Common/           Shared base types
+├── DineBook.Infrastructure/   EF Core (SQL Server), seed data, SQL scripts
+│   └── Database/Scripts/      Numbered SQL scripts, run by hand
+├── DineBook.Application/      Use cases (booking, orders, payments, sign-in, registration)
+├── DineBook.Payments/         Cashfree gateway behind IPaymentGateway
+├── DineBook.Email/            Razor email templates, Brevo sender
+└── DineBook.Web/              Razor Pages site (the app you run)
 ```
 
-## 2. Architecture rules
+`DineBook.API` is commented out in the solution. It is planned for later and is not in this version.
 
-- **Domain** has no dependencies. Business rules live in the entities (`Order.MarkAsPaid()`, `Product.ChangePrice()`).
-- **Infrastructure** owns `ApplicationDbContext`, EF Core configurations, and seed data.
-- **Payments** isolates the gateway behind `IPaymentGateway`. Cashfree is the only implementation.
-- **Application** contains use cases (`PaymentService`). It depends on Domain, Infrastructure, and Payments.
-- **API and Web** are the presentation layers. They are composed in `Startup.cs`.
-- There is **no repository layer**. The Web pages and `ProductsController` query `ApplicationDbContext` directly. `PaymentService` also uses the context directly, as `ChatSessionService` does in Nexora.
+## 2. Requirements
 
-## 3. Requirements
+- .NET 10 SDK (`dotnet --version` starts with `10.`)
+- SQL Server (LocalDB works for development)
+- Internet access for Bootstrap (CDN), dish photos (picsum.photos) and the Cashfree sandbox
 
-- .NET 10 SDK (`dotnet --version` should start with `10.`)
-- EF Core CLI tools: `dotnet tool install --global dotnet-ef`
-- Visual Studio 2022 (17.12+), VS Code, or Rider
-- Internet access (Bootstrap CDN, product images from `picsum.photos`, Cashfree sandbox)
+## 3. Setup
 
-## 4. First-time setup
-
-Run every command from the **solution folder** (where `DineBook.slnx` is). The SQLite file `productshop.db` is created relative to the current directory, so using one folder for all commands keeps Web and API on the same database.
-
-### Step 1: Restore and build
+### Step 1: Build
 ```bash
 dotnet restore
 dotnet build
 ```
 
-### Step 2: Create the database
+### Step 2: Create or update the database
+This project does not use EF migrations. Schema changes are SQL scripts in `DineBook.Infrastructure/Database/Scripts/`. Run them in order on the database named in `ConnectionStrings:DbConnection`. Each script is safe to run more than once.
+
+| Script | What it does |
+|--------|--------------|
+| `001_dish_images.sql` | Adds `ImageUrl` to `MenuItem` and `OrderItem`, and fills in the sample dish photos |
+
+Run one script with sqlcmd:
 ```bash
-dotnet ef migrations add InitialCreate --project DineBook.Infrastructure --startup-project DineBook.API --output-dir Database/Migrations
-dotnet ef database update --project DineBook.Infrastructure --startup-project DineBook.API
+sqlcmd -S <server> -d <database> -E -i DineBook.Infrastructure/Database/Scripts/001_dish_images.sql
 ```
+Or open it in SSMS and run it. The `GO` lines are required.
 
-This creates `productshop.db` with the `Products` and `Orders` tables and the 10 seed products. After every model change, run `migrations add` again with a new name, then `database update`.
+When you add a script, give it the next number and run it on every database (development, staging, production).
 
-### Step 3: Set Cashfree test secrets (shared by API and Web)
-`DineBook.API` and `DineBook.Web` use the same `UserSecretsId`, so you set the secrets once:
+### Step 3: Settings
+Set secrets with user-secrets from the `DineBook.Web` folder:
 
 ```bash
-cd DineBook.API
-dotnet user-secrets set "Jwt:Key" "a-random-string-of-at-least-32-characters"
+cd DineBook.Web
+dotnet user-secrets set "Cashfree:AppId" "your_test_app_id"
+dotnet user-secrets set "Cashfree:SecretKey" "your_test_secret"
 dotnet user-secrets set "Admin:Email" "you@example.com"
 dotnet user-secrets set "Admin:Password" "a-password-of-at-least-12-characters"
-dotnet user-secrets set "Cashfree:AppId" "your_test_app_id"
-dotnet user-secrets set "Cashfree:SecretKey" "your_test_secret_key"
-cd ..
 ```
 
-Both projects read these values. Never put them in `appsettings.json` or commit them to Git. Both projects will fail at startup if the secrets are missing (`ValidateOnStart`). This is intentional.
+`Admin:Email` and `Admin:Password` create the first admin account when no admin exists.
 
-## 5. Run
-
+### Step 4: Run
 ```bash
-# Terminal 1: Razor Pages website (products, checkout, payment result)
-dotnet run --project DineBook.Web      # http://localhost:5080
-
-# Terminal 2: Web API
-dotnet run --project DineBook.API      # http://localhost:5200
+cd DineBook.Web
+dotnet run
 ```
+The site runs at `https://localhost:7080` and `http://localhost:5080` (see `Properties/launchSettings.json`).
 
-Visual Studio: set **Multiple Startup Projects** (Web and API), or start them separately.
+In development, sample restaurants and menus are added when the database has none (`DiningSeeder`).
 
-## 5b. Payment from Razor Pages
+## 4. What guests and customers can do
 
-1. Open the home page (`/`) and click **Buy** on a product.
-2. `/Checkout/{id}` asks for email and phone. Clicking **Continue to payment** creates the order. The price is read from the database.
-3. The **Pay** button opens Cashfree checkout (sandbox).
-4. After payment, Cashfree redirects to `/Payment/Result?order_id=...`. That page confirms the status with Cashfree and shows success, failed, or pending.
+- **Book a table:** pick a date, party size and time. Name, phone and email are filled in from your account, or from your last booking on this browser.
+- **My bookings** (`/Bookings`): all bookings made with your account phone, or on this browser.
+- **Booking details** (`/Reservations/Details?code=...`): add food, pay each food order, or cancel the booking.
+- **Order history** (`/Orders`): food ordered for your bookings, with a photo for each dish.
+- **Checkout** (`/Checkout/{orderId}`): pay one food order through Cashfree. The receipt goes to the booking's email.
 
-Test with card `4111 1111 1111 1111`, any future expiry, CVV `123`.
+### Opening a booking without signing in
+A booking made on this browser opens without a phone number. If someone sends you a booking code, open it with the phone number used for the booking. This browser then remembers it. The phone number is checked once, not on every page.
 
-If Cashfree rejects the `localhost` return URL, expose the Web app with ngrok and open the site through its HTTPS URL.
+### Sign-in and registration
+- `/Login`: email and password. Creates the site cookie `DineBook.Auth` (7 days).
+- `/Registration`: creates an account. A guest record with the same phone is linked to it. You are signed in straight away.
+- Password: at least 12 characters on registration.
+- Sign out: the **Sign out** link in the header (`/Logout`) ends the site cookie.
 
-## 6. Endpoints
+## 5. Admin
 
-| Method | URL                              | Description                                             |
-|--------|----------------------------------|---------------------------------------------------------|
-| GET    | `/` (Web)                        | Product listing page                                    |
-| GET    | `/api/products`                  | All products                                            |
-| GET    | `/api/products/{id}`             | One product (404 if not found)                          |
-| POST   | `/api/payments/create-order`     | Creates a Cashfree order for a product (price from DB)  |
-| GET    | `/api/payments/status/{orderId}` | Confirms the status with Cashfree and updates the order |
-| POST   | `/api/payments/webhook`          | Cashfree server-to-server callback (signature verified) |
-| GET    | `/openapi/v1.json`               | OpenAPI document (Development only)                     |
+- `/Admin`: restaurant list. `/Admin/Restaurants/New`: create a restaurant. `/Admin/Restaurants/{id}`: tables and menu.
+- `/Admin/Users`: staff accounts.
+- Admin pages require the Admin role.
 
-Create order request:
-```bash
-curl -X POST http://localhost:5200/api/payments/create-order \
-  -H "Content-Type: application/json" \
-  -d '{"productId":3,"customerEmail":"test@example.com","customerPhone":"9999999999"}'
-```
+## 6. Payments
 
-Response:
-```json
-{
-  "orderId": "order_638...",
-  "paymentSessionId": "session_...",
-  "amount": 2999,
-  "currency": "INR"
-}
-```
+1. The guest pays a food order on the booking page. `PaymentService` reads the amount from the database, never from the form.
+2. It creates a Cashfree order and saves a `Payment` with status `Pending`. Email and phone come from the booking.
+3. The browser opens Cashfree checkout with the payment session.
+4. After payment, `/Payment/Result` asks Cashfree for the status and marks the payment paid.
 
-Errors use RFC 7807 ProblemDetails. A business rule violation returns 400, and an unexpected error returns 500 with a generic message.
+**Not yet wired:** the Cashfree webhook. `PaymentService.HandleWebhookAsync` exists, but no web page or API endpoint calls it. Payments are marked paid only when the result page checks the status. Until the webhook is wired, a payment that succeeds but whose customer never returns to the site stays pending.
 
-## 7. Payment flow
+## 7. Configuration reference
 
-1. The browser calls `POST /api/payments/create-order` with a `productId`.
-2. `PaymentService` reads the **price from the database**, creates the Cashfree order, and saves an `Order` with status `Pending`.
-3. The frontend opens Cashfree checkout with the returned `paymentSessionId`.
-4. After payment, the frontend calls `GET /api/payments/status/{orderId}`. The service checks the status with Cashfree and calls `order.MarkAsPaid()` if it is paid.
-5. Cashfree may also call `POST /api/payments/webhook`. Duplicates are safe, because `MarkAsPaid()` returns `false` when the order is already paid.
+| Key | Where | Purpose |
+|-----|-------|---------|
+| `ConnectionStrings:DbConnection` | appsettings / user-secrets | SQL Server connection string |
+| `Cashfree:AppId`, `Cashfree:SecretKey` | user-secrets | Cashfree credentials |
+| `Cashfree:Environment` | appsettings | `sandbox` or `production` (keep `sandbox` for testing) |
+| `Admin:Email`, `Admin:Password` | user-secrets | First admin account |
+| `Site:PublicBaseUrl` | appsettings | Base URL used for the payment return page |
+| `Dining:*` | appsettings | Time zone, party size, notice, advance days, booking length, slot length |
+| `Email:Enabled`, `Email:SenderEmail`, `Email:SenderName` | appsettings | Booking and payment emails |
+| `Email:ApiKey` | user-secrets | Brevo API key (emails are off while `Enabled` is false) |
 
-## 8. Changing product data
+`Jwt:Key` is not needed for this version. JWT is part of the planned API.
 
-Seed products are in `DineBook.Infrastructure/Database/Configurations/ProductConfiguration.cs`. Changes there only apply to a new database. For an existing database, either update the `Products` table directly (for example, with DB Browser for SQLite), or add a migration.
-
-## 9. Webhook testing (local)
-
-Cashfree cannot reach `localhost`. Options:
-- Use **ngrok** (`ngrok http 5200`) and register `https://<id>.ngrok-free.app/api/payments/webhook` in the Cashfree dashboard (test mode).
-- Or skip the webhook and rely on `GET /api/payments/status/{orderId}`, which checks the status directly with Cashfree.
-
-## 10. Configuration reference
-
-| Key | Project | Purpose |
-|-----|---------|---------|
-| `ConnectionStrings:DbConnection` | API, Web | SQLite connection string |
-| `Cors:Origins` | API | Allowed frontend origins |
-| `Jwt:Key` | Web (user-secrets) | Signs sign-in tokens. At least 32 characters. The app will not start without it |
-| `Admin:Email`, `Admin:Password` | Web (user-secrets) | First admin account, created when no admin exists |
-| `Cashfree:AppId`, `Cashfree:SecretKey` | API and Web (shared user-secrets) | Cashfree credentials |
-| `Cashfree:Environment` | API, Web | `sandbox` or `production` (keep `sandbox`) |
-
-## 11. Troubleshooting
+## 8. Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| `Cashfree:AppId and Cashfree:SecretKey must be set` | Run the `user-secrets set` commands in `DineBook.API` (Step 3). |
-| `no such table: Products` | Run the migration commands (Step 2). |
-| Web and API show different data | Run both from the solution folder so they share `productshop.db`. |
-| `dotnet ef` not found | `dotnet tool install --global dotnet-ef`, then restart the terminal. |
-| CORS error in the frontend | Add your frontend origin to `Cors:Origins` in `DineBook.API/appsettings.json`. |
+| `Invalid column name 'ImageUrl'` | Run `Database/Scripts/001_dish_images.sql` (Step 2). |
+| Cashfree secrets missing | Set `Cashfree:AppId` and `Cashfree:SecretKey` (Step 3). |
+| Dish photos do not load | Needs internet access to `picsum.photos`, or the URL in `MenuItem.ImageUrl` is wrong. |
+| Phone field asks for a booking phone | The booking was made on another browser. Enter its phone number once. |
+| My bookings is empty | You are signed out and made the booking on another browser, or the account phone differs from the booking phone. |
 | HTTPS certificate warning | `dotnet dev-certs https --trust` |
-| Images not loading | Needs internet access to `picsum.photos`. |
 
-## 12. Notes
+## 9. Notes
 
-- Never commit secrets. Keep Cashfree keys in user-secrets, and do not use live keys for this project.
+- Never commit secrets. Keep Cashfree keys and the admin password in user-secrets.
 - Test card: `4111 1111 1111 1111`, any future expiry, CVV `123`.
-- Do not skip signature verification in the webhook, and do not trust the browser redirect alone to mark an order as paid.
+- Do not trust the browser redirect alone in production. Wire the webhook before going live (section 6).

@@ -173,6 +173,25 @@ namespace DineBook.Application.Services
             return reservation;
         }
 
+        public async Task<IReadOnlyList<Reservation>> GetBookingsAsync(IReadOnlyCollection<string> codes, string accountPhone, CancellationToken ct = default)
+        {
+            var normalizedCodes = (codes ?? Array.Empty<string>())
+                .Select(c => (c ?? string.Empty).Trim().ToUpperInvariant())
+                .Where(c => c.Length > 0)
+                .Distinct()
+                .ToList();
+
+            var phone = Reservation.NormalizePhone(accountPhone);
+            if (normalizedCodes.Count == 0 && phone.Length == 0)
+                return Array.Empty<Reservation>();
+
+            return await _db.Reservations.AsNoTracking()
+                .Include(r => r.Restaurant)
+                .Where(r => normalizedCodes.Contains(r.Code) || (phone.Length > 0 && r.CustomerPhone == phone))
+                .OrderByDescending(r => r.StartsAt)
+                .ToListAsync(ct);
+        }
+
         public Task<Reservation> FindByCodeAsync(string code, CancellationToken ct = default)
         {
             var normalized = (code ?? string.Empty).Trim().ToUpperInvariant();

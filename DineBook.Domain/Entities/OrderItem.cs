@@ -4,11 +4,11 @@ using System;
 
 namespace DineBook.Domain.Entities
 {
-    // One dish in an order, with the name and price copied at the time of ordering.
+    // One dish in an order, with the name, price and image copied at the time of ordering.
     // Added through Orders.AddOrderItem.
     public class OrderItem : Entity, IAuditableEntity
     {
-        public OrderItem(long menuItemId, string itemName, decimal unitPrice, int quantity)
+        public OrderItem(long menuItemId, string itemName, decimal unitPrice, int quantity, string imageUrl = null)
         {
             DomainValidation<long>.Ensure(menuItemId, "Menu item").IsGreaterThan(0);
             DomainValidation<string>.Ensure(itemName, "Item name").IsNotNullOrWhiteSpace();
@@ -19,6 +19,7 @@ namespace DineBook.Domain.Entities
             ItemName = itemName.Trim();
             UnitPrice = unitPrice;
             Quantity = quantity;
+            ImageUrl = string.IsNullOrWhiteSpace(imageUrl) ? null : imageUrl.Trim();
         }
 
         public long OrderId { get; private set; }
@@ -30,6 +31,9 @@ namespace DineBook.Domain.Entities
         public decimal UnitPrice { get; private set; }
 
         public int Quantity { get; private set; }
+
+        // Copied from the menu, so the order history keeps the photo even if the dish is later removed
+        public string ImageUrl { get; private set; }
 
         public DateTimeOffset CreatedDateTime { get; set; }
 

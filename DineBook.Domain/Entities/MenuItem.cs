@@ -4,11 +4,13 @@ using System;
 
 namespace DineBook.Domain.Entities
 {
-    // A dish on one restaurant's menu. Orders copy the name and price, so later edits do not change past orders.
+    // A dish on one restaurant's menu. Orders copy the name, price and image, so later edits do not change past orders.
     // Added through Restaurant.AddMenuItem.
     public class MenuItem : Entity, IAuditableEntity
     {
-        public MenuItem(string name, string description, decimal price)
+        public const int MaxImageUrlLength = 500;
+
+        public MenuItem(string name, string description, decimal price, string imageUrl = null)
         {
             DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace().HasMaxLength(100);
             DomainValidation<string>.Ensure(description ?? string.Empty, nameof(description)).HasMaxLength(300);
@@ -17,6 +19,7 @@ namespace DineBook.Domain.Entities
             Name = name.Trim();
             Description = (description ?? string.Empty).Trim();
             Price = price;
+            ImageUrl = NormalizeImage(imageUrl);
             Category = string.Empty;
             IsAvailable = true;
         }
@@ -33,6 +36,9 @@ namespace DineBook.Domain.Entities
         public string Category { get; private set; }
 
         public decimal Price { get; private set; }
+
+        // Photo shown in the menu and order history. Null means the page shows a placeholder.
+        public string ImageUrl { get; private set; }
 
         // Unavailable items cannot be ordered, but they stay on record
         public bool IsAvailable { get; private set; }
@@ -60,6 +66,8 @@ namespace DineBook.Domain.Entities
             Price = price;
         }
 
+        public void ChangeImage(string imageUrl) => ImageUrl = NormalizeImage(imageUrl);
+
         public void SetAvailability(bool available) => IsAvailable = available;
 
         // Soft delete: the item leaves the menu, but past orders still point at it
@@ -75,6 +83,14 @@ namespace DineBook.Domain.Entities
 
         // Called by MenuCategory when the item is added to it
         internal void SetCategoryName(string categoryName) => Category = categoryName;
+
+        private static string NormalizeImage(string imageUrl)
+        {
+            var value = (imageUrl ?? string.Empty).Trim();
+            DomainValidation<string>.Ensure(value, nameof(imageUrl)).HasMaxLength(MaxImageUrlLength);
+
+            return value.Length == 0 ? null : value;
+        }
 
         private static void EnsurePrice(decimal price) =>
             DomainValidation<decimal>.Ensure(price)

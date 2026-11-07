@@ -16,10 +16,12 @@ namespace DineBook.Web.Pages.Restaurants
     public class BookModel : AppPageModel
     {
         private readonly IReservationService _reservations;
+        private readonly BookingAccess _access;
 
-        public BookModel(IReservationService reservations)
+        public BookModel(IReservationService reservations, BookingAccess access)
         {
             _reservations = reservations;
+            _access = access;
         }
 
         [BindProperty(SupportsGet = true)]
@@ -60,6 +62,9 @@ namespace DineBook.Web.Pages.Restaurants
         [Display(Name = "Special requests (optional)")]
         public string SpecialRequests { get; set; } = string.Empty;
 
+        // True when the form was filled from the account or from this browser's earlier bookings
+        public bool Prefilled { get; private set; }
+
         public Restaurant Restaurant { get; private set; }
 
         public IReadOnlyList<DateTime> Slots { get; private set; } = Array.Empty<DateTime>();
@@ -73,6 +78,17 @@ namespace DineBook.Web.Pages.Restaurants
                 return NotFound();
 
             Date ??= Today;
+
+            // Guests never retype their details: use the account or the last booking made on this device
+            var contact = await _access.PrefillAsync(ct);
+            if (contact is not null)
+            {
+                CustomerName = contact.Name;
+                CustomerPhone = contact.Phone;
+                CustomerEmail = contact.Email;
+                Prefilled = true;
+            }
+
             await LoadSlotsAsync(ct);
             return Page();
         }
@@ -87,7 +103,7 @@ namespace DineBook.Web.Pages.Restaurants
 
             if (!ModelState.IsValid)
             {
-                ToastError("Please check your details and try again.");
+                ToastError("Please check the highlighted details.");
                 await LoadSlotsAsync(ct);
                 return Page();
             }
@@ -103,6 +119,9 @@ namespace DineBook.Web.Pages.Restaurants
                     CustomerEmail.Trim(),
                     (SpecialRequests ?? string.Empty).Trim()),
                     ct);
+
+                // Remember the booking here so it appears under "My bookings" and the details are prefilled next time
+                _access.Remember(reservation, saveContact: true);
 
                 ToastSuccess("Your table is booked.");
 

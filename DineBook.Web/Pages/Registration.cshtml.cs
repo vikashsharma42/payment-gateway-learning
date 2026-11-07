@@ -14,10 +14,12 @@ namespace DineBook.Web.Pages
     public class RegistrationModel : AppPageModel
     {
         private readonly IRegistrationService _registration;
+        private readonly IWebAuthenticationService _auth;
 
-        public RegistrationModel(IRegistrationService registration)
+        public RegistrationModel(IRegistrationService registration, IWebAuthenticationService auth)
         {
             _registration = registration;
+            _auth = auth;
         }
 
         [BindProperty]
@@ -47,7 +49,7 @@ namespace DineBook.Web.Pages
             public string Phone { get; set; }
 
             [Required(ErrorMessage = "Password is required.")]
-            [StringLength(128, MinimumLength = 9, ErrorMessage = "Password must be at least 12 characters.")]
+            [StringLength(128, MinimumLength = 12, ErrorMessage = "Password must be at least 12 characters.")]
             [DataType(DataType.Password)]
             [Display(Name = "Password")]
             public string Password { get; set; }
@@ -76,11 +78,11 @@ namespace DineBook.Web.Pages
 
             try
             {
-                var session = await _registration.RegisterCustomerAsync(new CustomerRegistrationRequest(
+                var user = await _registration.RegisterCustomerAsync(new CustomerRegistrationRequest(
                     Input.FirstName, Input.LastName, Input.Email, Input.Phone, Input.Password), ct);
 
-                // Signed in straight away, like the sign-in page does
-                AuthCookies.Set(Response, session.Tokens);
+                // Signed in straight away, with the same cookie as the sign-in page
+                await _auth.SignInAsync(user);
                 ToastSuccess("Welcome to DineBook! Your account is ready.");
                 return RedirectToPage("/Index");
             }

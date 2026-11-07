@@ -43,6 +43,13 @@
         <form method="post" data-submit-once class="card card-body shadow-sm">
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
 
+            @if (Model.Prefilled)
+            {
+                <p class="alert alert-light border small mb-4">
+                    We filled in your details. Change them only if this table is for someone else.
+                </p>
+            }
+
             <input type="hidden" name="Date" value="@Model.Date.Value.ToString("yyyy-MM-dd")" />
             <input type="hidden" name="Guests" value="@Model.Guests" />
 
@@ -68,7 +75,12 @@
             <div class="row g-3 mb-3">
                 <div class="col-sm-6">
                     <label asp-for="CustomerPhone" class="form-label"></label>
-                    <input asp-for="CustomerPhone" type="tel" class="form-control" autocomplete="tel" inputmode="tel" />
+                    <div class="input-group phone-input">
+                        <span class="input-group-text phone-prefix" aria-hidden="true">
+                            <img src="~/img/flag-in.svg" alt="" width="24" height="16" /> +91
+                        </span>
+                        <input asp-for="CustomerPhone" type="tel" class="form-control" autocomplete="tel" inputmode="tel" placeholder="98765 43210" />
+                    </div>
                     <span asp-validation-for="CustomerPhone" class="text-danger small"></span>
                 </div>
                 <div class="col-sm-6">

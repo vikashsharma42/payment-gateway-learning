@@ -167,3 +167,38 @@ main {
         transition: none;
     }
 }
+
+/* Phone inputs with the India flag and +91 prefix */
+.phone-prefix {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-variant-numeric: tabular-nums;
+    background: #f8fafc;
+}
+
+.phone-prefix img {
+    border-radius: 2px;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+
+/* Dish photos in menus, bookings and order history */
+.dish-thumb {
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+    border-radius: 0.5rem;
+    flex-shrink: 0;
+    background: #f1f5f9;
+}
+
+.dish-thumb--empty {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.qty-input {
+    width: 4.5rem;
+}

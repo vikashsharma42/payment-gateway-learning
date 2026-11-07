@@ -27,6 +27,11 @@ namespace DineBook.Application.Services.Interface
 
         /// <summary>Cancels a confirmed booking. The phone number must match the booking.</summary>
         Task<Reservation> CancelAsync(string code, string phone, CancellationToken ct = default);
+
+        /// <summary>
+        /// Bookings with these codes, plus every booking made with the account phone number. Newest first.
+        /// </summary>
+        Task<IReadOnlyList<Reservation>> GetBookingsAsync(IReadOnlyCollection<string> codes, string accountPhone, CancellationToken ct = default);
     }
 
     public sealed record BookingRequest(

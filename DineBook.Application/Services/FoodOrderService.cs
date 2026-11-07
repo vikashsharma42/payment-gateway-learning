@@ -1,8 +1,10 @@
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
+using DineBook.Domain.Enums;
 using DineBook.Domain.Exceptions;
 using DineBook.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -70,6 +72,20 @@ namespace DineBook.Application.Services
                 .Include(o => o.Items)
                 .Where(o => o.ReservationId == reservation.Id)
                 .OrderBy(o => o.CreatedDateTime)
+                .ToListAsync(ct);
+        }
+
+        public async Task<IReadOnlyList<Orders>> GetOrdersForBookingsAsync(IReadOnlyCollection<long> reservationIds, CancellationToken ct = default)
+        {
+            var ids = (reservationIds ?? Array.Empty<long>()).ToList();
+            if (ids.Count == 0)
+                return Array.Empty<Orders>();
+
+            return await _db.Orders.AsNoTracking()
+                .Include(o => o.Items)
+                .Include(o => o.Payments)
+                .Where(o => ids.Contains(o.ReservationId) && o.Status != OrderStatus.Cancelled)
+                .OrderByDescending(o => o.CreatedDateTime)
                 .ToListAsync(ct);
         }
 

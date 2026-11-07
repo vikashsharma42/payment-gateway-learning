@@ -32,6 +32,9 @@ namespace DineBook.Application.DependencyInjection
             // Sign-up and staff registration
             services.AddScoped<IRegistrationService, RegistrationService>();
 
+            // Contact details for signed-in customers (prefills forms)
+            services.AddScoped<ICustomerContactService, CustomerContactService>();
+
             // First admin seeding
             services.AddScoped<AdminAccountSeeder>();
 

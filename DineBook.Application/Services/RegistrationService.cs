@@ -28,7 +28,7 @@ namespace DineBook.Application.Services
             _hasher = hasher;
         }
 
-        public async Task<AccountSession> RegisterCustomerAsync(CustomerRegistrationRequest request, CancellationToken ct = default)
+        public async Task<ApplicationUser> RegisterCustomerAsync(CustomerRegistrationRequest request, CancellationToken ct = default)
         {
             var email = ApplicationUser.NormalizeEmail(request.Email);
             await EnsureEmailFreeAsync(email, ct);
@@ -58,12 +58,8 @@ namespace DineBook.Application.Services
 
             guest.LinkUser(user.Id);
             await SaveAsync(ct);
-            return Ok();
-        }
 
-        private AccountSession Ok()
-        {
-            throw new NotImplementedException();
+            return user;
         }
 
         public async Task<ApplicationUser> CreateStaffUserAsync(StaffUserRequest request, CancellationToken ct = default)

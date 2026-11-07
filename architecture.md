@@ -12,7 +12,7 @@ many dishes in one order, placed in one action.
 | Dining       | Dining                                    | RestaurantTable, Reservation, ReservationPolicy, ReservationRules |
 | Menu         | Menu                                      | MenuCategory, MenuItem                                      |
 | Ordering     | Ordering                                  | Orders (aggregate root), OrderItems                         |
-| Payments     | Payments                                  | Bill (aggregate root), Payment (gateway attempt for a bill) |
+| Payments     | Payments                                  | Payment (gateway attempt for one food order)                |
 | Customers    | Customers                                 | Customer (guest, matched by phone)                          |
 | Email        | DineBook.Email                            | Razor email templates, Brevo sender                         |
 | Shared       | DineBook.Common                           | ValueObject base, IDomainEvent                              |
@@ -28,15 +28,15 @@ private `List<T>` exposed as `IReadOnlyCollection<T>`, added through the parent 
 `ICurrentUserProvider` (Web registers one that reads the signed-in email) or "system" when none is registered. `UserRefreshToken` (a hashed refresh token) is a persistence record, so it
 lives in DineBook.Infrastructure/Database/Security, not in the Domain.
 
-Layers, outside in: Web / API -> Application (use cases) -> Domain (rules) and Infrastructure (EF Core).
+Layers, outside in: Web (Razor Pages) -> Application (use cases) -> Domain (rules) and Infrastructure (EF Core). Payments is a separate project behind `IPaymentGateway`.
 Domain has no framework or database references.
 
 ## Aggregates
 
 - **Reservation** (root): one booking, identified by an 8-character code. Confirmed, Seated, Completed, Cancelled, or NoShow.
   It holds a table for `DurationMinutes`. Only Confirmed and Seated bookings block a table.
-- **Bill** (root): what a booking owes for its non-cancelled orders. The amount is fixed when the bill is created.
-  A `Payment` is one Cashfree attempt to pay a bill; a paid payment marks the bill paid.
+- **Orders** (food order): one food order for one booking. Its items copy name, price and photo when placed.
+  A `Payment` is one Cashfree attempt to pay one food order; a paid payment marks that order paid. Each order is paid separately.
 - **MenuItem** (root): one dish for one restaurant, with availability and price.
 - **Orders** (root): all dishes ordered for one reservation at one time.
   - `Orders.AddOrderItem(menuItem, quantity)` adds one dish; `Reservation.AddFoodOrder` attaches the order to the booking.
@@ -67,24 +67,28 @@ Domain has no framework or database references.
 - Emails never log the recipient address. Email errors are logged with the subject only.
 - Cashfree secrets and the Brevo API key live in user-secrets, not in appsettings.
 
-## Admin
+## Sign-in and admin
 
-- Routes: `/Admin/Login`, `/Admin` (restaurant list), `/Admin/Restaurants/New`, `/Admin/Restaurants/{id}` (tables and menu).
-- Login: email and password (`/Admin/Login`). Passwords are stored only as PBKDF2 hashes (`PasswordHasher`).
-  A successful login issues a JWT access token (15 minutes) and a refresh token (7 days). Both travel in
-  HttpOnly, Secure, SameSite=Strict cookies (`dinebook.access`, `dinebook.refresh`), never in page scripts.
-  Login is rate limited per IP, and the error message is the same for an unknown email, a wrong password and
-  a deactivated account.
-- JWT bearer (`JwtBearerSetup`): reads the access cookie; when it has expired, the refresh token is rotated
-  and new cookies are set. A token is rejected when its `jti` is blacklisted (sign-out) or the user is no
-  longer active (`IUserActiveCache`). Not signed in: redirect to `/Admin/Login?returnUrl=...`. Wrong role:
-  redirect to `/Admin/Login?denied=1`.
-- Sign-out (`/Admin/Logout`, POST) revokes the user's refresh tokens, blacklists the access token and clears the cookies.
-- Authorization: every page under `/Admin` requires the `AdminOnly` policy (role `Admin`), except sign-in and sign-out.
+- Customers and admins sign in at `/Login` with email and password. Passwords are stored only as PBKDF2 hashes (`PasswordHasher`).
+  A successful login creates the site cookie `DineBook.Auth` (HttpOnly, Secure, SameSite=Strict, 7 days, sliding).
+  Admins are sent to `/Admin` after login; customers to `/`.
+- Registration (`/Registration`) creates the account, links it to any guest record with the same phone, and signs in with the same cookie.
+- The JWT code (`JwtSignInManager`, `JwtTokenService`, cookies `dinebook.access` and `dinebook.refresh`) is kept for the API planned
+  for later. Nothing in the web app issues JWT cookies right now; sign-out only clears them.
+- Sign-out (`/Logout`, POST) ends only the site cookie `DineBook.Auth`. It does not touch the JWT cookies, which are unused by the web app today.
+  `/Admin/Logout` is the older JWT sign-out and is not used by any page.
+- Authorization: `/Admin` pages require the `AdminOnly` policy (role `Admin`).
 - First admin: when no admin exists, `AdminAccountSeeder` creates one from `Admin:Email` and `Admin:Password` (user-secrets).
-- Use cases live in `RestaurantAdminService` (Application), not in the pages. The domain rules
-  (duplicate table labels, capacity, price, opening hours) apply to admin input as they do everywhere.
-- The app will not start without `Jwt:Key` (at least 32 characters, in user-secrets). `Admin:Password`, when set, must be at least 12 characters.
+  `Admin:Password`, when set, must be at least 12 characters.
+- Use cases live in `RestaurantAdminService` (Application), not in the pages.
+
+## Guest memory and booking access
+
+- `BookingAccess` (Web) decides which bookings a visitor may see or change: bookings made with the account phone, and bookings
+  this browser made or unlocked with the phone number.
+- The browser memory is the cookie `dinebook.guest`: a list of booking codes and the last contact details, encrypted and signed
+  with ASP.NET Data Protection. Forms are prefilled from the account first, then from this memory.
+- Opening someone else's booking needs the booking phone number once. Unlocking does not save that person's details as the visitor's.
 
 ## Configuration
 
@@ -97,3 +101,12 @@ Domain has no framework or database references.
 - Payment or deposit for food orders (orders are pay-at-table for now).
 - Kitchen or staff screens (seat, serve, no-show). The domain methods exist, but no UI calls them.
 - Email confirmation for food orders. Reminder emails before a booking.
+
+
+## Database changes
+
+Schema changes are plain SQL scripts in `DineBook.Infrastructure/Database/Scripts/`, numbered in order and safe to run more than once. EF migrations are not used. When the entities change, add a script that makes the same change to the database.
+
+- `001_dish_images.sql`: adds `ImageUrl` to `MenuItem` and `OrderItem`, and fills in sample photos.
+
+Order items copy the dish name, price and photo when the order is placed, so past orders do not change when the menu does.

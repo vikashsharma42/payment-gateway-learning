@@ -1,4 +1,3 @@
-﻿
 using DineBook.Application.Security;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
@@ -39,37 +38,31 @@ namespace DineBook.Application.Services
 
             if (user is null)
             {
+                // Same amount of hashing for unknown emails, so timing does not reveal accounts
                 _hasher.Verify(password, _unknownUserHash.Value);
                 return null;
             }
 
             var passwordValid = _hasher.Verify(password, user.PasswordHash);
-
             if (!passwordValid || !user.IsActive)
                 return null;
 
-            // Generate user claims.
-            var claims = UserClaimsFactory.Create(user);
-
-            // Create identity.
-            var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-
-            // Create principal.
-            var principal = new ClaimsPrincipal(identity);
-
-            var context = _httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HTTP context is unavailable.");
-
-            // Issue authentication cookie.
-            await context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
-
+            await SignInAsync(user);
             return user;
         }
 
-        public async Task LogoutAsync()
+        public Task SignInAsync(ApplicationUser user)
         {
-            var context = _httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HTTP context is unavailable.");
+            var identity = new ClaimsIdentity(UserClaimsFactory.Create(user), CookieAuthenticationDefaults.AuthenticationScheme);
+            var context = CurrentContext();
 
-            await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            return context.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
         }
+
+        public Task LogoutAsync() =>
+            CurrentContext().SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+
+        private HttpContext CurrentContext() =>
+            _httpContextAccessor.HttpContext ?? throw new InvalidOperationException("HTTP context is unavailable.");
     }
 }

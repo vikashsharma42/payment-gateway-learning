@@ -1,0 +1,80 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Order history";
+}
+
+<h1 class="h2 mb-4">Order history</h1>
+
+@if (Model.History.Count == 0)
+{
+    <div class="card card-body shadow-sm text-center py-5">
+        <p class="fw-semibold mb-2">No food orders yet</p>
+        <p class="text-muted small mb-3">Dishes you order during a booking will appear here with their photos.</p>
+        <a asp-page="/Bookings/Index" class="btn btn-outline-primary mx-auto">Go to my bookings</a>
+    </div>
+}
+else
+{
+    @foreach (var group in Model.History)
+    {
+        <section class="mb-5" aria-labelledby="booking-@group.Booking.Id">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h2 id="booking-@group.Booking.Id" class="h5 mb-0">
+                    @group.Booking.Restaurant?.Name
+                    <span class="small text-muted fw-normal">· @group.Booking.StartsAt.ToString("dd MMM yyyy")</span>
+                </h2>
+                <a asp-page="/Reservations/Details" asp-route-code="@group.Booking.Code" class="small">Booking @group.Booking.Code</a>
+            </div>
+
+            <div class="row g-3">
+                @foreach (var order in group.FoodOrders)
+                {
+                    <div class="col-md-6">
+                        <div class="card h-100 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="small text-muted">@order.CreatedDateTime.ToLocalTime().ToString("dd MMM yyyy, HH:mm")</span>
+                                    @if (order.IsPaid)
+                                    {
+                                        <span class="badge text-bg-success">Paid</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge text-bg-warning">To pay</span>
+                                    }
+                                </div>
+
+                                <ul class="list-unstyled mb-2">
+                                    @foreach (var line in order.Items)
+                                    {
+                                        <li class="d-flex align-items-center gap-3 py-2 border-bottom">
+                                            @if (!string.IsNullOrEmpty(line.ImageUrl))
+                                            {
+                                                <img class="dish-thumb" src="@line.ImageUrl" alt="@line.ItemName" loading="lazy" width="56" height="56" />
+                                            }
+                                            else
+                                            {
+                                                <span class="dish-thumb dish-thumb--empty" aria-hidden="true">🍽️</span>
+                                            }
+                                            <span class="flex-grow-1">
+                                                <span class="fw-semibold">@line.ItemName</span>
+                                                <span class="d-block small text-muted">@line.Quantity × @DineBook.Web.Helpers.Money.Inr(line.UnitPrice)</span>
+                                            </span>
+                                            <span class="fw-semibold">@DineBook.Web.Helpers.Money.Inr(line.LineTotal())</span>
+                                        </li>
+                                    }
+                                </ul>
+
+                                <div class="d-flex justify-content-between">
+                                    <span>Total</span>
+                                    <strong>@DineBook.Web.Helpers.Money.Inr(order.Total())</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+}

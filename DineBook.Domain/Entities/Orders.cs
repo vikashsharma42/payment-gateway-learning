@@ -63,7 +63,7 @@ namespace DineBook.Domain.Entities
             DomainValidation<int>.Ensure(_items.Count)
                 .IsLessThanOrEqualTo(29, $"An order can have at most 30 different items.");
 
-            _items.Add(new OrderItem(menuItem.Id, menuItem.Name, menuItem.Price, quantity));
+            _items.Add(new OrderItem(menuItem.Id, menuItem.Name, menuItem.Price, quantity, menuItem.ImageUrl));
         }
 
         public void MarkServed() => MoveFrom(OrderStatus.Placed, OrderStatus.Served, "Only placed orders can be served.");

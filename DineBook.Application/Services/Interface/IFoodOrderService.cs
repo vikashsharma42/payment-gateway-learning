@@ -17,6 +17,9 @@ namespace DineBook.Application.Services.Interface
             CancellationToken ct = default);
 
         Task<IReadOnlyList<Orders>> GetOrdersAsync(string reservationCode, string phone, CancellationToken ct = default);
+
+        /// <summary>Food orders (not cancelled) for these bookings, with their items and payments. Newest first.</summary>
+        Task<IReadOnlyList<Orders>> GetOrdersForBookingsAsync(IReadOnlyCollection<long> reservationIds, CancellationToken ct = default);
     }
 
     public sealed record OrderItemRequest(long MenuItemId, int Quantity);
