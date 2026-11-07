@@ -126,14 +126,7 @@
                     }
                 </div>
             </section>
-
-            @if (Model.HasPaidFood)
-            {
-                <div class="alert alert-light border small mb-0">
-                    This booking has a paid food order, so it cannot be cancelled.
-                </div>
-            }
-            else if (Model.CanCancel)
+            if (Model.CanCancel)
             {
                 <form method="post" asp-page-handler="Cancel" class="card card-body shadow-sm" data-submit-once>
                     <input type="hidden" name="Code" value="@Model.Code" />
@@ -145,7 +138,8 @@
         }
     </div>
 
-    @if (Model.IsOwner && Model.CanOrderFood && Model.MenuGroups.Count > 0)
+    @* Once a food order is paid, the menu and order button are hidden; only the paid bill stays on the page *@
+    @if (Model.IsOwner && Model.CanOrderFood && !Model.HasPaidFood && Model.MenuGroups.Count > 0)
     {
         <div class="col-lg-8">
             <form method="post" asp-page-handler="Order" data-submit-once>
@@ -167,6 +161,8 @@
                 <div class="menu-grid">
                     @foreach (var group in Model.MenuGroups)
                     {
+                        @* One shared grid for all dishes. The category name sits on each card, and the
+                           category chip jumps to its first dish, so a category with one dish no longer leaves a half-empty row. *@
                         foreach (var (item, idx) in group.Select((m, n) => (m, n)))
                         {
                             <div class="menu-card-col" id="@(idx == 0 ? "cat-" + group.Key.GetHashCode() : null)"
@@ -207,7 +203,7 @@
                         <div class="fw-semibold" id="orderCount">No dishes selected</div>
                         <div class="small text-muted" id="orderTotal">Choose quantities to see your total</div>
                     </div>
-                    <button type="submit" class="btn btn-brand btn-lg" id="placeOrder" disabled>Place order</button>
+                    <button type="submit" class="btn btn-brand btn-lg" id="placeOrder" disabled>Place order &amp; pay</button>
                 </div>
             </form>
         </div>

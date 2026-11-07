@@ -1,16 +1,16 @@
 using DineBook.Application.Configuration;
-using DineBook.Web.Helpers;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
+using DineBook.Web.Helpers;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
-using System.Text.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -126,9 +126,9 @@ namespace DineBook.Web.Pages.Reservations
 
             // The booking's own phone number is used as the proof, because ownership was checked above
             var order = await _orders.PlaceOrderAsync(Code, booking.CustomerPhone, selections, ct);
-            ToastSuccess($"Order placed: {order.Items.Count} item(s). Pay for it below.");
 
-            return RedirectToPage(new { code = Code });
+            // One step for the guest: placing the order opens the secure payment page straight away
+            return await StartPaymentAsync(order.Id, order.Subtotal(), booking, ct);
         }
 
         public async Task<IActionResult> OnPostCancelAsync(CancellationToken ct)
@@ -158,10 +158,16 @@ namespace DineBook.Web.Pages.Reservations
                 return RedirectToPage(new { code = Code });
             }
 
-            // The bill is calculated here, on the server, from the restaurant's current charges
+            return await StartPaymentAsync(orderId, payable.First(o => o.Id == orderId).Subtotal(), booking, ct);
+        }
+
+        // Creates the payment session for one order and sends the guest to the checkout page.
+        // The bill is calculated here, on the server, from the restaurant's current charges.
+        private async Task<IActionResult> StartPaymentAsync(long orderId, decimal subtotal, Reservation booking, CancellationToken ct)
+        {
             var restaurant = await _reservations.GetRestaurantAsync(booking.RestaurantId, ct);
             var charges = new RestaurantCharges(restaurant.TaxPercent, restaurant.SystemAccessFee, restaurant.TaxType);
-            var bill = BillCalculator.Calculate(payable.First(o => o.Id == orderId).Subtotal(), charges);
+            var bill = BillCalculator.Calculate(subtotal, charges);
 
             var returnUrl = $"{_site.PublicBaseUrl.TrimEnd('/')}/Payment/Result";
             var session = await _payments.CreateOrderAsync(
