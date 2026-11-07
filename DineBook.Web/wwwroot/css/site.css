@@ -53,7 +53,7 @@ main {
     outline-offset: 2px;
 }
 
-/* Header: white, sticky, orange brand. Mobile-friendly: nav wraps instead of overflowing */
+/* Header: white, sticky. Mobile-friendly: nav wraps instead of overflowing */
 .site-header {
     background: #fff;
     color: var(--ink);
@@ -68,7 +68,11 @@ main {
         gap: 0.5rem;
     }
 
+/* Brand: logo mark and wordmark */
 .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     color: var(--brand);
     font-weight: 800;
     font-size: 1.4rem;
@@ -79,6 +83,12 @@ main {
     .brand:hover {
         color: var(--brand-dark);
     }
+
+.brand-mark {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+}
 
 .site-header nav {
     flex-wrap: wrap;
@@ -185,42 +195,7 @@ main {
     border-radius: 999px;
 }
 
-/* Menu */
-.category-title {
-    font-size: 0.8rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin: 1.5rem 0 0.25rem;
-}
-
-.menu-item {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 0.9rem 0;
-    border-bottom: 1px solid var(--line);
-}
-
-    .menu-item:last-child {
-        border-bottom: 0;
-    }
-
-    .menu-item .dish-name {
-        font-weight: 600;
-    }
-
-    .menu-item .dish-desc {
-        font-size: 0.875rem;
-        color: var(--muted);
-    }
-
-    .menu-item .dish-price {
-        font-weight: 700;
-        font-size: 0.95rem;
-    }
-
+/* Dish thumbnails (orders, checkout, bookings) */
 .dish-thumb {
     width: 64px;
     height: 64px;
@@ -314,6 +289,47 @@ main {
         font-weight: 700;
     }
 
+/* Bill breakdown: items, system access fee, GST and total */
+.bill {
+    display: grid;
+    gap: 0.35rem;
+}
+
+.bill-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 0;
+    font-size: 0.95rem;
+}
+
+    .bill-row dt {
+        font-weight: 400;
+        color: var(--muted);
+    }
+
+    .bill-row dd {
+        margin: 0;
+        font-weight: 600;
+    }
+
+.bill-total {
+    border-top: 1px solid var(--line);
+    padding-top: 0.5rem;
+    margin-top: 0.25rem;
+    font-size: 1.05rem;
+}
+
+    .bill-total dt {
+        color: var(--ink);
+        font-weight: 700;
+    }
+
+    .bill-total dd {
+        font-weight: 800;
+        color: var(--brand);
+    }
+
 /* Steps */
 .steps {
     display: flex;
@@ -378,25 +394,24 @@ main {
         box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.12);
     }
 
-@media (max-width: 575.98px) {
-    .menu-item .dish-thumb--lg,
-    .menu-item .dish-thumb {
-        width: 72px;
-        height: 72px;
-    }
-
-    .summary-sticky {
-        position: static;
-    }
+/* Bookings and orders: cards with clear status */
+.booking-card .booking-restaurant {
+    font-weight: 700;
+    font-size: 1.1rem;
 }
 
-@media (prefers-reduced-motion: reduce) {
-    .restaurant-card {
-        transition: none;
-    }
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
 }
 
-/* Menu layout (FoodMe style): category chips, dish cards with photo on top, floating order bar */
+    .empty-state .empty-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+/* ---------- Menu ---------- */
+
 .menu-search {
     max-width: 320px;
     border-radius: 999px;
@@ -428,9 +443,23 @@ main {
         color: var(--brand);
     }
 
-.menu-section {
-    scroll-margin-top: 6rem;
+/* One grid for all dishes, three per row on desktop, one per row on phones */
+.menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    align-items: stretch;
+    width: 100%;
 }
+
+.menu-card-col {
+    min-width: 0;
+}
+
+    /* Chips jump to the first dish of a category, leaving room for the sticky header */
+    .menu-card-col[id] {
+        scroll-margin-top: 6rem;
+    }
 
 .dish-card {
     background: #fff;
@@ -440,6 +469,11 @@ main {
     display: flex;
     flex-direction: column;
 }
+
+    .dish-card.in-order {
+        border-color: var(--brand);
+        box-shadow: 0 0 0 2px var(--brand-soft);
+    }
 
 .dish-media {
     aspect-ratio: 4 / 3;
@@ -467,6 +501,21 @@ main {
     flex: 1;
 }
 
+/* Category name shown on each dish card */
+.dish-category {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--brand);
+    background: var(--brand-soft);
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    margin-bottom: 0.4rem;
+    align-self: flex-start;
+}
+
 .dish-card .dish-name {
     font-size: 1rem;
     font-weight: 700;
@@ -486,27 +535,14 @@ main {
 }
 
 .dish-card .qty-input {
-    width: 6rem;
+    width: 100%;
+    max-width: 7rem;
+    border-radius: 12px;
+    text-align: center;
+    font-weight: 700;
 }
 
-/* Sticky inside the menu column, so it never covers the booking or bill on the left */
-.order-bar {
-    position: sticky;
-    bottom: 1rem;
-    z-index: 5;
-    margin-top: 1.5rem;
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
-    padding: 0.85rem 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-}
-
-/* Quantity stepper and selected dishes */
+/* Quantity stepper */
 .qty-stepper {
     display: inline-flex;
     align-items: center;
@@ -557,33 +593,25 @@ main {
     outline-offset: -3px;
 }
 
-.dish-card.in-order {
-    border-color: var(--brand);
-    box-shadow: 0 0 0 2px var(--brand-soft);
-}
-
+/* Order bar: sticky inside the menu column, so it never covers the bill on the left */
 .order-bar {
+    position: sticky;
+    bottom: 1rem;
+    z-index: 5;
+    margin-top: 1.5rem;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(17, 24, 39, 0.12);
+    padding: 0.85rem 1rem;
+    display: flex;
     justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
 }
 
     .order-bar .btn:disabled {
         opacity: 0.5;
-    }
-
-/* Bookings and orders: cards with clear status */
-.booking-card .booking-restaurant {
-    font-weight: 700;
-    font-size: 1.1rem;
-}
-
-.empty-state {
-    text-align: center;
-    padding: 3rem 1rem;
-}
-
-    .empty-state .empty-icon {
-        font-size: 2.5rem;
-        margin-bottom: 0.5rem;
     }
 
 @media (max-width: 575.98px) {
@@ -592,91 +620,22 @@ main {
     }
 }
 
-/* Menu: each category is its own grid of dish cards, filling the full menu column */
-.menu-grid {
-    display: block;
-    width: 100%;
+/* ---------- Responsive ---------- */
+
+@media (max-width: 575.98px) {
+    .menu-item .dish-thumb--lg,
+    .menu-item .dish-thumb {
+        width: 72px;
+        height: 72px;
+    }
+
+    .summary-sticky {
+        position: static;
+    }
 }
 
-.menu-section {
-    margin-bottom: 1.5rem;
-}
-
-.menu-section-items {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 1rem;
-    align-items: stretch;
-}
-
-.menu-section .menu-card-col {
-    min-width: 0;
-}
-
-.menu-grid .category-title {
-    margin: 0.5rem 0 0.75rem;
-}
-
-.dish-card .qty-input {
-    width: 100%;
-    max-width: 7rem;
-    border-radius: 12px;
-    text-align: center;
-    font-weight: 700;
-}
-
-
-/* Bill breakdown: items, system access fee, GST and total */
-.bill {
-    display: grid;
-    gap: 0.35rem;
-}
-
-.bill-row {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    margin: 0;
-    font-size: 0.95rem;
-}
-
-.bill-row dt {
-    font-weight: 400;
-    color: var(--muted);
-}
-
-.bill-row dd {
-    margin: 0;
-    font-weight: 600;
-}
-
-.bill-total {
-    border-top: 1px solid var(--line);
-    padding-top: 0.5rem;
-    margin-top: 0.25rem;
-    font-size: 1.05rem;
-}
-
-.bill-total dt {
-    color: var(--ink);
-    font-weight: 700;
-}
-
-.bill-total dd {
-    font-weight: 800;
-    color: var(--brand);
-}
-
-/* Logo mark in the header */
-.brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    text-decoration: none;
-}
-
-.brand-mark {
-    width: 34px;
-    height: 34px;
-    flex: 0 0 34px;
+@media (prefers-reduced-motion: reduce) {
+    .restaurant-card {
+        transition: none;
+    }
 }

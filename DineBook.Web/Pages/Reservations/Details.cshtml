@@ -109,7 +109,7 @@
                                 }
                             </ul>
 
-                                                        @await Html.PartialAsync("_BillBreakdown", Model.BillFor(order))
+                            @await Html.PartialAsync("_BillBreakdown", Model.BillFor(order))
 
                             @if (!order.IsPaid && Model.CanPay)
                             {
@@ -167,43 +167,39 @@
                 <div class="menu-grid">
                     @foreach (var group in Model.MenuGroups)
                     {
-                        <section id="cat-@group.Key.GetHashCode()" class="menu-section" aria-labelledby="h-cat-@group.Key.GetHashCode()">
-                            <h3 id="h-cat-@group.Key.GetHashCode()" class="category-title">@group.Key</h3>
-                            <div class="menu-section-items">
-                                @foreach (var item in group)
-                                {
-                                    <div class="menu-card-col" data-name="@item.Name.ToLowerInvariant()" data-price="@item.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-label="@item.Name">
-                                        <article class="dish-card h-100">
-                                            <div class="dish-media">
-                                                @if (!string.IsNullOrEmpty(item.ImageUrl))
-                                                {
-                                                    <img src="@item.ImageUrl" alt="@item.Name" loading="lazy" />
-                                                }
-                                                else
-                                                {
-                                                    <span class="dish-media-empty" aria-hidden="true">🍽️</span>
-                                                }
-                                            </div>
-                                            <div class="dish-body">
-                                                <h4 class="dish-name">@item.Name</h4>
-                                                <div class="dish-price">@Money.Inr(item.Price)</div>
-                                                @if (!string.IsNullOrEmpty(item.Description))
-                                                {
-                                                    <p class="dish-desc">@item.Description</p>
-                                                }
-                                                <div class="d-flex align-items-center justify-content-between mt-auto pt-2">
-                                                    <label class="visually-hidden" for="qty_@item.Id">Quantity of @item.Name</label>
-                                                    <input id="qty_@item.Id" type="number" class="form-control qty-input"
-                                                           name="qty_@item.Id" min="0" max="20" value="0" />
-                                                </div>
-                                            </div>
-                                        </article>
+                        foreach (var (item, idx) in group.Select((m, n) => (m, n)))
+                        {
+                            <div class="menu-card-col" id="@(idx == 0 ? "cat-" + group.Key.GetHashCode() : null)"
+                                 data-name="@item.Name.ToLowerInvariant()" data-price="@item.Price.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-label="@item.Name">
+                                <article class="dish-card h-100">
+                                    <div class="dish-media">
+                                        @if (!string.IsNullOrEmpty(item.ImageUrl))
+                                        {
+                                            <img src="@item.ImageUrl" alt="@item.Name" loading="lazy" />
+                                        }
+                                        else
+                                        {
+                                            <span class="dish-media-empty" aria-hidden="true">🍽️</span>
+                                        }
                                     </div>
-                                }
+                                    <div class="dish-body">
+                                        <span class="dish-category">@group.Key</span>
+                                        <h4 class="dish-name">@item.Name</h4>
+                                        <div class="dish-price">@Money.Inr(item.Price)</div>
+                                        @if (!string.IsNullOrEmpty(item.Description))
+                                        {
+                                            <p class="dish-desc">@item.Description</p>
+                                        }
+                                        <div class="d-flex align-items-center justify-content-between mt-auto pt-2">
+                                            <label class="visually-hidden" for="qty_@item.Id">Quantity of @item.Name</label>
+                                            <input id="qty_@item.Id" type="number" class="form-control qty-input"
+                                                   name="qty_@item.Id" min="0" max="20" value="0" />
+                                        </div>
+                                    </div>
+                                </article>
                             </div>
-                        </section>
+                        }
                     }
-
                 </div>
 
                 <div class="order-bar" id="orderBar" data-fee="@Model.Charges.SystemAccessFee.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-tax="@Model.Charges.TaxPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)" data-tax-type="@Model.Charges.TaxType">
@@ -224,4 +220,4 @@
 
 @section Scripts {
     <script src="~/js/menu.js" asp-append-version="true" defer></script>
-} 
+}
