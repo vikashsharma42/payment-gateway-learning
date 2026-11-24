@@ -1,14 +1,14 @@
+using DineBook.Application.Services.Interface;
+using DineBook.Domain.Entities;
+using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities;
-using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Restaurants
 {
@@ -65,7 +65,7 @@ namespace DineBook.Web.Pages.Restaurants
 
         public Restaurant Restaurant { get; private set; }
 
-        public IReadOnlyList<DateTime> Slots { get; private set; } = Array.Empty<DateTime>();
+        public IReadOnlyList<DateTime> Slots { get; private set; }
 
         public DateOnly Today => DateOnly.FromDateTime(_reservations.LocalNow());
 
