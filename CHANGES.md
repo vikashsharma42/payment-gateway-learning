@@ -10,16 +10,16 @@
 - Registration: the account was saved and then the request crashed (`NotImplementedException`). Registration now completes, and the new account is signed in with the same cookie as Login.
 - Registration password: the form now requires at least 12 characters (it said 12 but allowed 9).
 - Sign out: the header and admin Sign out button both use `/Logout`, which ends the site cookie `DineBook.Auth`. Before, the header's sign out only cleared JWT cookies, so the site cookie stayed and the user stayed signed in.
-- Checkout: a bill can only be opened by the visitor who owns its booking. Other visitors get "not found".
+- Checkout: a bill can only be opened by the signed-in account that owns its booking. Anyone else gets "not found".
 
 ## Booking and payment
 - Each booking has its own food orders and payments.
-- `/Bookings` lists every booking made with the account phone, or on this browser.
-- The booking and registration forms are prefilled from the account, or from the last booking on this browser.
-- Opening a booking made by someone else asks for the phone number once. The browser remembers it. Those details are not saved as the visitor's.
+- `/Bookings` lists every booking made with the signed-in account.
+- The booking form is prefilled from the signed-in account.
+- Booking is for signed-in accounts only. There is no guest booking and no phone-number lookup. Someone else's booking gives "not found".
 - Checkout uses the booking's email and phone. Nobody types them again.
 - The booking details page has the food, a pay button per food order, add food and cancel. The owner does not enter the phone number.
-- Guest memory is an encrypted, signed cookie (`dinebook.guest`), made with ASP.NET Data Protection.
+- Schema (`DineBook.Database/ddd-domain-migration.sql`): `Reservations.ApplicationUserId` is required and the per-phone `Customers` table is removed. Existing databases still use `002_accounts_own_bookings.sql`.
 
 ## Order history and photos
 - `/Orders` shows food orders grouped by booking, with a photo for each dish.

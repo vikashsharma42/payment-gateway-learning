@@ -13,7 +13,6 @@ namespace DineBook.Application.DependencyInjection
         /// </summary>
         public static IServiceCollection AddDineBookApplication(this IServiceCollection services)
         {
-            // Legacy single-product payment flow
             services.AddScoped<IPaymentService, PaymentService>();
 
             // Restaurant table reservations
@@ -34,9 +33,6 @@ namespace DineBook.Application.DependencyInjection
 
             // Contact details for signed-in customers (prefills forms)
             services.AddScoped<ICustomerContactService, CustomerContactService>();
-
-            // First admin seeding
-            services.AddScoped<AdminAccountSeeder>();
 
             return services;
         }

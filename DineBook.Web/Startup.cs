@@ -1,7 +1,6 @@
 
 using DineBook.Application.Configuration;
 using DineBook.Application.DependencyInjection;
-using DineBook.Application.Security;
 using DineBook.Application.Services;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Enums;
@@ -62,9 +61,6 @@ namespace DineBook.Web
                     options.SlidingExpiration = true;
                 });
 
-            // First admin configuration
-            services.AddAdminAccountOptions(_configuration);
-
             // Authorization
             services.AddAuthorization(options =>
             {
@@ -100,7 +96,7 @@ namespace DineBook.Web
             // Web-specific Cookie Authentication Service
             services.AddScoped<IWebAuthenticationService, WebAuthenticationService>();
             services.AddScoped<ICurrentUserProvider, HttpContextCurrentUserProvider>();
-            services.AddScoped<BookingAccess>();
+            services.AddScoped<CustomerBookings>();
             services.AddScoped<BillingQueries>();
 
             // Site configuration
@@ -171,9 +167,6 @@ namespace DineBook.Web
         private async Task SeedDataAsync(IServiceProvider services)
         {
             await using var scope = services.CreateAsyncScope();
-
-            // Seed first admin
-            await scope.ServiceProvider.GetRequiredService<AdminAccountSeeder>().SeedAsync();
 
             // Seed sample restaurants in development
             if (_environment.IsDevelopment())

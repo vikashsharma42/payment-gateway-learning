@@ -3,25 +3,26 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
-using DineBook.Domain.Exceptions;
 using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Restaurants
 {
+    [Authorize]
     [EnableRateLimiting("checkout")]
     public class BookModel : AppPageModel
     {
         private readonly IReservationService _reservations;
-        private readonly BookingAccess _access;
+        private readonly ICustomerContactService _contacts;
 
-        public BookModel(IReservationService reservations, BookingAccess access)
+        public BookModel(IReservationService reservations, ICustomerContactService contacts)
         {
             _reservations = reservations;
-            _access = access;
+            _contacts = contacts;
         }
 
         [BindProperty(SupportsGet = true)]
@@ -62,7 +63,7 @@ namespace DineBook.Web.Pages.Restaurants
         [Display(Name = "Special requests (optional)")]
         public string SpecialRequests { get; set; } = string.Empty;
 
-        // True when the form was filled from the account or from this browser's earlier bookings
+        // True when the form was filled from the signed-in account
         public bool Prefilled { get; private set; }
 
         public Restaurant Restaurant { get; private set; }
@@ -79,8 +80,8 @@ namespace DineBook.Web.Pages.Restaurants
 
             Date ??= Today;
 
-            // Guests never retype their details: use the account or the last booking made on this device
-            var contact = await _access.PrefillAsync(ct);
+            // Customers never retype their details: they come from the signed-in account
+            var contact = await _contacts.GetForUserAsync(UserId, ct);
             if (contact is not null)
             {
                 CustomerName = contact.Name;
@@ -109,6 +110,7 @@ namespace DineBook.Web.Pages.Restaurants
             }
 
             var reservation = await _reservations.BookAsync(new BookingRequest(
+                UserId,
                 Id,
                 StartsAt,
                 Guests,
@@ -118,14 +120,10 @@ namespace DineBook.Web.Pages.Restaurants
                 (SpecialRequests ?? string.Empty).Trim()),
                 ct);
 
-            // Remember the booking here so it appears under "My bookings" and the details are prefilled next time
-            _access.Remember(reservation, saveContact: true);
-
             ToastSuccess("Your table is booked.");
 
             // Post/Redirect/Get: a refresh does not book again
             return RedirectToPage("/Reservations/Details", new { code = reservation.Code });
-            
         }
 
         private async Task LoadSlotsAsync(CancellationToken ct)
@@ -134,7 +132,6 @@ namespace DineBook.Web.Pages.Restaurants
                 return;
 
             Slots = await _reservations.GetAvailableSlotsAsync(Id, Date.Value, Guests, ct);
-            
         }
     }
 }

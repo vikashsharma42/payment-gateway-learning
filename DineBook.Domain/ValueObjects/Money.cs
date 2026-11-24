@@ -1,6 +1,6 @@
 using DineBook.Domain.Validation;
 using System.Collections.Generic;
-using DineBook.Common.Domain;
+using DineBook.Domain.Abstractions;
 using DineBook.Domain.Exceptions;
 
 namespace DineBook.Domain.ValueObjects

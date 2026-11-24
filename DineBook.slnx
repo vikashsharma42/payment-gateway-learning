@@ -5,7 +5,6 @@
     <Build />
     <Deploy />
   </Project>
-  <Project Path="DineBook.Common/DineBook.Common.csproj" />  
   <Project Path="DineBook.Domain/DineBook.Domain.csproj" />
   <Project Path="DineBook.Email/DineBook.Email.csproj" />
   <!--<Project Path="DineBook.Tests/DineBook.Tests.csproj" />-->

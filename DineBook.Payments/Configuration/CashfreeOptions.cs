@@ -13,7 +13,7 @@ namespace DineBook.Payments.Configuration
         // "sandbox" or "production". Keep "sandbox" for this project.
         public string Environment { get; set; } = "sandbox";
 
-        public string ApiVersion { get; set; } = "2023-08-01";
+        public string ApiVersion { get; set; } = "2026-01-01";
 
         public string BaseUrl => Environment.Equals("production", StringComparison.OrdinalIgnoreCase)
             ? "https://api.cashfree.com/pg"

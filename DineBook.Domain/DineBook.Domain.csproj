@@ -10,7 +10,6 @@
 	</PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DineBook.Common\DineBook.Common.csproj" />
   </ItemGroup>
 
 </Project>

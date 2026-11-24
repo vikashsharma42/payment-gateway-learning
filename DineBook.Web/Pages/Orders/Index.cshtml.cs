@@ -3,18 +3,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Authorization;
 using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Orders
 {
-    public class IndexModel : PageModel
+    [Authorize]
+    public class IndexModel : AppPageModel
     {
-        private readonly BookingAccess _access;
+        private readonly CustomerBookings _bookings;
 
-        public IndexModel(BookingAccess access)
+        public IndexModel(CustomerBookings bookings)
         {
-            _access = access;
+            _bookings = bookings;
         }
 
         // Only bookings that have food
@@ -22,7 +23,7 @@ namespace DineBook.Web.Pages.Orders
 
         public async Task OnGetAsync(CancellationToken ct)
         {
-            var all = await _access.LoadMyBookingsAsync(ct);
+            var all = await _bookings.LoadAsync(UserId, ct);
             History = all.Where(b => b.FoodOrders.Count > 0).ToList();
         }
     }

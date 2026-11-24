@@ -19,22 +19,24 @@ namespace DineBook.Application.Services.Interface
         /// <summary>Start times on a day that still have a free table for the party size.</summary>
         Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(long restaurantId, DateOnly date, int guests, CancellationToken ct = default);
 
-        /// <summary>Books the best-fit free table. Throws DomainException when the request breaks a rule.</summary>
+        /// <summary>Books the best-fit free table for the signed-in customer. Throws DomainException when a rule is broken.</summary>
         Task<Reservation> BookAsync(BookingRequest request, CancellationToken ct = default);
 
         /// <summary>Null when no booking has this code.</summary>
         Task<Reservation> FindByCodeAsync(string code, CancellationToken ct = default);
 
-        /// <summary>Cancels a confirmed booking. The phone number must match the booking.</summary>
-        Task<Reservation> CancelAsync(string code, string phone, CancellationToken ct = default);
+        /// <summary>True when the booking belongs to the customer linked to this account.</summary>
+        Task<bool> IsOwnedByAsync(long reservationId, long userId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Bookings with these codes, plus every booking made with the account phone number. Newest first.
-        /// </summary>
-        Task<IReadOnlyList<Reservation>> GetBookingsAsync(IReadOnlyCollection<string> codes, string accountPhone, CancellationToken ct = default);
+        /// <summary>Cancels a confirmed booking that belongs to this account.</summary>
+        Task<Reservation> CancelAsync(string code, long userId, CancellationToken ct = default);
+
+        /// <summary>Every booking of the customer linked to this account. Newest first.</summary>
+        Task<IReadOnlyList<Reservation>> GetBookingsForUserAsync(long userId, CancellationToken ct = default);
     }
 
     public sealed record BookingRequest(
+        long ApplicationUserId,
         long RestaurantId,
         DateTime StartsAt,
         int Guests,

@@ -19,6 +19,7 @@ namespace DineBook.Domain.Entities
 
         public Reservation(
             string code,
+            long applicationUserId,
             long restaurantId,
             long tableId,
             string customerName,
@@ -30,6 +31,7 @@ namespace DineBook.Domain.Entities
             string specialRequests)
         {
             DomainValidation<string>.Ensure(code).HasLength(CodeLength, "Booking code must be 8 characters.");
+            DomainValidation<long>.Ensure(applicationUserId).IsGreaterThan(0, "A signed-in customer is required to book.");
             DomainValidation<string>.Ensure(customerName).IsNotNullOrWhiteSpace("Name is required.");
             DomainValidation<string>.Ensure(customerPhone)
                 .IsPhoneNumber(MinPhoneDigits, MaxPhoneDigits, "Enter a valid phone number.");
@@ -41,6 +43,7 @@ namespace DineBook.Domain.Entities
                 .HasMaxLength(MaxSpecialRequestsLength, "Special requests can be at most 200 characters.");
 
             Code = code;
+            ApplicationUserId = applicationUserId;
             RestaurantId = restaurantId;
             TableId = tableId;
             CustomerName = customerName.Trim();
@@ -58,8 +61,8 @@ namespace DineBook.Domain.Entities
 
         public long RestaurantId { get; private set; }
 
-        // The guest who booked, when known. The contact details below stay as they were at booking time.
-        public long? CustomerId { get; private set; }
+        // The signed-in customer who made the booking
+        public long ApplicationUserId { get; private set; }
 
         public long TableId { get; private set; }
 
@@ -93,8 +96,6 @@ namespace DineBook.Domain.Entities
 
         public virtual Restaurant Restaurant { get; private set; }
 
-        public virtual Customer Customer { get; private set; }
-
         public virtual RestaurantTable Table { get; private set; }
 
         private readonly List<Orders> _foodOrders = [];
@@ -109,17 +110,12 @@ namespace DineBook.Domain.Entities
 
         public void MarkNoShow() => MoveFrom(ReservationStatus.Confirmed, ReservationStatus.NoShow, "Only confirmed reservations can be marked as no-show.");
 
-        // The phone number is the second factor: the code alone cannot cancel a booking.
-        public void Cancel(string phoneProvided)
+        public void Cancel()
         {
-            DomainValidation<string>.Ensure(NormalizePhone(phoneProvided), nameof(phoneProvided))
-                .IsEqualTo(CustomerPhone, "Phone number does not match this booking.");
-
             MoveFrom(ReservationStatus.Confirmed, ReservationStatus.Cancelled, "Only confirmed reservations can be cancelled.");
         }
 
-        public bool MatchesPhone(string phone) =>
-            !string.IsNullOrWhiteSpace(phone) && NormalizePhone(phone) == CustomerPhone;
+        public bool IsBookedBy(long userId) => ApplicationUserId == userId;
 
         // Food can be ordered while the booking is still active (confirmed or seated, before it ends)
         public bool AcceptsFoodOrders(DateTime nowLocal) =>
@@ -136,14 +132,6 @@ namespace DineBook.Domain.Entities
 
             order.AssignReservation(Id);
             _foodOrders.Add(order);
-        }
-
-        // Called by Customer.AddReservation
-        internal void AssignCustomer(Customer customer)
-        {
-            Customer = customer;
-            // A new customer has no id yet. EF Core fills the foreign key when both are saved together.
-            CustomerId = customer.Id == 0 ? null : customer.Id;
         }
 
         private void MoveFrom(ReservationStatus expected, ReservationStatus next, string message)

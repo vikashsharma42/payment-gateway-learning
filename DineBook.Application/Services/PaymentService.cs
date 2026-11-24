@@ -40,15 +40,15 @@ namespace DineBook.Application.Services
             _logger = logger;
         }
 
-        public async Task<IReadOnlyList<Orders>> GetPayableOrdersAsync(string reservationCode, string phone, CancellationToken ct = default)
+        public async Task<IReadOnlyList<Orders>> GetPayableOrdersAsync(string reservationCode, long userId, CancellationToken ct = default)
         {
             var code = (reservationCode ?? string.Empty).Trim().ToUpperInvariant();
 
             var reservation = await _db.Reservations.AsNoTracking()
                 .FirstOrDefaultAsync(r => r.Code == code, ct);
 
-            // Same message for an unknown code and a wrong phone, so the code alone reveals nothing
-            if (reservation is null || !reservation.MatchesPhone(phone))
+            // Same message for an unknown code and someone else's booking, so the code alone reveals nothing
+            if (reservation is null || !reservation.IsBookedBy(userId))
                 throw new DomainException("We could not find a booking with those details.");
 
             var orders = await _db.Orders.AsNoTracking()

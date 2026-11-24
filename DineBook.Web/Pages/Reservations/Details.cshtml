@@ -44,26 +44,6 @@
             </div>
         </div>
 
-        @if (!Model.IsOwner)
-        {
-            <form method="post" asp-page-handler="Unlock" class="card card-body shadow-sm" data-submit-once>
-                <input type="hidden" name="Code" value="@Model.Code" />
-                <h2 class="h5">Open this booking</h2>
-                <p class="text-muted small">Enter the phone number used for this booking. You only need to do this once on this device.</p>
-                <div class="d-flex gap-2">
-                    <div class="input-group phone-input flex-grow-1">
-                        <span class="input-group-text phone-prefix" aria-hidden="true">
-                            <img src="~/img/flag-in.svg" alt="" width="24" height="16" /> +91
-                        </span>
-                        <input name="UnlockPhone" type="tel" class="form-control" placeholder="98765 43210"
-                               aria-label="Phone number" autocomplete="tel" inputmode="tel" required />
-                    </div>
-                    <button type="submit" class="btn btn-brand">Open</button>
-                </div>
-            </form>
-        }
-        else
-        {
             <section class="card shadow-sm mb-4" aria-labelledby="food-heading">
                 <div class="card-body">
                     <h2 id="food-heading" class="h5">Your food</h2>
@@ -135,11 +115,10 @@
                     <button type="submit" class="btn btn-outline-danger">Cancel booking</button>
                 </form>
             }
-        }
     </div>
 
     @* Once a food order is paid, the menu and order button are hidden; only the paid bill stays on the page *@
-    @if (Model.IsOwner && Model.CanOrderFood && !Model.HasPaidFood && Model.MenuGroups.Count > 0)
+    @if (Model.CanOrderFood && !Model.HasPaidFood && Model.MenuGroups.Count > 0)
     {
         <div class="col-lg-8">
             <form method="post" asp-page-handler="Order" data-submit-once>

@@ -5,7 +5,6 @@ using DineBook.Domain.Enums;
 using DineBook.Domain.Exceptions;
 using DineBook.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -15,7 +14,6 @@ namespace DineBook.Application.Services
 {
     public sealed class RegistrationService : IRegistrationService
     {
-
         // Roles an admin can assign. Customers sign up themselves.
         private static readonly UserRole[] StaffRoles = { UserRole.Staff, UserRole.Manager, UserRole.Admin };
 
@@ -33,30 +31,14 @@ namespace DineBook.Application.Services
             var email = ApplicationUser.NormalizeEmail(request.Email);
             await EnsureEmailFreeAsync(email, ct);
 
-            // Validates and normalizes the phone (digits only)
-            var phone = Customer.NormalizePhone(request.Phone);
-            var fullName = $"{request.FirstName} {request.LastName}".Trim();
-
-            // A guest who booked before may already exist with this phone
-            var guest = await _db.Customers.FirstOrDefaultAsync(c => c.Phone == phone, ct);
-            if (guest?.ApplicationUserId is not null)
+            // The entity validates the phone number for customers
+            var phone = ApplicationUser.NormalizePhone(request.Phone);
+            if (await _db.Users.AnyAsync(u => u.Phone == phone, ct))
                 throw new DomainException("An account already exists for this phone number.");
 
-            var user = new ApplicationUser(email, _hasher.Hash(request.Password), request.FirstName, request.LastName, UserRole.Customer);
+            var user = new ApplicationUser(email, _hasher.Hash(request.Password), request.FirstName, request.LastName,
+                UserRole.Customer, phone);
             _db.Users.Add(user);
-            await SaveAsync(ct);
-
-            if (guest is null)
-            {
-                guest = new Customer(fullName, phone, email);
-                _db.Customers.Add(guest);
-            }
-            else
-            {
-                guest.UpdateContact(fullName, email);
-            }
-
-            guest.LinkUser(user.Id);
             await SaveAsync(ct);
 
             return user;

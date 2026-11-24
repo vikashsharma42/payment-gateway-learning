@@ -13,7 +13,7 @@ namespace DineBook.Application.Services.Interface
     public interface IRegistrationService
     {
         /// <summary>
-        /// Creates a Customer account and links it to any guest record with the same phone.
+        /// Creates a customer account. The phone number must not belong to another account.
         /// The caller signs the user in.
         /// </summary>
         Task<ApplicationUser> RegisterCustomerAsync(CustomerRegistrationRequest request, CancellationToken ct = default);

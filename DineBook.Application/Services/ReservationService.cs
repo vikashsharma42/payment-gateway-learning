@@ -136,6 +136,7 @@ namespace DineBook.Application.Services
 
                 var newReservation = new Reservation(
                     await NewCodeAsync(ct),
+                    request.ApplicationUserId,
                     restaurant.Id,
                     table.Id,
                     request.CustomerName,
@@ -145,11 +146,6 @@ namespace DineBook.Application.Services
                     request.StartsAt,
                     policy.DurationMinutes,
                     request.SpecialRequests);
-
-                var customer = await FindOrCreateCustomerAsync(
-                    newReservation, ct);
-
-                customer.AddReservation(newReservation);
 
                 _db.Reservations.Add(newReservation);
 
@@ -173,25 +169,16 @@ namespace DineBook.Application.Services
             return reservation;
         }
 
-        public async Task<IReadOnlyList<Reservation>> GetBookingsAsync(
-            IReadOnlyCollection<string> codes, string accountPhone, CancellationToken ct = default)
-        {
-            var normalizedCodes = (codes ?? Array.Empty<string>())
-                .Select(c => (c ?? string.Empty).Trim().ToUpperInvariant())
-                .Where(c => c.Length > 0)
-                .Distinct()
-                .ToList();
-
-            var phone = Reservation.NormalizePhone(accountPhone);
-            if (normalizedCodes.Count == 0 && phone.Length == 0)
-                return Array.Empty<Reservation>();
-
-            return await _db.Reservations.AsNoTracking()
+        public async Task<IReadOnlyList<Reservation>> GetBookingsForUserAsync(long userId, CancellationToken ct = default) =>
+            await _db.Reservations.AsNoTracking()
                 .Include(r => r.Restaurant)
-                .Where(r => normalizedCodes.Contains(r.Code) || (phone.Length > 0 && r.CustomerPhone == phone))
+                .Where(r => r.ApplicationUserId == userId)
                 .OrderByDescending(r => r.StartsAt)
                 .ToListAsync(ct);
-        }
+
+        public Task<bool> IsOwnedByAsync(long reservationId, long userId, CancellationToken ct = default) =>
+            _db.Reservations.AsNoTracking()
+                .AnyAsync(r => r.Id == reservationId && r.ApplicationUserId == userId, ct);
 
         public Task<Reservation> FindByCodeAsync(string code, CancellationToken ct = default)
         {
@@ -199,10 +186,10 @@ namespace DineBook.Application.Services
             return _db.Reservations.AsNoTracking().FirstOrDefaultAsync(r => r.Code == normalized, ct);
         }
 
-        public async Task<Reservation> CancelAsync(string code, string phone, CancellationToken ct = default)
+        public async Task<Reservation> CancelAsync(string code, long userId, CancellationToken ct = default)
         {
             var normalized = (code ?? string.Empty).Trim().ToUpperInvariant();
-            var reservation = await _db.Reservations.FirstOrDefaultAsync(r => r.Code == normalized, ct)
+            var reservation = await _db.Reservations.FirstOrDefaultAsync(r => r.Code == normalized && r.ApplicationUserId == userId, ct)
                 ?? throw new DomainException("We could not find a booking with that code.");
 
             // A booking with a paid food order is final: the money has been taken for food served on it
@@ -214,7 +201,7 @@ namespace DineBook.Application.Services
             if (hasPaidFood)
                 throw new DomainException("This booking has a paid food order and cannot be cancelled.");
 
-            reservation.Cancel(phone);
+            reservation.Cancel();
             await _db.SaveChangesAsync(ct);
 
             var restaurantName = await _db.Restaurants.AsNoTracking()
@@ -230,24 +217,6 @@ namespace DineBook.Application.Services
                 reservation.StartsAt), ct);
 
             return reservation;
-        }
-
-        // Guests are matched by phone number. The booking keeps its own copy of the contact details.
-        private async Task<Customer> FindOrCreateCustomerAsync(Reservation reservation, CancellationToken ct)
-        {
-            var customer = await _db.Customers.FirstOrDefaultAsync(c => c.Phone == reservation.CustomerPhone, ct);
-
-            if (customer is null)
-            {
-                customer = new Customer(reservation.CustomerName, reservation.CustomerPhone, reservation.CustomerEmail);
-                _db.Customers.Add(customer);
-            }
-            else
-            {
-                customer.UpdateContact(reservation.CustomerName, reservation.CustomerEmail);
-            }
-
-            return customer;
         }
 
         private Task<List<Reservation>> LoadBlockingAsync(

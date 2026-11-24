@@ -15,7 +15,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\DineBook.Common\DineBook.Common.csproj" />
 		<ProjectReference Include="..\DineBook.Domain\DineBook.Domain.csproj" />
 		<ProjectReference Include="..\DineBook.Infrastructure\DineBook.Infrastructure.csproj" />
 		<ProjectReference Include="..\DineBook.Payments\DineBook.Payments.csproj" />
@@ -23,8 +22,6 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<!-- JWT sign-in -->
-		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
 	</ItemGroup>
 
 </Project>

@@ -1,6 +1,5 @@
 using DineBook.Domain.Abstractions;
 using DineBook.Domain.Entities;
-using DineBook.Infrastructure.Database.Security;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Threading;
@@ -12,13 +11,9 @@ namespace DineBook.Infrastructure.Database
     {
         private const string SystemUser = "system";
 
-        // Identity and sessions
+        // Identity
         public DbSet<ApplicationUser> Users { get; set; }
 
-        public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
-
-        // Guests
-        public DbSet<Customer> Customers { get; set; }
 
         // Restaurants, tables and reservations
         public DbSet<Restaurant> Restaurants { get; set; }

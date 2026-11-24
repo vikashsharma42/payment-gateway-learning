@@ -1,7 +1,7 @@
 /*
     DineBook CREATE-ONLY schema script
     Generated from the supplied DineBook.Domain.zip entity classes.
-    Creates 10 tables: Users, Customers, Restaurants, RestaurantTables,
+    Creates 9 tables: Users, Restaurants, RestaurantTables,
     MenuCategories, MenuItems, Reservations, Orders, OrderItems, Payments.
 
     Mapping notes:
@@ -35,7 +35,7 @@ IF EXISTS
     WHERE schema_id = SCHEMA_ID(N'dbo')
       AND name IN
       (
-          N'Users', N'Customers', N'Restaurants', N'RestaurantTables',
+          N'Users', N'Restaurants', N'RestaurantTables',
           N'MenuCategories', N'MenuItems', N'Reservations', N'Orders',
           N'OrderItems', N'Payments'
       )
@@ -61,23 +61,6 @@ BEGIN TRY
         UpdatedBy NVARCHAR(256) NULL,
         CONSTRAINT UQ_Users_Email UNIQUE (Email),
         CONSTRAINT CK_Users_Role CHECK (Role IN (N'Customer', N'Staff', N'Manager', N'Admin'))
-    );
-
-    /* Customers */
-    CREATE TABLE dbo.Customers
-    (
-        Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Customers PRIMARY KEY,
-        Name NVARCHAR(100) NOT NULL,
-        Phone NVARCHAR(15) NOT NULL,
-        Email NVARCHAR(254) NOT NULL,
-        ApplicationUserId BIGINT NULL,
-        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Customers_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
-        CreatedBy NVARCHAR(256) NULL,
-        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Customers_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
-        UpdatedBy NVARCHAR(256) NULL,
-        CONSTRAINT UQ_Customers_Phone UNIQUE (Phone),
-        CONSTRAINT CK_Customers_Phone CHECK (Phone NOT LIKE N'%[^0-9]%' AND LEN(Phone) BETWEEN 10 AND 15),
-        CONSTRAINT FK_Customers_Users FOREIGN KEY (ApplicationUserId) REFERENCES dbo.Users(Id)
     );
 
     /* Restaurants: Address is an owned value object, stored as columns on Restaurants. */
@@ -167,13 +150,13 @@ BEGIN TRY
     CREATE INDEX IX_MenuItems_RestaurantId ON dbo.MenuItems(RestaurantId);
     CREATE INDEX IX_MenuItems_MenuCategoryId ON dbo.MenuItems(MenuCategoryId);
 
-    /* Reservations */
+    /* Reservations: every booking belongs to a signed-in user. There are no guest bookings. */
     CREATE TABLE dbo.Reservations
     (
         Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Reservations PRIMARY KEY,
         Code NVARCHAR(8) NOT NULL,
         RestaurantId BIGINT NOT NULL,
-        CustomerId BIGINT NULL,
+        ApplicationUserId BIGINT NOT NULL,
         TableId BIGINT NOT NULL,
         CustomerName NVARCHAR(100) NOT NULL,
         CustomerPhone NVARCHAR(15) NOT NULL,
@@ -189,7 +172,7 @@ BEGIN TRY
         UpdatedBy NVARCHAR(256) NULL,
         CONSTRAINT UQ_Reservations_Code UNIQUE (Code),
         CONSTRAINT FK_Reservations_Restaurants FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurants(Id),
-        CONSTRAINT FK_Reservations_Customers FOREIGN KEY (CustomerId) REFERENCES dbo.Customers(Id),
+        CONSTRAINT FK_Reservations_Users FOREIGN KEY (ApplicationUserId) REFERENCES dbo.Users(Id),
         CONSTRAINT FK_Reservations_RestaurantTables FOREIGN KEY (TableId) REFERENCES dbo.RestaurantTables(Id),
         CONSTRAINT CK_Reservations_Phone CHECK (CustomerPhone NOT LIKE N'%[^0-9]%' AND LEN(CustomerPhone) BETWEEN 10 AND 15),
         CONSTRAINT CK_Reservations_Guests CHECK (Guests > 0),
@@ -197,7 +180,7 @@ BEGIN TRY
         CONSTRAINT CK_Reservations_Status CHECK (Status IN (N'Confirmed', N'Seated', N'Completed', N'Cancelled', N'NoShow'))
     );
     CREATE INDEX IX_Reservations_RestaurantId ON dbo.Reservations(RestaurantId);
-    CREATE INDEX IX_Reservations_CustomerId ON dbo.Reservations(CustomerId);
+    CREATE INDEX IX_Reservations_ApplicationUserId ON dbo.Reservations(ApplicationUserId);
     CREATE INDEX IX_Reservations_TableId ON dbo.Reservations(TableId);
     CREATE INDEX IX_Reservations_StartsAt ON dbo.Reservations(StartsAt);
 
@@ -282,7 +265,7 @@ FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_TYPE = 'BASE TABLE'
   AND TABLE_NAME IN
   (
-      N'Users', N'Customers', N'Restaurants', N'RestaurantTables',
+      N'Users', N'Restaurants', N'RestaurantTables',
       N'MenuCategories', N'MenuItems', N'Reservations', N'Orders',
       N'OrderItems', N'Payments'
   )

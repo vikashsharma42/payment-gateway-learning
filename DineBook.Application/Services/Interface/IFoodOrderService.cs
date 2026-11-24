@@ -7,16 +7,12 @@ namespace DineBook.Application.Services.Interface
 {
     public interface IFoodOrderService
     {
-        /// <summary>
-        /// Places one order with many items for an active booking. The customer must give the booking's phone number.
-        /// </summary>
+        /// <summary>Places one order with many items for an active booking that belongs to this account.</summary>
         Task<Orders> PlaceOrderAsync(
             string reservationCode,
-            string phone,
+            long userId,
             IReadOnlyList<OrderItemRequest> items,
             CancellationToken ct = default);
-
-        Task<IReadOnlyList<Orders>> GetOrdersAsync(string reservationCode, string phone, CancellationToken ct = default);
 
         /// <summary>Food orders (not cancelled) for these bookings, with their items and payments. Newest first.</summary>
         Task<IReadOnlyList<Orders>> GetOrdersForBookingsAsync(IReadOnlyCollection<long> reservationIds, CancellationToken ct = default);

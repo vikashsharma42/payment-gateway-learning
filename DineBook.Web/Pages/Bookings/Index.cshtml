@@ -14,16 +14,7 @@
     <div class="card card-body shadow-sm empty-state">
         <div class="empty-icon" aria-hidden="true">🗓️</div>
         <p class="fw-semibold mb-2">No bookings yet</p>
-        <p class="text-muted small mb-0">
-            @if (Model.IsSignedIn)
-            {
-                <span>Bookings made with your phone number will appear here.</span>
-            }
-            else
-            {
-                <span>Bookings you make on this device will appear here. <a asp-page="/Login">Sign in</a> to see them everywhere.</span>
-            }
-        </p>
+        <p class="text-muted small mb-0">Bookings you make while signed in will appear here.</p>
     </div>
 }
 else

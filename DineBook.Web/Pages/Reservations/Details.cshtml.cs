@@ -4,6 +4,7 @@ using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Web.Helpers;
 using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
@@ -16,6 +17,7 @@ using System.Threading.Tasks;
 
 namespace DineBook.Web.Pages.Reservations
 {
+    [Authorize]
     [EnableRateLimiting("checkout")]
     public class DetailsModel : AppPageModel
     {
@@ -23,7 +25,6 @@ namespace DineBook.Web.Pages.Reservations
         private readonly IMenuService _menu;
         private readonly IFoodOrderService _orders;
         private readonly IPaymentService _payments;
-        private readonly BookingAccess _access;
         private readonly SiteOptions _site;
 
         public DetailsModel(
@@ -31,14 +32,12 @@ namespace DineBook.Web.Pages.Reservations
             IMenuService menu,
             IFoodOrderService orders,
             IPaymentService payments,
-            BookingAccess access,
             IOptions<SiteOptions> site)
         {
             _reservations = reservations;
             _menu = menu;
             _orders = orders;
             _payments = payments;
-            _access = access;
             _site = site.Value;
         }
 
@@ -53,16 +52,9 @@ namespace DineBook.Web.Pages.Reservations
         [BindProperty(SupportsGet = true)]
         public string Code { get; set; } = string.Empty;
 
-        // Only used once, to unlock a booking made by someone else on this device
-        [BindProperty]
-        public string UnlockPhone { get; set; } = string.Empty;
-
         public Reservation Reservation { get; private set; }
 
         public Restaurant Restaurant { get; private set; }
-
-        // True when this visitor may see and change the booking. Otherwise only the unlock form shows.
-        public bool IsOwner { get; private set; }
 
         public IReadOnlyList<DineBook.Domain.Entities.Orders> FoodOrders { get; private set; } = Array.Empty<DineBook.Domain.Entities.Orders>();
 
@@ -75,7 +67,7 @@ namespace DineBook.Web.Pages.Reservations
 
         public bool CanCancel => Reservation?.Status == ReservationStatus.Confirmed && !HasPaidFood;
 
-        // Guests can pay until the booking is cancelled or marked as no-show
+        // Customers can pay until the booking is cancelled or marked as no-show
         public bool CanPay => Reservation is not null
             && Reservation.Status != ReservationStatus.Cancelled
             && Reservation.Status != ReservationStatus.NoShow;
@@ -91,28 +83,11 @@ namespace DineBook.Web.Pages.Reservations
             return Page();
         }
 
-        // Asks for the booking phone once. After that this browser keeps access to the booking.
-        public async Task<IActionResult> OnPostUnlockAsync(CancellationToken ct)
-        {
-            var booking = await _reservations.FindByCodeAsync(Code, ct);
-
-            // Same message for an unknown code and a wrong phone, so the code alone reveals nothing
-            if (booking is null || !booking.MatchesPhone(UnlockPhone))
-            {
-                ToastError("We could not find a booking with those details.");
-                return RedirectToPage(new { code = Code });
-            }
-
-            _access.Remember(booking, saveContact: false);
-            ToastSuccess("Booking opened. You will not need the phone number again on this device.");
-            return RedirectToPage(new { code = Code });
-        }
-
         public async Task<IActionResult> OnPostOrderAsync(CancellationToken ct)
         {
             var booking = await OwnedBookingAsync(ct);
             if (booking is null)
-                return RedirectToLocked();
+                return NotFound();
 
             var menu = await _menu.GetAvailableItemsAsync(booking.RestaurantId, ct);
 
@@ -124,10 +99,9 @@ namespace DineBook.Web.Pages.Reservations
                     selections.Add(new OrderItemRequest(item.Id, quantity));
             }
 
-            // The booking's own phone number is used as the proof, because ownership was checked above
-            var order = await _orders.PlaceOrderAsync(Code, booking.CustomerPhone, selections, ct);
+            var order = await _orders.PlaceOrderAsync(Code, UserId, selections, ct);
 
-            // One step for the guest: placing the order opens the secure payment page straight away
+            // One step for the customer: placing the order opens the secure payment page straight away
             return await StartPaymentAsync(order.Id, order.Subtotal(), booking, ct);
         }
 
@@ -135,9 +109,9 @@ namespace DineBook.Web.Pages.Reservations
         {
             var booking = await OwnedBookingAsync(ct);
             if (booking is null)
-                return RedirectToLocked();
+                return NotFound();
 
-            await _reservations.CancelAsync(Code, booking.CustomerPhone, ct);
+            await _reservations.CancelAsync(Code, UserId, ct);
             ToastSuccess("Your booking has been cancelled.");
 
             return RedirectToPage(new { code = Code });
@@ -149,9 +123,9 @@ namespace DineBook.Web.Pages.Reservations
         {
             var booking = await OwnedBookingAsync(ct);
             if (booking is null)
-                return RedirectToLocked();
+                return NotFound();
 
-            var payable = await _payments.GetPayableOrdersAsync(Code, booking.CustomerPhone, ct);
+            var payable = await _payments.GetPayableOrdersAsync(Code, UserId, ct);
             if (!payable.Any(o => o.Id == orderId && !o.IsPaid))
             {
                 ToastError("That order cannot be paid.");
@@ -161,7 +135,7 @@ namespace DineBook.Web.Pages.Reservations
             return await StartPaymentAsync(orderId, payable.First(o => o.Id == orderId).Subtotal(), booking, ct);
         }
 
-        // Creates the payment session for one order and sends the guest to the checkout page.
+        // Creates the payment session for one order and sends the customer to the checkout page.
         // The bill is calculated here, on the server, from the restaurant's current charges.
         private async Task<IActionResult> StartPaymentAsync(long orderId, decimal subtotal, Reservation booking, CancellationToken ct)
         {
@@ -182,30 +156,20 @@ namespace DineBook.Web.Pages.Reservations
             return RedirectToPage("/Checkout", new { id = orderId });
         }
 
+        // The booking when it belongs to the signed-in customer. Someone else's booking looks like "not found".
         private async Task<Reservation> OwnedBookingAsync(CancellationToken ct)
         {
             var booking = await _reservations.FindByCodeAsync(Code, ct);
-            return booking is not null && await _access.OwnsAsync(booking, ct) ? booking : null;
-        }
-
-        private RedirectToPageResult RedirectToLocked()
-        {
-            ToastError("Enter the booking phone number to open this booking first.");
-            return RedirectToPage(new { code = Code });
+            return booking is not null && await _reservations.IsOwnedByAsync(booking.Id, UserId, ct) ? booking : null;
         }
 
         private async Task<bool> LoadAsync(CancellationToken ct)
         {
-            Reservation = await _reservations.FindByCodeAsync(Code, ct);
+            Reservation = await OwnedBookingAsync(ct);
             if (Reservation is null)
                 return false;
 
             Restaurant = await _reservations.GetRestaurantAsync(Reservation.RestaurantId, ct);
-            IsOwner = await _access.OwnsAsync(Reservation, ct);
-
-            if (!IsOwner)
-                return true;
-
             FoodOrders = await _orders.GetOrdersForBookingsAsync(new[] { Reservation.Id }, ct);
 
             CanOrderFood = Reservation.AcceptsFoodOrders(_reservations.LocalNow());

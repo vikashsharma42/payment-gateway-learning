@@ -13,9 +13,9 @@ many dishes in one order, placed in one action.
 | Menu         | Menu                                      | MenuCategory, MenuItem                                      |
 | Ordering     | Ordering                                  | Orders (aggregate root), OrderItems                         |
 | Payments     | Payments                                  | Payment (gateway attempt for one food order)                |
-| Customers    | Customers                                 | Customer (guest, matched by phone)                          |
+| Customers    | Accounts (ApplicationUser)                | Reservations belong to the signed-in account                 |
 | Email        | DineBook.Email                            | Razor email templates, Brevo sender                         |
-| Shared       | DineBook.Common                           | ValueObject base, IDomainEvent                              |
+| Shared       | DineBook.Domain (Abstractions)            | ValueObject base                                            |
 
 DineBook.Domain also holds `Abstractions` (Entity, AggregateRoot, IAuditableEntity), `Enums`,
 `Exceptions` (DomainException), `Validation` (DomainValidation) and `ValueObjects` (Money, Address).
@@ -25,8 +25,7 @@ private setters, a virtual navigation property next to each foreign key (`[Forei
 private `List<T>` exposed as `IReadOnlyCollection<T>`, added through the parent (`customer.AddReservation`,
 `restaurant.AddTable`, `order.AddOrderItem`). Every entity implements `IAuditableEntity`
 (CreatedDateTime, CreatedBy, UpdatedDateTime, UpdatedBy); `ApplicationDbContext` fills them on save, using
-`ICurrentUserProvider` (Web registers one that reads the signed-in email) or "system" when none is registered. `UserRefreshToken` (a hashed refresh token) is a persistence record, so it
-lives in DineBook.Infrastructure/Database/Security, not in the Domain.
+`ICurrentUserProvider` (Web registers one that reads the signed-in email) or "system" when none is registered.
 
 Layers, outside in: Web (Razor Pages) -> Application (use cases) -> Domain (rules) and Infrastructure (EF Core). Payments is a separate project behind `IPaymentGateway`.
 Domain has no framework or database references.
@@ -53,16 +52,16 @@ Domain has no framework or database references.
 4. Save, then send the confirmation email. Email failure is logged and does not undo the booking.
 
 **Food order** (`FoodOrderService.PlaceOrderAsync`)
-1. Find the booking by code and check the phone number. Unknown code and wrong phone give the same message.
+1. Find the booking by code and check that the signed-in account owns it.
 2. Check that the booking still accepts food (Confirmed or Seated, before it ends).
 3. Merge duplicate lines, load the items for this restaurant only, and build the order with `new Orders(...)` and `AddOrderItem`.
 4. Save the order in one transaction.
 
-**Cancel booking**: needs the code and the phone number. Only Confirmed bookings can be cancelled.
+**Cancel booking**: needs the code and the signed-in account that owns it. Only Confirmed bookings can be cancelled.
 
 ## Security decisions
 
-- The booking code alone cannot change a booking. Cancel and order both need the phone number.
+- The booking code alone cannot change a booking. Cancel, order and pay need the signed-in account that owns the booking.
 - Anti-forgery tokens on every form; rate limit (`checkout` policy) on POSTs that change data.
 - Emails never log the recipient address. Email errors are logged with the subject only.
 - Cashfree secrets and the Brevo API key live in user-secrets, not in appsettings.
@@ -72,29 +71,23 @@ Domain has no framework or database references.
 - Customers and admins sign in at `/Login` with email and password. Passwords are stored only as PBKDF2 hashes (`PasswordHasher`).
   A successful login creates the site cookie `DineBook.Auth` (HttpOnly, Secure, SameSite=Strict, 7 days, sliding).
   Admins are sent to `/Admin` after login; customers to `/`.
-- Registration (`/Registration`) creates the account, links it to any guest record with the same phone, and signs in with the same cookie.
-- The JWT code (`JwtSignInManager`, `JwtTokenService`, cookies `dinebook.access` and `dinebook.refresh`) is kept for the API planned
-  for later. Nothing in the web app issues JWT cookies right now; sign-out only clears them.
-- Sign-out (`/Logout`, POST) ends only the site cookie `DineBook.Auth`. It does not touch the JWT cookies, which are unused by the web app today.
-  `/Admin/Logout` is the older JWT sign-out and is not used by any page.
+- Registration (`/Registration`) creates the account. A phone number can belong to one account only. It signs in with the same cookie.
 - Authorization: `/Admin` pages require the `AdminOnly` policy (role `Admin`).
-- First admin: when no admin exists, `AdminAccountSeeder` creates one from `Admin:Email` and `Admin:Password` (user-secrets).
-  `Admin:Password`, when set, must be at least 12 characters.
+- No admin is created automatically. Promote an account in SQL: `UPDATE ApplicationUser SET Role = 'Admin' WHERE Email = '...'`.
 - Use cases live in `RestaurantAdminService` (Application), not in the pages.
 
-## Guest memory and booking access
+## Booking access
 
-- `BookingAccess` (Web) decides which bookings a visitor may see or change: bookings made with the account phone, and bookings
-  this browser made or unlocked with the phone number.
-- The browser memory is the cookie `dinebook.guest`: a list of booking codes and the last contact details, encrypted and signed
-  with ASP.NET Data Protection. Forms are prefilled from the account first, then from this memory.
-- Opening someone else's booking needs the booking phone number once. Unlocking does not save that person's details as the visitor's.
+- Booking pages require sign-in (`[Authorize]`). A booking belongs to the account that made it
+  (`Reservation.ApplicationUserId`). `ReservationService.IsOwnedByAsync` is the ownership check, and
+  `GetBookingsForUserAsync` lists a customer's bookings. Phone numbers are not used as proof of ownership. Someone else's booking returns "not found".
+- `CustomerBookings` (Web) loads the bookings with their food orders for My bookings and Order history.
 
 ## Configuration
 
 - `Dining` section: time zone, max party size, minimum notice, advance days, default duration, slot length.
 - `Email` section: `Enabled`, `SenderEmail`, `SenderName`. `ApiKey` in user-secrets.
-- `Cashfree` and `Site` sections for the legacy payment flow.
+- `Cashfree` (sandbox or production, API version `2026-01-01`) and `Site` sections for the payment flow.
 
 ## Not built yet
 

@@ -10,6 +10,7 @@ namespace DineBook.Infrastructure.Database.Configurations
         {
             builder.ToTable(nameof(ApplicationUser));
             builder.Property(x => x.Role).HasConversion<string>().HasMaxLength(20).IsRequired();
+            builder.Property(x => x.Phone).HasMaxLength(15).IsRequired();
 
             // FullName is computed from the two name columns
             builder.Ignore(x => x.FullName);

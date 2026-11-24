@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace DineBook.Common.Domain
+namespace DineBook.Domain.Abstractions
 {
     /// <summary>
     /// Base type for value objects. Two value objects are equal when all their components are equal.

@@ -19,10 +19,10 @@ namespace DineBook.Infrastructure.Database.Configurations
                 .HasForeignKey(x => x.RestaurantId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Optional link to the guest record. Customers are kept for history.
-            builder.HasOne(x => x.Customer)
-                .WithMany(c => c.Reservations)
-                .HasForeignKey(x => x.CustomerId)
+            // The account that made the booking. Accounts are kept for history.
+            builder.HasOne<ApplicationUser>()
+                .WithMany()
+                .HasForeignKey(x => x.ApplicationUserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
             builder.HasOne(x => x.Table)

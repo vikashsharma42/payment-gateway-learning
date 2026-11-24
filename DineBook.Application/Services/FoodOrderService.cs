@@ -25,11 +25,11 @@ namespace DineBook.Application.Services
 
         public async Task<Orders> PlaceOrderAsync(
             string reservationCode,
-            string phone,
+            long userId,
             IReadOnlyList<OrderItemRequest> items,
             CancellationToken ct = default)
         {
-            var reservation = await LoadBookingAsync(reservationCode, phone, ct);
+            var reservation = await LoadBookingAsync(reservationCode, userId, ct);
 
             if (items is null || items.Count == 0)
                 throw new DomainException("Choose at least one item.");
@@ -64,17 +64,6 @@ namespace DineBook.Application.Services
             return order;
         }
 
-        public async Task<IReadOnlyList<Orders>> GetOrdersAsync(string reservationCode, string phone, CancellationToken ct = default)
-        {
-            var reservation = await LoadBookingAsync(reservationCode, phone, ct);
-
-            return await _db.Orders.AsNoTracking()
-                .Include(o => o.Items)
-                .Where(o => o.ReservationId == reservation.Id)
-                .OrderBy(o => o.CreatedDateTime)
-                .ToListAsync(ct);
-        }
-
         public async Task<IReadOnlyList<Orders>> GetOrdersForBookingsAsync(
             IReadOnlyCollection<long> reservationIds, CancellationToken ct = default)
         {
@@ -90,12 +79,12 @@ namespace DineBook.Application.Services
                 .ToListAsync(ct);
         }
 
-        private async Task<Reservation> LoadBookingAsync(string code, string phone, CancellationToken ct)
+        // Only the account that made the booking can order food for it. Anything else reads as not found.
+        private async Task<Reservation> LoadBookingAsync(string code, long userId, CancellationToken ct)
         {
             var reservation = await _reservations.FindByCodeAsync(code, ct);
 
-            // Same message for an unknown code and a wrong phone, so the code alone reveals nothing
-            if (reservation is null || !reservation.MatchesPhone(phone))
+            if (reservation is null || !reservation.IsBookedBy(userId))
                 throw new DomainException("We could not find a booking with those details.");
 
             return reservation;

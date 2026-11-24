@@ -15,7 +15,7 @@ namespace DineBook.Application.Services.Interface
         /// Returns the food orders of a booking that can be paid (not cancelled), with their items and payments.
         /// The caller must give the booking's phone number. Throws when the booking or phone does not match.
         /// </summary>
-        Task<IReadOnlyList<Orders>> GetPayableOrdersAsync(string reservationCode, string phone, CancellationToken ct = default);
+        Task<IReadOnlyList<Orders>> GetPayableOrdersAsync(string reservationCode, long userId, CancellationToken ct = default);
 
         /// <summary>
         /// Creates a gateway order for one food order and stores a pending Payment. The amount is the bill total,

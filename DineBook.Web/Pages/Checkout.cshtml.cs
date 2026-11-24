@@ -5,6 +5,7 @@ using DineBook.Domain.Enums;
 using DineBook.Infrastructure.Database;
 using DineBook.Web.Helpers;
 using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,7 @@ using System.Threading.Tasks;
 
 namespace DineBook.Web.Pages
 {
+    [Authorize]
     [EnableRateLimiting("checkout")]
     public class CheckoutModel : AppPageModel
     {
@@ -29,20 +31,20 @@ namespace DineBook.Web.Pages
         private readonly IPaymentService _payments;
         private readonly IConfiguration _configuration;
         private readonly SiteOptions _site;
-        private readonly BookingAccess _access;
+        private readonly IReservationService _reservations;
 
         public CheckoutModel(
             ApplicationDbContext db,
             IPaymentService payments,
             IConfiguration configuration,
             IOptions<SiteOptions> site,
-            BookingAccess access)
+            IReservationService reservations)
         {
             _db = db;
             _payments = payments;
             _configuration = configuration;
             _site = site.Value;
-            _access = access;
+            _reservations = reservations;
         }
 
         [BindProperty]
@@ -147,7 +149,7 @@ namespace DineBook.Web.Pages
             Bill = BillCalculator.Calculate(Order.Subtotal(),
                 new RestaurantCharges(Order.Restaurant.TaxPercent, Order.Restaurant.SystemAccessFee, Order.Restaurant.TaxType));
 
-            return Booking is not null && await _access.OwnsAsync(Booking, ct);
+            return Booking is not null && await _reservations.IsOwnedByAsync(Booking.Id, UserId, ct);
         }
 
         // A paid or cancelled order needs no checkout: show the booking instead

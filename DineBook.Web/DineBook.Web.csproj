@@ -12,13 +12,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\DineBook.Application\DineBook.Application.csproj" />
     <ProjectReference Include="..\DineBook.Infrastructure\DineBook.Infrastructure.csproj" />
-    <ProjectReference Include="..\DineBook.Common\DineBook.Common.csproj" />
   </ItemGroup>
 
 </Project>
