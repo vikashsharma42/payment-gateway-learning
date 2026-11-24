@@ -1,5 +1,15 @@
 # Changes: booking, payment, order history and dish photos
 
+## Restaurant web addresses (latest)
+Run `DineBook.Infrastructure/Database/Scripts/003_restaurant_slugs.sql` first. It adds `Restaurant.Slug` and fills it in from the names. If it stops at the unique index, two slugs are the same: fix those rows and run it again.
+
+- Each restaurant has a slug, for example `/spice-garden/`. A new restaurant gets one from its name. A second restaurant with a similar name gets `-2`, `-3`, and so on. Names that match a page name (login, bookings, admin...) get `-restaurant`.
+- Pages under the restaurant: booking `/{slug}/`, reservation `/{slug}/Reservations/{code}`, checkout `/{slug}/Checkout/{orderId}`, my bookings `/{slug}/Bookings`, orders `/{slug}/Orders`, sign-in `/{slug}/Login`, registration `/{slug}/Registration`, sign-out `/{slug}/Logout`, payment return `/{slug}/Payment/Result`.
+- Not changed: `/` (restaurant list), `/Admin/...` (admin pages, signed in at `/Admin/Login`), and `/Payment/Webhook`, which Cashfree calls server to server.
+- A booking or order opens only under the slug of its own restaurant. Any other slug gives "not found".
+- My bookings and Order history still list every booking of the account. The slug only sets which restaurant's address the page is under.
+- Old addresses such as `/Bookings`, `/Login` and `/Restaurants/Book/5` no longer exist.
+
 ## Before running
 1. Run the database script once on the database used by DineBook.Web:
    `DineBook.Infrastructure/Database/Scripts/001_dish_images.sql`

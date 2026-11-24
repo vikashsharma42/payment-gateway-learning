@@ -42,6 +42,7 @@ This project does not use EF migrations. Schema changes are SQL scripts in `Dine
 |--------|--------------|
 | `001_dish_images.sql` | Adds `ImageUrl` to `MenuItem` and `OrderItem`, and fills in the sample dish photos |
 | `002_accounts_own_bookings.sql` | Bookings belong to a customer account. Adds `ApplicationUser.Phone` and `Reservation.ApplicationUserId`. Stops if a booking has no account. |
+| `003_restaurant_slugs.sql` | Adds `Restaurant.Slug`, the web address of each restaurant (for example `/spice-garden/`), and fills it in from the names |
 
 Run one script with sqlcmd:
 ```bash
@@ -73,30 +74,32 @@ In development, sample restaurants and menus are added when the database has non
 
 ## 4. What customers can do
 
+Every restaurant has its own web address, for example `/spice-garden/`. Its booking page is that address, and the pages for that restaurant sit under it. The restaurant list stays at `/`, and the admin pages keep `/Admin`.
+
 - **Book a table:** sign in first, then pick a date, party size and time. Name, phone and email come from your account. Visitors who are not signed in see a "Sign in to book" button instead.
-- **My bookings** (`/Bookings`): every booking made with your account.
-- **Booking details** (`/Reservations/Details?code=...`): add food, pay each food order, or cancel the booking. Only the account that made the booking can open it.
-- **Order history** (`/Orders`): food ordered for your bookings, with a photo for each dish.
-- **Checkout** (`/Checkout/{orderId}`): pay one food order through Cashfree. The receipt goes to the booking's email.
+- **My bookings** (`/{slug}/Bookings`): every booking made with your account.
+- **Booking details** (`/{slug}/Reservations/{code}`): add food, pay each food order, or cancel the booking. Only the account that made the booking can open it.
+- **Order history** (`/{slug}/Orders`): food ordered for your bookings, with a photo for each dish.
+- **Checkout** (`/{slug}/Checkout/{orderId}`): pay one food order through Cashfree. The receipt goes to the booking's email.
 
 ### Sign-in and registration
-- `/Login`: email and password. Creates the site cookie `DineBook.Auth` (7 days).
-- `/Registration`: creates an account. Each phone number can belong to one account only. You are signed in straight away.
+- `/{slug}/Login`: email and password. Creates the site cookie `DineBook.Auth` (7 days).
+- `/{slug}/Registration`: creates an account. Each phone number can belong to one account only. You are signed in straight away.
 - Password: at least 12 characters on registration.
-- Sign out: the **Sign out** link in the header (`/Logout`) ends the site cookie.
+- Sign out: the **Sign out** link in the header (`/{slug}/Logout`) ends the site cookie.
 
 ## 5. Admin
 
 - `/Admin`: restaurant list. `/Admin/Restaurants/New`: create a restaurant. `/Admin/Restaurants/{id}`: tables and menu.
 - `/Admin/Users`: staff accounts.
-- Admin pages require the Admin role.
+- Admin pages require the Admin role. Admins sign in at `/Admin/Login`.
 
 ## 6. Payments
 
 1. The customer pays a food order on the booking page. `PaymentService` reads the amount from the database, never from the form.
 2. It creates a Cashfree order and saves a `Payment` with status `Pending`. Email and phone come from the booking.
 3. The browser opens Cashfree checkout with the payment session.
-4. After payment, `/Payment/Result` asks Cashfree for the status and marks the payment paid.
+4. After payment, `/{slug}/Payment/Result` asks Cashfree for the status and marks the payment paid.
 
 **Webhook:** Cashfree calls `POST /Payment/Webhook` after each payment. The request is checked with the HMAC-SHA256 signature (`x-webhook-signature`, over `x-webhook-timestamp` plus the raw body) using `Cashfree:SecretKey`. A valid event marks the payment paid, but only if the amount matches. Unsigned or wrong-signature requests get 401. Malformed signed requests get 400. Repeated events are safe.
 

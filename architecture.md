@@ -68,7 +68,7 @@ Domain has no framework or database references.
 
 ## Sign-in and admin
 
-- Customers and admins sign in at `/Login` with email and password. Passwords are stored only as PBKDF2 hashes (`PasswordHasher`).
+- Customers sign in at `/{slug}/Login` and admins at `/Admin/Login`, with email and password. Passwords are stored only as PBKDF2 hashes (`PasswordHasher`).
   A successful login creates the site cookie `DineBook.Auth` (HttpOnly, Secure, SameSite=Strict, 7 days, sliding).
   Admins are sent to `/Admin` after login; customers to `/`.
 - Registration (`/Registration`) creates the account. A phone number can belong to one account only. It signs in with the same cookie.
@@ -101,6 +101,7 @@ Domain has no framework or database references.
 Schema changes are plain SQL scripts in `DineBook.Infrastructure/Database/Scripts/`, numbered in order and safe to run more than once. EF migrations are not used. When the entities change, add a script that makes the same change to the database.
 
 - `001_dish_images.sql`: adds `ImageUrl` to `MenuItem` and `OrderItem`, and fills in sample photos.
+- `003_restaurant_slugs.sql`: adds `Restaurant.Slug` (the web address, for example `/spice-garden/`), unique, and fills it in from the names.
 
 Order items copy the dish name, price and photo when the order is placed, so past orders do not change when the menu does.
 

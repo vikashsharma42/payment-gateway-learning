@@ -1,4 +1,4 @@
-@page
+@page "/{slug}/Reservations/{code}"
 @model DetailsModel
 @{
     ViewData["Title"] = "Your booking";
@@ -14,7 +14,7 @@
 
 <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb mb-0">
-        <li class="breadcrumb-item"><a asp-page="/Bookings/Index">My bookings</a></li>
+        <li class="breadcrumb-item"><a asp-page="/Bookings/Index" asp-route-slug="@Model.Slug">My bookings</a></li>
         <li class="breadcrumb-item active" aria-current="page">@(Model.Restaurant?.Name ?? "Booking")</li>
     </ol>
 </nav>
@@ -190,7 +190,7 @@
 </div>
 
 <div class="mt-4">
-    <a asp-page="/Bookings/Index" class="btn btn-outline-secondary">Back to my bookings</a>
+    <a asp-page="/Bookings/Index" asp-route-slug="@Model.Slug" class="btn btn-outline-secondary">Back to my bookings</a>
 </div>
 
 @section Scripts {

@@ -36,14 +36,18 @@ else
 
                         @if (User.Identity?.IsAuthenticated == true)
                         {
-                            <a class="btn btn-brand mt-auto" asp-page="/Restaurants/Book" asp-route-id="@restaurant.Id">
+                            <a class="btn btn-brand mt-auto" asp-page="/Restaurants/Book" asp-route-slug="@restaurant.Slug">
                                 Book a table<span class="visually-hidden">: @restaurant.Name</span>
                             </a>
                         }
                         else
                         {
-                            <a class="btn btn-outline-primary mt-auto" asp-page="/Login" asp-route-ReturnUrl="@Url.Page('/Restaurants/Book', new { id = restaurant.Id })">
-                                Sign in to book<span class="visually-hidden">: @restaurant.Name</span>
+                            <a class="btn btn-outline-primary mt-auto"
+                               asp-page="/Login"
+                               asp-route-slug="@restaurant.Slug"
+                               asp-route-ReturnUrl="@Url.Page("/Restaurants/Book", new { slug = restaurant.Slug })">
+                                Sign in to book
+                                <span class="visually-hidden">: @restaurant.Name</span>
                             </a>
                         }
                     </div>

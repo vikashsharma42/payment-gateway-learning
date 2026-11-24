@@ -1,6 +1,8 @@
 @{
     // Set by AppPageModel and read once per request
     var toastJson = TempData["Toast"] as string;
+    // The restaurant in the web address (/{slug}/...), or the first restaurant on the directory page. Null on admin pages.
+    var slug = ViewContext.RouteData.Values["slug"]?.ToString() ?? ViewData["NavSlug"]?.ToString();
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -23,22 +25,34 @@
             </a>
             <nav class="d-flex align-items-center gap-3">
                 <a class="link-light" asp-page="/Index">Restaurants</a>
-                <a class="link-light" asp-page="/Bookings/Index">My bookings</a>
-                <a class="link-light" asp-page="/Orders/Index">Orders</a>
+                @if (slug is not null)
+                {
+                    <a class="link-light" asp-page="/Bookings/Index" asp-route-slug="@slug">My bookings</a>
+                    <a class="link-light" asp-page="/Orders/Index" asp-route-slug="@slug">Orders</a>
+                }
                 @if (User.Identity?.IsAuthenticated == true)
                 {
                     @if (User.IsInRole("Admin"))
                     {
                         <a class="link-light" asp-page="/Admin/Index">Admin</a>
                     }
-                    <form method="post" asp-page="/Logout" class="d-inline">
-                        <button type="submit" class="btn btn-link link-light p-0 text-decoration-none">Sign out</button>
-                    </form>
+                    @if (slug is not null)
+                    {
+                        <form method="post" asp-page="/Logout" asp-route-slug="@slug" class="d-inline">
+                            <button type="submit" class="btn btn-link link-light p-0 text-decoration-none">Sign out</button>
+                        </form>
+                    }
+                    else
+                    {
+                        <form method="post" asp-page="/Admin/Logout" class="d-inline">
+                            <button type="submit" class="btn btn-link link-light p-0 text-decoration-none">Sign out</button>
+                        </form>
+                    }
                 }
-                else
+                else if (slug is not null)
                 {
-                    <a class="link-light" asp-page="/Registration">Create account</a>
-                    <a class="link-light" asp-page="/Login">Sign in</a>
+                    <a class="link-light" asp-page="/Registration" asp-route-slug="@slug">Create account</a>
+                    <a class="link-light" asp-page="/Login" asp-route-slug="@slug">Sign in</a>
                 }
                 <span class="secure-badge">Secure checkout</span>
             </nav>

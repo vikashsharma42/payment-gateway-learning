@@ -75,7 +75,7 @@ namespace DineBook.Web.Pages.Reservations
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(Code))
-                return RedirectToPage("/Bookings/Index");
+                return RedirectToPage("/Bookings/Index", new { slug = Slug });
 
             if (!await LoadAsync(ct))
                 return NotFound();
@@ -114,7 +114,7 @@ namespace DineBook.Web.Pages.Reservations
             await _reservations.CancelAsync(Code, UserId, ct);
             ToastSuccess("Your booking has been cancelled.");
 
-            return RedirectToPage(new { code = Code });
+            return RedirectToPage(new { slug = Slug, code = Code });
         }
 
         // One click to pay: the payment session is created here, and the checkout page opens the
@@ -129,7 +129,7 @@ namespace DineBook.Web.Pages.Reservations
             if (!payable.Any(o => o.Id == orderId && !o.IsPaid))
             {
                 ToastError("That order cannot be paid.");
-                return RedirectToPage(new { code = Code });
+                return RedirectToPage(new { slug = Slug, code = Code });
             }
 
             return await StartPaymentAsync(orderId, payable.First(o => o.Id == orderId).Subtotal(), booking, ct);
@@ -143,7 +143,7 @@ namespace DineBook.Web.Pages.Reservations
             var charges = new RestaurantCharges(restaurant.TaxPercent, restaurant.SystemAccessFee, restaurant.TaxType);
             var bill = BillCalculator.Calculate(subtotal, charges);
 
-            var returnUrl = $"{_site.PublicBaseUrl.TrimEnd('/')}/Payment/Result";
+            var returnUrl = $"{_site.PublicBaseUrl.TrimEnd('/')}/{Slug}/Payment/Result";
             var session = await _payments.CreateOrderAsync(
                 orderId, bill.Total, booking.CustomerEmail, booking.CustomerPhone, returnUrl, Guid.NewGuid().ToString("N"), ct);
 
@@ -153,14 +153,19 @@ namespace DineBook.Web.Pages.Reservations
             var pending = new PendingPayment(orderId, session.OrderId, session.PaymentSessionId, session.Amount, DateTimeOffset.UtcNow);
             TempData[CheckoutModel.PendingKey] = JsonSerializer.Serialize(pending);
 
-            return RedirectToPage("/Checkout", new { id = orderId });
+            return RedirectToPage("/Checkout", new { slug = Slug, id = orderId });
         }
 
         // The booking when it belongs to the signed-in customer. Someone else's booking looks like "not found".
         private async Task<Reservation> OwnedBookingAsync(CancellationToken ct)
         {
             var booking = await _reservations.FindByCodeAsync(Code, ct);
-            return booking is not null && await _reservations.IsOwnedByAsync(booking.Id, UserId, ct) ? booking : null;
+            if (booking is null || !await _reservations.IsOwnedByAsync(booking.Id, UserId, ct))
+                return null;
+
+            // The web address must name the restaurant the booking is at, otherwise it is "not found"
+            var restaurant = await _reservations.GetRestaurantAsync(booking.RestaurantId, ct);
+            return string.Equals(restaurant?.Slug, Slug, StringComparison.OrdinalIgnoreCase) ? booking : null;
         }
 
         private async Task<bool> LoadAsync(CancellationToken ct)

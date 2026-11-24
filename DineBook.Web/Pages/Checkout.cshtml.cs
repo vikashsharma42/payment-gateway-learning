@@ -96,7 +96,7 @@ namespace DineBook.Web.Pages
                 IdempotencyKey = Guid.NewGuid().ToString("N");
 
             // Built from configuration, never from the Host header
-            var returnUrl = $"{_site.PublicBaseUrl.TrimEnd('/')}/Payment/Result";
+            var returnUrl = $"{_site.PublicBaseUrl.TrimEnd('/')}/{Slug}/Payment/Result";
 
             // Contact details come from the booking, so nobody types them again.
             // The amount is read from the order inside PaymentService, never from the form.
@@ -111,7 +111,7 @@ namespace DineBook.Web.Pages
 
             // Post/Redirect/Get: a refresh shows this session instead of creating another payment
             TempData[PendingKey] = JsonSerializer.Serialize(pending);
-            return RedirectToPage(new { id });
+            return RedirectToPage(new { slug = Slug, id });
         }
 
         private PendingPayment ReadPending(long orderId)
@@ -149,7 +149,9 @@ namespace DineBook.Web.Pages
             Bill = BillCalculator.Calculate(Order.Subtotal(),
                 new RestaurantCharges(Order.Restaurant.TaxPercent, Order.Restaurant.SystemAccessFee, Order.Restaurant.TaxType));
 
-            return Booking is not null && await _reservations.IsOwnedByAsync(Booking.Id, UserId, ct);
+            return Booking is not null
+                && string.Equals(Order.Restaurant.Slug, Slug, StringComparison.OrdinalIgnoreCase)
+                && await _reservations.IsOwnedByAsync(Booking.Id, UserId, ct);
         }
 
         // A paid or cancelled order needs no checkout: show the booking instead
@@ -157,8 +159,8 @@ namespace DineBook.Web.Pages
         {
             ToastSuccess("This order has already been paid or cancelled.");
             return string.IsNullOrEmpty(ReservationCode)
-                ? RedirectToPage("/Bookings/Index")
-                : RedirectToPage("/Reservations/Details", new { code = ReservationCode });
+                ? RedirectToPage("/Bookings/Index", new { slug = Slug })
+                : RedirectToPage("/Reservations/Details", new { slug = Slug, code = ReservationCode });
         }
     }
 

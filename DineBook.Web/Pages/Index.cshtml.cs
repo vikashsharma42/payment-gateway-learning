@@ -22,6 +22,9 @@ namespace DineBook.Web.Pages
         public async Task OnGetAsync(CancellationToken ct)
         {
             Restaurants = await _reservations.GetRestaurantsAsync(ct);
+
+            // The header links for My bookings, Orders and sign-in use this restaurant's address
+            ViewData["NavSlug"] = Restaurants.Count > 0 ? Restaurants[0].Slug : null;
         }
     }
 }

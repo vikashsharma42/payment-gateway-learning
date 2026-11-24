@@ -30,6 +30,7 @@ namespace DineBook.Application.Services
             // Address and time rules are checked by the domain objects below
             var address = Address.Create(request.Street, request.City, request.State, request.Pincode);
             var restaurant = new Restaurant(name, address, request.OpensAt, request.ClosesAt);
+            restaurant.AssignSlug(await UniqueSlugAsync(restaurant.Slug, ct));
 
             _db.Restaurants.Add(restaurant);
             await _db.SaveChangesAsync(ct);
@@ -111,6 +112,16 @@ namespace DineBook.Application.Services
 
             item.Delete();
             await _db.SaveChangesAsync(ct);
+        }
+
+        // spice-garden, then spice-garden-2, spice-garden-3 ... when names are alike
+        private async Task<string> UniqueSlugAsync(string baseSlug, CancellationToken ct)
+        {
+            var slug = baseSlug;
+            for (var number = 2; await _db.Restaurants.AnyAsync(r => r.Slug == slug, ct); number++)
+                slug = RestaurantSlug.WithSuffix(baseSlug, number);
+
+            return slug;
         }
 
         private async Task<Restaurant> LoadRestaurantAsync(long restaurantId, CancellationToken ct) =>

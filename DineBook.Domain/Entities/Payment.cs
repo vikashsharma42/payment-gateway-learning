@@ -23,8 +23,7 @@ namespace DineBook.Domain.Entities
         {
             DomainValidation<Orders>.Ensure(order).IsNotNull();
             DomainValidation<long>.Ensure(order.Id).IsGreaterThan(0);
-            DomainValidation<bool>.Ensure(order.Status != OrderStatus.Cancelled)
-                .IsTrue("A cancelled order cannot be paid.");
+            DomainValidation<bool>.Ensure(order.Status != OrderStatus.Cancelled).IsTrue("A cancelled order cannot be paid.");
             DomainValidation<bool>.Ensure(order.IsPaid).IsFalse("This order has already been paid.");
 
             // The amount is the bill total, calculated by BillCalculator from the restaurant's charges

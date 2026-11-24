@@ -39,6 +39,10 @@ namespace DineBook.Web.Pages
         [BindProperty(SupportsGet = true)]
         public bool Denied { get; set; }
 
+        // The restaurant whose sign-in page this is (/{slug}/Login). Empty on the admin sign-in page.
+        [BindProperty(SupportsGet = true)]
+        public string Slug { get; set; }
+
         public string Error { get; private set; }
 
         public IActionResult OnGet()

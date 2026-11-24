@@ -1,4 +1,4 @@
-@page
+@page "/{slug}/Bookings"
 @model IndexModel
 @{
     ViewData["Title"] = "My bookings";
@@ -47,7 +47,7 @@ else
                                 <div class="small text-success mb-2">All food is paid</div>
                             }
 
-                            <a class="btn btn-outline-primary w-100" asp-page="/Reservations/Details" asp-route-code="@booking.Code">Open booking</a>
+                            <a class="btn btn-outline-primary w-100" asp-page="/Reservations/Details" asp-route-slug="@booking.Restaurant.Slug" asp-route-code="@booking.Code">Open booking</a>
                         </div>
                     </div>
                 </div>

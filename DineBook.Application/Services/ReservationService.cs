@@ -62,8 +62,12 @@ namespace DineBook.Application.Services
                 .Include(r => r.Tables)
                 .FirstOrDefaultAsync(r => r.Id == restaurantId, ct);
 
-        public async Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(
-            long restaurantId, DateOnly date, int guests, CancellationToken ct = default)
+        public Task<Restaurant> GetRestaurantBySlugAsync(string slug, CancellationToken ct = default) =>
+            _db.Restaurants.AsNoTracking()
+                .Include(r => r.Tables)
+                .FirstOrDefaultAsync(r => r.Slug == slug, ct);
+
+        public async Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(long restaurantId, DateOnly date, int guests, CancellationToken ct = default)
         {
             var policy = _options.ToPolicy();
             if (guests < 1 || guests > policy.MaxGuests)

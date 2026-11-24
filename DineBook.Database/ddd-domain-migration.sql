@@ -67,26 +67,27 @@ BEGIN TRY
     CREATE TABLE dbo.Restaurants
     (
         Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Restaurants PRIMARY KEY,
+        Slug NVARCHAR(60) NOT NULL,
         Name NVARCHAR(100) NOT NULL,
-        Address_Street NVARCHAR(200) NOT NULL,
-        Address_City NVARCHAR(100) NOT NULL,
-        Address_State NVARCHAR(100) NOT NULL,
-        Address_Pincode NVARCHAR(6) NOT NULL,
+        Street NVARCHAR(200) NOT NULL,
+        City NVARCHAR(100) NOT NULL,
+        State NVARCHAR(100) NOT NULL,
+        Pincode NVARCHAR(6) NOT NULL,
         OpensAt TIME NOT NULL,
         ClosesAt TIME NOT NULL,
-        Status NVARCHAR(20) NOT NULL CONSTRAINT DF_Restaurants_Status DEFAULT (N'Active'),
-        Phone NVARCHAR(15) NOT NULL CONSTRAINT DF_Restaurants_Phone DEFAULT (N''),
-        Description NVARCHAR(500) NOT NULL CONSTRAINT DF_Restaurants_Description DEFAULT (N''),
-        Cuisine NVARCHAR(50) NOT NULL CONSTRAINT DF_Restaurants_Cuisine DEFAULT (N''),
+        Status NVARCHAR(20) NOT NULL CONSTRAINT DF_Restaurant_Status DEFAULT (N'Active'),
+        Phone NVARCHAR(15) NOT NULL CONSTRAINT DF_Restaurant_Phone DEFAULT (N''),
+        Description NVARCHAR(500) NOT NULL CONSTRAINT DF_Restaurant_Description DEFAULT (N''),
+        Cuisine NVARCHAR(50) NOT NULL CONSTRAINT DF_Restaurant_Cuisine DEFAULT (N''),
         TaxType NVARCHAR(20) NOT NULL,
         TaxPercent DECIMAL(5,2) NOT NULL,
         SystemAccessFee DECIMAL(10,2) NOT NULL,
-        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Restaurants_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
+        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Restaurant_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
         CreatedBy NVARCHAR(256) NULL,
-        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Restaurants_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
+        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Restaurant_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
         UpdatedBy NVARCHAR(256) NULL,
-        CONSTRAINT CK_Restaurants_Status CHECK (Status IN (N'Active', N'Inactive')),
-        CONSTRAINT CK_Restaurants_Address_Pincode CHECK (Address_Pincode NOT LIKE N'%[^0-9]%' AND LEN(Address_Pincode) = 6)
+        CONSTRAINT CK_Restaurant_Status CHECK (Status IN (N'Active', N'Inactive')),
+        CONSTRAINT CK_Restaurant_Pincode CHECK (Pincode NOT LIKE N'%[^0-9]%' AND LEN(Pincode) = 6)
     );
 
     /* Restaurant tables */

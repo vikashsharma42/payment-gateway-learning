@@ -32,6 +32,7 @@ namespace DineBook.Domain.Entities
             DomainValidation<TimeOnly>.Ensure(closesAt).IsDateNewerThan(opensAt, "Closing time must be after opening time.");
 
             Name = name.Trim();
+            Slug = RestaurantSlug.FromName(Name);
             Address = address;
             OpensAt = opensAt;
             ClosesAt = closesAt;
@@ -45,6 +46,9 @@ namespace DineBook.Domain.Entities
         }
 
         public string Name { get; private set; }
+
+        // URL name of the restaurant, for example spice-garden in /spice-garden/. Set when the restaurant is created.
+        public string Slug { get; private set; }
 
         public Address Address { get; private set; }
 
@@ -102,6 +106,13 @@ namespace DineBook.Domain.Entities
         public void Activate() => Status = RestaurantStatus.Active;
 
         public void Deactivate() => Status = RestaurantStatus.Inactive;
+
+        // Set once by the admin service, when another restaurant already has the base slug (spice-garden-2)
+        public void AssignSlug(string slug)
+        {
+            DomainValidation<bool>.Ensure(RestaurantSlug.IsValid(slug)).IsTrue("The web address is not valid.");
+            Slug = slug;
+        }
 
         public void UpdateDetails(string phone, string description, string cuisine)
         {

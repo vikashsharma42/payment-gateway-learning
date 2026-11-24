@@ -1,4 +1,5 @@
 using DineBook.Domain.Entities;
+using DineBook.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -23,6 +24,10 @@ namespace DineBook.Infrastructure.Database.Configurations
             builder.Property(x => x.SystemAccessFee).HasPrecision(10, 2);
 
             builder.Ignore(x => x.IsActive);
+
+            // Every restaurant has its own web address, so slugs are unique
+            builder.Property(x => x.Slug).HasMaxLength(RestaurantSlug.MaxLength).IsRequired();
+            builder.HasIndex(x => x.Slug).IsUnique();
         }
     }
 }

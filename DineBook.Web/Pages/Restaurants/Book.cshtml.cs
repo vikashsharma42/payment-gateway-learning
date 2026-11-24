@@ -26,9 +26,6 @@ namespace DineBook.Web.Pages.Restaurants
         }
 
         [BindProperty(SupportsGet = true)]
-        public long Id { get; set; }
-
-        [BindProperty(SupportsGet = true)]
         public DateOnly? Date { get; set; }
 
         [BindProperty(SupportsGet = true)]
@@ -74,7 +71,7 @@ namespace DineBook.Web.Pages.Restaurants
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
-            Restaurant = await _reservations.GetRestaurantAsync(Id, ct);
+            Restaurant = await _reservations.GetRestaurantBySlugAsync(Slug, ct);
             if (Restaurant is null)
                 return NotFound();
 
@@ -96,7 +93,7 @@ namespace DineBook.Web.Pages.Restaurants
 
         public async Task<IActionResult> OnPostAsync(CancellationToken ct)
         {
-            Restaurant = await _reservations.GetRestaurantAsync(Id, ct);
+            Restaurant = await _reservations.GetRestaurantBySlugAsync(Slug, ct);
             if (Restaurant is null)
                 return NotFound();
 
@@ -111,7 +108,7 @@ namespace DineBook.Web.Pages.Restaurants
 
             var reservation = await _reservations.BookAsync(new BookingRequest(
                 UserId,
-                Id,
+                Restaurant.Id,
                 StartsAt,
                 Guests,
                 CustomerName.Trim(),
@@ -123,7 +120,7 @@ namespace DineBook.Web.Pages.Restaurants
             ToastSuccess("Your table is booked.");
 
             // Post/Redirect/Get: a refresh does not book again
-            return RedirectToPage("/Reservations/Details", new { code = reservation.Code });
+            return RedirectToPage("/Reservations/Details", new { slug = Slug, code = reservation.Code });
         }
 
         private async Task LoadSlotsAsync(CancellationToken ct)
@@ -131,7 +128,7 @@ namespace DineBook.Web.Pages.Restaurants
             if (Date is null)
                 return;
 
-            Slots = await _reservations.GetAvailableSlotsAsync(Id, Date.Value, Guests, ct);
+            Slots = await _reservations.GetAvailableSlotsAsync(Restaurant.Id, Date.Value, Guests, ct);
         }
     }
 }

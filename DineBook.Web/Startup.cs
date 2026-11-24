@@ -19,6 +19,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Threading.RateLimiting;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace DineBook.Web
@@ -47,7 +48,13 @@ namespace DineBook.Web
                 .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
                 .AddCookie(options =>
                 {
-                    options.LoginPath = "/Login";
+                    // Sign-in is per restaurant (/{slug}/Login). Admin pages send visitors to /Admin/Login.
+                    options.Events.OnRedirectToLogin = context =>
+                    {
+                        var returnUrl = context.Request.PathBase + context.Request.Path + context.Request.QueryString;
+                        context.Response.Redirect(SignInPathFor(context.Request.Path) + QueryString.Create("ReturnUrl", returnUrl));
+                        return Task.CompletedTask;
+                    };
 
                     options.Cookie.Name = "DineBook.Auth";
                     options.Cookie.HttpOnly = true;
@@ -157,6 +164,15 @@ namespace DineBook.Web
             {
                 endpoints.MapRazorPages();
             });
+        }
+
+        // The sign-in page for a web address: /{slug}/Login, or /Admin/Login for admin pages
+        private static string SignInPathFor(PathString path)
+        {
+            var first = path.Value?.Split('/', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault();
+            return first is null || string.Equals(first, "Admin", StringComparison.OrdinalIgnoreCase)
+                ? "/Admin/Login"
+                : $"/{first}/Login";
         }
 
         // Client IP address

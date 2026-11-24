@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System;
 using System.Security.Claims;
@@ -7,6 +8,9 @@ namespace DineBook.Web.Infrastructure
 {
     public abstract class AppPageModel : PageModel
     {
+        [BindProperty(SupportsGet = true)]
+        public string Slug { get; set; }
+
         private const string ToastKey = "Toast";
 
         // Id of the signed-in account. Only read on pages that require sign-in.
