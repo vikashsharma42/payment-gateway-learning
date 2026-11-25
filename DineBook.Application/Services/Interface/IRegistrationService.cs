@@ -15,7 +15,7 @@ namespace DineBook.Application.Services.Interface
         /// <summary>
         /// Creates a Customer account, links it to a guest record (matched by phone), and signs the user in.
         /// </summary>
-        Task<AccountSession> RegisterCustomerAsync(CustomerRegistrationRequest request, CancellationToken ct = default);
+        Task<ApplicationUser> RegisterCustomerAsync(CustomerRegistrationRequest request, CancellationToken ct = default);
 
         /// <summary>Creates a Staff, Manager or Admin account. Customer accounts are not created here.</summary>
         Task<ApplicationUser> CreateStaffUserAsync(StaffUserRequest request, CancellationToken ct = default);

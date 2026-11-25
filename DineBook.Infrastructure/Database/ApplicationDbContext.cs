@@ -19,7 +19,7 @@ namespace DineBook.Infrastructure.Database
 
         public DbSet<Location> RestaurantLocations { get; set; }
 
-        public DbSet<Table> RestaurantTables { get; set; }
+        public DbSet<Table> Tables { get; set; }
 
         public DbSet<Reservation> Reservations { get; set; }
 

@@ -11,17 +11,19 @@ namespace DineBook.Infrastructure.Database.Configurations
             builder.ToTable(nameof(Table));
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
 
-            // Many tables belong to one restaurant. Deleting a restaurant removes its tables.
+            builder.Ignore(x => x.IsActive);
+
             builder.HasOne(x => x.Restaurant)
                 .WithMany(r => r.Tables)
                 .HasForeignKey(x => x.RestaurantId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Every table is at one location. Restrict: a location with tables cannot be deleted.
             builder.HasOne<Location>()
                 .WithMany()
                 .HasForeignKey(x => x.LocationId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            builder.HasQueryFilter(x => !x.IsDeleted);
 
             // Removed tables are soft-deleted: hidden everywhere, but kept for past bookings
             builder.HasQueryFilter(x => !x.IsDeleted);

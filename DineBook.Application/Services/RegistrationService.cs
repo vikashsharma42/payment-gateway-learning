@@ -28,42 +28,23 @@ namespace DineBook.Application.Services
             _hasher = hasher;
         }
 
-        public async Task<AccountSession> RegisterCustomerAsync(CustomerRegistrationRequest request, CancellationToken ct = default)
+        public async Task<ApplicationUser> RegisterCustomerAsync(CustomerRegistrationRequest request, CancellationToken ct = default)
         {
             var email = ApplicationUser.NormalizeEmail(request.Email);
             await EnsureEmailFreeAsync(email, ct);
 
             // Validates and normalizes the phone (digits only)
-            var phone = Customer.NormalizePhone(request.Phone);
-            var fullName = $"{request.FirstName} {request.LastName}".Trim();
+            var phone = ApplicationUser.NormalizePhone(request.Phone);
 
-            // A guest who booked before may already exist with this phone
-            var guest = await _db.Customers.FirstOrDefaultAsync(c => c.Phone == phone, ct);
-            if (guest?.ApplicationUserId is not null)
+            if (await _db.Users.AnyAsync(u => u.Phone == phone, ct))
                 throw new DomainException("An account already exists for this phone number.");
 
-            var user = new ApplicationUser(email, _hasher.Hash(request.Password), request.FirstName, request.LastName, UserRole.Customer);
+            var user = new ApplicationUser(email, _hasher.Hash(request.Password), request.FirstName, request.LastName, UserRole.Customer, phone);
+
             _db.Users.Add(user);
             await SaveAsync(ct);
 
-            if (guest is null)
-            {
-                guest = new Customer(fullName, phone, email);
-                _db.Customers.Add(guest);
-            }
-            else
-            {
-                guest.UpdateContact(fullName, email);
-            }
-
-            guest.LinkUser(user.Id);
-            await SaveAsync(ct);
-            return Ok();
-        }
-
-        private AccountSession Ok()
-        {
-            throw new NotImplementedException();
+            return user;
         }
 
         public async Task<ApplicationUser> CreateStaffUserAsync(StaffUserRequest request, CancellationToken ct = default)
@@ -84,9 +65,7 @@ namespace DineBook.Application.Services
                     throw new DomainException("Restaurant not found.");
             }
 
-            var user = new ApplicationUser(email, _hasher.Hash(request.Password), request.FirstName, request.LastName, request.Role);
-            if (needsRestaurant)
-                user.AssignRestaurant(request.RestaurantId.Value);
+            var user = new ApplicationUser(email, _hasher.Hash(request.Password), request.FirstName, request.LastName, request.Role, phone: null);
             _db.Users.Add(user);
             await SaveAsync(ct);
 

@@ -10,16 +10,16 @@ namespace DineBook.Infrastructure.Database.Configurations
         {
             builder.ToTable(nameof(Location));
 
-            builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
-            builder.Property(x => x.Phone).HasMaxLength(15).IsRequired();
-
             builder.OwnsOne(x => x.Address, a => ValueObjectMappings.MapAddress(a));
 
             // Many locations belong to one restaurant. Deleting a restaurant removes its locations.
-            builder.HasOne<Restaurant>()
-                .WithMany(r => r.Locations)
-                .HasForeignKey(x => x.RestaurantId)
-                .OnDelete(DeleteBehavior.Cascade);
+            builder.HasOne(x => x.Restaurant)
+                 .WithMany(r => r.Locations)
+                 .HasForeignKey(x => x.RestaurantId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Navigation(nameof(Location.Tables))
+              .UsePropertyAccessMode(PropertyAccessMode.Field);
         }
     }
 }

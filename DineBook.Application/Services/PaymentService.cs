@@ -43,12 +43,17 @@ namespace DineBook.Application.Services
         public async Task<IReadOnlyList<Orders>> GetPayableOrdersAsync(string reservationCode, string phone, CancellationToken ct = default)
         {
             var code = (reservationCode ?? string.Empty).Trim().ToUpperInvariant();
+            var normalizedPhone = ApplicationUser.NormalizePhone(phone);
 
-            var reservation = await _db.Reservations.AsNoTracking()
+            if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(normalizedPhone))
+                throw new DomainException("We could not find a booking with those details.");
+
+            var reservation = await _db.Reservations
+                .AsNoTracking()
+                .Include(r => r.Customer)
                 .FirstOrDefaultAsync(r => r.Code == code, ct);
 
-            // Same message for an unknown code and a wrong phone, so the code alone reveals nothing
-            if (reservation is null || !reservation.MatchesPhone(phone))
+            if (reservation?.Customer is null || reservation.Customer.Phone != normalizedPhone)
                 throw new DomainException("We could not find a booking with those details.");
 
             var orders = await _db.Orders.AsNoTracking()
@@ -56,6 +61,7 @@ namespace DineBook.Application.Services
                 .Include(o => o.Items)
                 .ThenInclude(i => i.MenuItem)
                 .Include(o => o.Payments)
+                .AsSplitQuery()
                 .OrderBy(o => o.Id)
                 .ToListAsync(ct);
 
@@ -86,14 +92,30 @@ namespace DineBook.Application.Services
                 return ToResult(existing);
             }
 
-            // The amount always comes from the order in the database, never from the client
-            var order = await _db.Orders.AsNoTracking()
-                .Include(o => o.Items)
-                .Include(o => o.Payments)
-                .FirstOrDefaultAsync(o => o.Id == orderId, ct);
+            var order = await _db.Orders
+                 .AsNoTracking()
+                 .Include(o => o.Items)
+                 .Include(o => o.Payments)
+                 .Include(o => o.Reservation)
+                 .ThenInclude(r => r.Customer)
+                 .AsSplitQuery()
+                 .FirstOrDefaultAsync(o => o.Id == orderId, ct);
 
             if (order is null)
                 return null;
+
+            var customer = order.Reservation?.Customer;
+
+            if (customer is null)
+                throw new DomainException("Customer information is not available for this booking.");
+
+            var normalizedEmail = ApplicationUser.NormalizeEmail(customerEmail);
+            var normalizedPhone = ApplicationUser.NormalizePhone(customerPhone);
+
+            if (normalizedEmail != customer.Email || normalizedPhone != customer.Phone)
+            {
+                throw new DomainException("Customer details do not match this booking.");
+            }
 
             if (order.Status == OrderStatus.Cancelled)
                 throw new DomainException("This order was cancelled and cannot be paid.");
@@ -101,9 +123,9 @@ namespace DineBook.Application.Services
             if (order.IsPaid)
                 throw new DomainException("This order has already been paid.");
 
-            // Reuse a fresh pending payment for this order, so two checkouts never charge the same order twice
-            var pending = order.Payments.FirstOrDefault(p =>
-                p.Status == PaymentStatus.Pending && DateTimeOffset.UtcNow - p.CreatedDateTime < SessionLifetime);
+            var now = DateTimeOffset.UtcNow;
+            var pending = order.Payments.FirstOrDefault(p => p.Status == PaymentStatus.Pending && now >= p.CreatedDateTime && now - p.CreatedDateTime < SessionLifetime);
+
             if (pending is not null)
                 return ToResult(pending);
 

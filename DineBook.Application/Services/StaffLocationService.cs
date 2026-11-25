@@ -1,8 +1,6 @@
 using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities;
 using DineBook.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,19 +29,22 @@ namespace DineBook.Application.Services
             var restaurant = await _db.Restaurants.AsNoTracking()
                 .Include(r => r.Locations)
                 .Include(r => r.Tables)
+                .AsSplitQuery()
                 .FirstOrDefaultAsync(r => r.Id == restaurantId.Value, ct);
 
             if (restaurant is null)
                 return null;
 
-            var open = restaurant.ActiveLocations.ToList();
-            if (open.Count == 0)
+            var activeLocations = restaurant.Locations
+                .Where(location => location.IsActive)
+                .ToList();
+
+            if (activeLocations.Count == 0)
                 return null;
 
-            // Only a location of this restaurant that is open can be the current one
-            var current = open.FirstOrDefault(l => locationId.HasValue && l.Id == locationId.Value) ?? open[0];
+            var currentLocation = activeLocations.FirstOrDefault(location => locationId.HasValue && location.Id == locationId.Value) ?? activeLocations[0];
 
-            return new StaffWorkspace(restaurant, open, current);
+            return new StaffWorkspace(restaurant, activeLocations, currentLocation);
         }
     }
 }

@@ -62,17 +62,15 @@ namespace DineBook.Application.Services
                 .Include(r => r.Tables).Include(r => r.Locations)
                 .FirstOrDefaultAsync(r => r.Id == restaurantId, ct);
 
-<<<<<<< Updated upstream
-        public async Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(
-            long restaurantId, DateOnly date, int guests, CancellationToken ct = default)
-=======
         public Task<Restaurant> GetRestaurantBySlugAsync(string slug, CancellationToken ct = default) =>
-            _db.Restaurants.AsNoTracking()
-                .Include(r => r.Tables).Include(r => r.Locations)
-                .FirstOrDefaultAsync(r => r.Slug == slug, ct);
+            _db.Restaurants
+            .AsNoTracking()
+            .Include(r => r.Tables)
+            .Include(r => r.Locations)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(r => r.Slug == slug, ct);
 
         public async Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(long restaurantId, DateOnly date, int guests, CancellationToken ct = default)
->>>>>>> Stashed changes
         {
             var policy = _options.ToPolicy();
             if (guests < 1 || guests > policy.MaxGuests)
@@ -143,22 +141,15 @@ namespace DineBook.Application.Services
                     policy.DurationMinutes)
                     ?? throw new DomainException("No table is free at that time for this party size.");
 
+
                 var newReservation = new Reservation(
                     await NewCodeAsync(ct),
-                    restaurant.Id,
-                    table.Id,
-                    request.CustomerName,
-                    request.CustomerPhone,
-                    request.CustomerEmail,
                     request.Guests,
                     request.StartsAt,
                     policy.DurationMinutes,
                     request.SpecialRequests);
 
-                var customer = await FindOrCreateCustomerAsync(
-                    newReservation, ct);
-
-                customer.AddReservation(newReservation);
+                restaurant.AddReservation(table.Id, reservation);
 
                 _db.Reservations.Add(newReservation);
 
@@ -171,13 +162,15 @@ namespace DineBook.Application.Services
             });
 
             // Sent only after the booking is saved
-            await SendSafelyAsync(new ReservationConfirmedEmailModel(
-                reservation.CustomerEmail,
-                reservation.CustomerName,
-                restaurant.Name,
-                reservation.Code,
-                reservation.StartsAt,
-                reservation.Guests), ct);
+            await SendSafelyAsync(
+                new ReservationConfirmedEmailModel(
+                    request.CustomerEmail,
+                    request.CustomerName,
+                    restaurant.Name,
+                    reservation.Code,
+                    reservation.StartsAt,
+                    reservation.Guests),
+                ct);
 
             return reservation;
         }
@@ -194,40 +187,22 @@ namespace DineBook.Application.Services
             var reservation = await _db.Reservations.FirstOrDefaultAsync(r => r.Code == normalized, ct)
                 ?? throw new DomainException("We could not find a booking with that code.");
 
-            reservation.Cancel(phone);
-            await _db.SaveChangesAsync(ct);
+            //reservation.Cancel(phone);
+            //await _db.SaveChangesAsync(ct);
 
-            var restaurantName = await _db.Restaurants.AsNoTracking()
-                .Where(r => r.Id == reservation.RestaurantId)
-                .Select(r => r.Name)
-                .FirstOrDefaultAsync(ct);
+            //var restaurantName = await _db.Restaurants.AsNoTracking()
+            //    .Where(r => r.Id == reservation.RestaurantId)
+            //    .Select(r => r.Name)
+            //    .FirstOrDefaultAsync(ct);
 
-            await SendSafelyAsync(new ReservationCancelledEmailModel(
-                reservation.CustomerEmail,
-                reservation.CustomerName,
-                restaurantName ?? "your restaurant",
-                reservation.Code,
-                reservation.StartsAt), ct);
+            //await SendSafelyAsync(new ReservationCancelledEmailModel(
+            //    reservation.CustomerEmail,
+            //    reservation.CustomerName,
+            //    restaurantName ?? "your restaurant",
+            //    reservation.Code,
+            //    reservation.StartsAt), ct);
 
             return reservation;
-        }
-
-        // Guests are matched by phone number. The booking keeps its own copy of the contact details.
-        private async Task<Customer> FindOrCreateCustomerAsync(Reservation reservation, CancellationToken ct)
-        {
-            var customer = await _db.Customers.FirstOrDefaultAsync(c => c.Phone == reservation.CustomerPhone, ct);
-
-            if (customer is null)
-            {
-                customer = new Customer(reservation.CustomerName, reservation.CustomerPhone, reservation.CustomerEmail);
-                _db.Customers.Add(customer);
-            }
-            else
-            {
-                customer.UpdateContact(reservation.CustomerName, reservation.CustomerEmail);
-            }
-
-            return customer;
         }
 
         private Task<List<Reservation>> LoadBlockingAsync(

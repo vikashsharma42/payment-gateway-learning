@@ -22,7 +22,7 @@ namespace DineBook.Application.Services
         {
             return await _db.MenuItems.AsNoTracking()
                 .Where(m => m.RestaurantId == restaurantId && m.IsAvailable)
-                .OrderBy(m => m.Category)
+                .OrderBy(m => m.MenuCategory.Name)
                 .ThenBy(m => m.Name)
                 .ToListAsync(ct);
         }

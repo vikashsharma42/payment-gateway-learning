@@ -35,9 +35,6 @@ namespace DineBook.Application.DependencyInjection
             // Sign-up and staff registration
             services.AddScoped<IRegistrationService, RegistrationService>();
 
-            // First admin seeding
-            services.AddScoped<AdminAccountSeeder>();
-
             return services;
         }
     }
