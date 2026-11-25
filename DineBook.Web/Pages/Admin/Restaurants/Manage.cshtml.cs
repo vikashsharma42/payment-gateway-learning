@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +25,45 @@ namespace DineBook.Web.Pages.Admin.Restaurants
 
         [BindProperty(SupportsGet = true)]
         public long Id { get; set; }
+
+        // The location whose tables are shown. Set from the query string (?LocationId=) or from the form.
+        [BindProperty(SupportsGet = true)]
+        public long LocationId { get; set; }
+
+        // Add-location form
+        [BindProperty]
+        [Required(ErrorMessage = "Location name is required.")]
+        [StringLength(100)]
+        public string NewLocationName { get; set; } = string.Empty;
+
+        [BindProperty]
+        [Required(ErrorMessage = "Street is required.")]
+        [StringLength(200)]
+        public string NewLocationStreet { get; set; } = string.Empty;
+
+        [BindProperty]
+        [Required(ErrorMessage = "City is required.")]
+        [StringLength(100)]
+        public string NewLocationCity { get; set; } = string.Empty;
+
+        [BindProperty]
+        [Required(ErrorMessage = "State is required.")]
+        [StringLength(100)]
+        public string NewLocationState { get; set; } = string.Empty;
+
+        [BindProperty]
+        [Required(ErrorMessage = "Country is required.")]
+        [StringLength(100)]
+        public string NewLocationCountry { get; set; } = "India";
+
+        [BindProperty]
+        [Required(ErrorMessage = "Zip code is required.")]
+        [StringLength(20)]
+        public string NewLocationZipCode { get; set; } = string.Empty;
+
+        [BindProperty]
+        [StringLength(Location.MaxPhoneLength)]
+        public string NewLocationPhone { get; set; } = string.Empty;
 
         // Add-table form
         [BindProperty]
@@ -56,6 +96,11 @@ namespace DineBook.Web.Pages.Admin.Restaurants
 
         public Restaurant Restaurant { get; private set; }
 
+        // The location shown below. Always one of the restaurant's locations once loaded.
+        public Location SelectedLocation { get; private set; }
+
+        public IReadOnlyList<RestaurantTable> SelectedTables { get; private set; } = Array.Empty<RestaurantTable>();
+
         public IReadOnlyList<MenuItem> Menu { get; private set; } = Array.Empty<MenuItem>();
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
@@ -66,10 +111,38 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             return Page();
         }
 
+        public async Task<IActionResult> OnPostAddLocationAsync(CancellationToken ct)
+        {
+            RemoveTableFormErrors();
+            RemoveItemFormErrors();
+
+            if (!ModelState.IsValid)
+            {
+                ToastError("Check the location details and try again.");
+                return await ReloadAsync(ct);
+            }
+
+            var location = await _admin.AddLocationAsync(Id, new AddLocationRequest(
+                NewLocationName, NewLocationStreet, NewLocationCity, NewLocationState,
+                NewLocationCountry, NewLocationZipCode, NewLocationPhone), ct);
+
+            ToastSuccess($"{location.Name} added. Add its tables next.");
+            return RedirectToPage(new { id = Id, locationId = location.Id });
+        }
+
+        public async Task<IActionResult> OnPostSetLocationActiveAsync(long targetLocationId, bool active, CancellationToken ct)
+        {
+            await _admin.SetLocationActiveAsync(Id, targetLocationId, active, ct);
+            ToastSuccess(active ? "Location reopened." : "Location closed for staff and new bookings.");
+
+            return RedirectToPage(new { id = Id, locationId = targetLocationId });
+        }
+
         public async Task<IActionResult> OnPostAddTableAsync(CancellationToken ct)
         {
             // Both forms share this page, so the other form's fields must not fail this one
             RemoveItemFormErrors();
+            RemoveLocationFormErrors();
 
             if (!ModelState.IsValid)
             {
@@ -77,6 +150,7 @@ namespace DineBook.Web.Pages.Admin.Restaurants
                 return await ReloadAsync(ct);
             }
 
+<<<<<<< Updated upstream
             try
             {
                 await _admin.AddTableAsync(Id, TableLabel.Trim(), TableCapacity, ct);
@@ -86,13 +160,18 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             {
                 ToastError(ex.Message);
             }
+=======
+            await _admin.AddTableAsync(Id, LocationId, TableLabel.Trim(), TableCapacity, ct);
+            ToastSuccess($"Table {TableLabel.Trim()} added.");
+>>>>>>> Stashed changes
 
-            return RedirectToPage(new { id = Id });
+            return RedirectToPage(new { id = Id, locationId = LocationId });
         }
 
         public async Task<IActionResult> OnPostAddItemAsync(CancellationToken ct)
         {
             RemoveTableFormErrors();
+            RemoveLocationFormErrors();
 
             if (!ModelState.IsValid)
             {
@@ -100,6 +179,7 @@ namespace DineBook.Web.Pages.Admin.Restaurants
                 return await ReloadAsync(ct);
             }
 
+<<<<<<< Updated upstream
             try
             {
                 await _admin.AddMenuItemAsync(Id, ItemName, ItemDescription, ItemCategory, ItemPrice, ct);
@@ -109,12 +189,29 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             {
                 ToastError(ex.Message);
             }
+=======
+            await _admin.AddMenuItemAsync(Id, ItemName, ItemDescription, ItemCategory, ItemPrice, ct);
+            ToastSuccess($"{ItemName.Trim()} added to the menu.");
 
-            return RedirectToPage(new { id = Id });
+            return RedirectToPage(new { id = Id, locationId = LocationId });
+        }
+
+        public async Task<IActionResult> OnPostChargesAsync(CancellationToken ct)
+        {
+            RemoveItemFormErrors();
+            RemoveTableFormErrors();
+            RemoveLocationFormErrors();
+
+            await _admin.UpdateChargesAsync(Id, TaxPercent, SystemAccessFee, ct);
+            ToastSuccess("Charges saved. New bills at this restaurant use these rates.");
+>>>>>>> Stashed changes
+
+            return RedirectToPage(new { id = Id, locationId = LocationId });
         }
 
         public async Task<IActionResult> OnPostToggleItemAsync(long itemId, bool available, CancellationToken ct)
         {
+<<<<<<< Updated upstream
             try
             {
                 await _admin.SetMenuItemAvailabilityAsync(itemId, available, ct);
@@ -124,8 +221,12 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             {
                 ToastError(ex.Message);
             }
+=======
+            await _admin.SetMenuItemAvailabilityAsync(itemId, available, ct);
+            ToastSuccess(available ? "Item is available again." : "Item hidden from customers.");
+>>>>>>> Stashed changes
 
-            return RedirectToPage(new { id = Id });
+            return RedirectToPage(new { id = Id, locationId = LocationId });
         }
 
         private void RemoveItemFormErrors()
@@ -142,6 +243,17 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             ModelState.Remove(nameof(TableCapacity));
         }
 
+        private void RemoveLocationFormErrors()
+        {
+            ModelState.Remove(nameof(NewLocationName));
+            ModelState.Remove(nameof(NewLocationStreet));
+            ModelState.Remove(nameof(NewLocationCity));
+            ModelState.Remove(nameof(NewLocationState));
+            ModelState.Remove(nameof(NewLocationCountry));
+            ModelState.Remove(nameof(NewLocationZipCode));
+            ModelState.Remove(nameof(NewLocationPhone));
+        }
+
         private async Task<IActionResult> ReloadAsync(CancellationToken ct)
         {
             return await LoadAsync(ct) ? Page() : NotFound();
@@ -152,6 +264,17 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             Restaurant = await _reservations.GetRestaurantAsync(Id, ct);
             if (Restaurant is null)
                 return false;
+
+            // Show the requested location, or the first open one when none is asked for
+            SelectedLocation = Restaurant.Locations.FirstOrDefault(l => l.Id == LocationId)
+                ?? Restaurant.Locations.OrderBy(l => l.Id).FirstOrDefault(l => l.IsActive)
+                ?? Restaurant.Locations.OrderBy(l => l.Id).FirstOrDefault();
+            LocationId = SelectedLocation?.Id ?? 0;
+
+            SelectedTables = SelectedLocation is null
+                ? Array.Empty<RestaurantTable>()
+                : Restaurant.Tables.Where(t => t.RestaurantLocationId == SelectedLocation.Id)
+                    .OrderBy(t => t.Label).ToList();
 
             Menu = await _admin.GetMenuAsync(Id, ct);
             return true;

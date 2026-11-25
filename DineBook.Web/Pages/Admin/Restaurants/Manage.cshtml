@@ -12,22 +12,106 @@
 </nav>
 
 <h1 class="h2 mb-1">@Model.Restaurant.Name</h1>
-<p class="text-muted mb-4">@Model.Restaurant.Address.Street, @Model.Restaurant.Address.City · open @Model.Restaurant.OpensAt.ToString("HH:mm") to @Model.Restaurant.ClosesAt.ToString("HH:mm")</p>
+<p class="text-muted mb-4">Open @Model.Restaurant.OpensAt.ToString("HH:mm") to @Model.Restaurant.ClosesAt.ToString("HH:mm") · @Model.Restaurant.Locations.Count location(s)</p>
 
+<<<<<<< Updated upstream
+=======
+<section class="card shadow-sm mb-4" aria-labelledby="charges-heading">
+    <div class="card-body">
+        <h2 id="charges-heading" class="h5">Bill charges</h2>
+        <p class="text-muted small mb-3">Added to every food bill at this restaurant: items + system access fee + GST.</p>
+        <form method="post" asp-page-handler="Charges" class="row g-3 align-items-end" data-submit-once>
+                <input type="hidden" name="LocationId" value="@Model.LocationId" />
+            <div class="col-sm-4">
+                <label class="form-label" for="taxPercent">GST (%)</label>
+                <input id="taxPercent" name="TaxPercent" type="number" step="0.01" min="0" max="28" class="form-control"
+                       value="@Model.Restaurant.TaxPercent.ToString(System.Globalization.CultureInfo.InvariantCulture)" required />
+            </div>
+            <div class="col-sm-4">
+                <label class="form-label" for="systemAccessFee">System access fee (₹ per order)</label>
+                <input id="systemAccessFee" name="SystemAccessFee" type="number" step="0.01" min="0" max="500" class="form-control"
+                       value="@Model.Restaurant.SystemAccessFee.ToString(System.Globalization.CultureInfo.InvariantCulture)" required />
+            </div>
+            <div class="col-sm-4">
+                <button type="submit" class="btn btn-brand w-100">Save charges</button>
+            </div>
+        </form>
+    </div>
+</section>
+
+<section class="card shadow-sm mb-4" aria-labelledby="locations-heading">
+    <div class="card-body">
+        <h2 id="locations-heading" class="h5">Locations</h2>
+        <p class="text-muted small mb-3">Each location has its own address, tables and staff switch. Staff can only work at open locations.</p>
+
+        <ul class="nav nav-pills mb-3 gap-2">
+            @foreach (var loc in Model.Restaurant.Locations.OrderBy(l => l.Id))
+            {
+                <li class="nav-item">
+                    <a class="nav-link @(loc.Id == Model.LocationId ? "active" : "")" asp-page="/Admin/Restaurants/Manage" asp-route-id="@Model.Id" asp-route-locationId="@loc.Id">
+                        @loc.Name@(loc.IsActive ? "" : " (closed)")
+                    </a>
+                </li>
+            }
+        </ul>
+
+        @if (Model.SelectedLocation is not null)
+        {
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <address class="mb-0">
+                    <strong>@Model.SelectedLocation.Name</strong><br />
+                    @Model.SelectedLocation.Address.Street, @Model.SelectedLocation.Address.City, @Model.SelectedLocation.Address.State @Model.SelectedLocation.Address.ZipCode, @Model.SelectedLocation.Address.Country
+                    @if (!string.IsNullOrEmpty(Model.SelectedLocation.Phone))
+                    {
+                        <br /><span>☎ @Model.SelectedLocation.Phone</span>
+                    }
+                </address>
+                <form method="post" asp-page-handler="SetLocationActive" data-submit-once>
+                <input type="hidden" name="LocationId" value="@Model.LocationId" />
+                    <input type="hidden" name="targetLocationId" value="@Model.SelectedLocation.Id" />
+                    <input type="hidden" name="active" value="@(!Model.SelectedLocation.IsActive)" />
+                    <button type="submit" class="btn btn-sm @(Model.SelectedLocation.IsActive ? "btn-outline-secondary" : "btn-outline-success")">
+                        @(Model.SelectedLocation.IsActive ? "Close location" : "Reopen location")
+                    </button>
+                </form>
+            </div>
+        }
+
+        <details>
+            <summary class="fw-semibold mb-2">Add a location</summary>
+            <form method="post" asp-page-handler="AddLocation" class="mt-3" data-submit-once>
+                <input type="hidden" name="LocationId" value="@Model.LocationId" />
+                <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
+                <div class="row g-2 mb-2">
+                    <div class="col-md-6"><label asp-for="NewLocationName" class="form-label">Location name</label><input asp-for="NewLocationName" class="form-control" maxlength="100" /></div>
+                    <div class="col-md-6"><label asp-for="NewLocationPhone" class="form-label">Phone (optional)</label><input asp-for="NewLocationPhone" class="form-control" maxlength="15" /></div>
+                    <div class="col-md-12"><label asp-for="NewLocationStreet" class="form-label">Street</label><input asp-for="NewLocationStreet" class="form-control" maxlength="200" /></div>
+                    <div class="col-md-4"><label asp-for="NewLocationCity" class="form-label">City</label><input asp-for="NewLocationCity" class="form-control" maxlength="100" /></div>
+                    <div class="col-md-4"><label asp-for="NewLocationState" class="form-label">State</label><input asp-for="NewLocationState" class="form-control" maxlength="100" /></div>
+                    <div class="col-md-4"><label asp-for="NewLocationCountry" class="form-label">Country</label><input asp-for="NewLocationCountry" class="form-control" maxlength="100" /></div>
+                    <div class="col-md-4"><label asp-for="NewLocationZipCode" class="form-label">Zip / postal code</label><input asp-for="NewLocationZipCode" class="form-control" maxlength="20" /></div>
+                </div>
+                <button type="submit" class="btn btn-outline-primary">Add location</button>
+            </form>
+        </details>
+    </div>
+</section>
+
+>>>>>>> Stashed changes
 <div class="row g-4">
     <section class="col-lg-5" aria-labelledby="tables-heading">
         <div class="card shadow-sm">
             <div class="card-body">
-                <h2 id="tables-heading" class="h5">Tables</h2>
+                <h2 id="tables-heading" class="h5">Tables at @(Model.SelectedLocation?.Name ?? "this location")</h2>
 
-                @if (Model.Restaurant.Tables.Count == 0)
+                @if (Model.SelectedTables.Count == 0)
                 {
                     <p class="text-muted">No tables yet. Customers cannot book until you add one.</p>
                 }
                 else
                 {
                     <ul class="list-group mb-3">
-                        @foreach (var table in Model.Restaurant.Tables)
+                        @foreach (var table in Model.SelectedTables)
                         {
                             <li class="list-group-item d-flex justify-content-between">
                                 <span>@table.Label</span>
@@ -38,6 +122,7 @@
                 }
 
                 <form method="post" asp-page-handler="AddTable" data-submit-once>
+                <input type="hidden" name="LocationId" value="@Model.LocationId" />
                     <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
                     <div class="row g-2 align-items-end">
                         <div class="col-6">
@@ -98,6 +183,7 @@
                                         </td>
                                         <td class="text-end">
                                             <form method="post" asp-page-handler="ToggleItem" class="d-inline">
+                <input type="hidden" name="LocationId" value="@Model.LocationId" />
                                                 <input type="hidden" name="itemId" value="@item.Id" />
                                                 <input type="hidden" name="available" value="@(!item.IsAvailable)" />
                                                 <button type="submit" class="btn btn-sm btn-outline-secondary">
@@ -114,6 +200,7 @@
 
                 <h3 class="h6">Add a dish</h3>
                 <form method="post" asp-page-handler="AddItem" data-submit-once>
+                <input type="hidden" name="LocationId" value="@Model.LocationId" />
                     <div asp-validation-summary="ModelOnly" class="text-danger small mb-2"></div>
                     <div class="row g-2 mb-2">
                         <div class="col-md-6">

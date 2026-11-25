@@ -26,6 +26,9 @@ namespace DineBook.Application.DependencyInjection
             // Restaurant administration
             services.AddScoped<IRestaurantAdminService, RestaurantAdminService>();
 
+            // Staff workspace: the restaurant and location a staff member is working at
+            services.AddScoped<IStaffLocationService, StaffLocationService>();
+
             // Password hashing
             services.AddSingleton<IPasswordHasher, PasswordHasher>();
 

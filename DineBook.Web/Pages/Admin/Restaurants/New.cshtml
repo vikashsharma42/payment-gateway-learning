@@ -24,6 +24,14 @@
                 <span asp-validation-for="Name" class="text-danger small"></span>
             </div>
 
+            <h2 class="h6 text-muted text-uppercase mb-3">First location</h2>
+
+            <div class="mb-3">
+                <label asp-for="LocationName" class="form-label">Location name</label>
+                <input asp-for="LocationName" class="form-control" placeholder="Main, Connaught Place, ..." />
+                <span asp-validation-for="LocationName" class="text-danger small"></span>
+            </div>
+
             <div class="mb-3">
                 <label asp-for="Street" class="form-label"></label>
                 <input asp-for="Street" class="form-control" />
@@ -43,10 +51,17 @@
                 </div>
             </div>
 
-            <div class="mb-3">
-                <label asp-for="Pincode" class="form-label"></label>
-                <input asp-for="Pincode" class="form-control" inputmode="numeric" maxlength="6" />
-                <span asp-validation-for="Pincode" class="text-danger small"></span>
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label asp-for="Country" class="form-label"></label>
+                    <input asp-for="Country" class="form-control" />
+                    <span asp-validation-for="Country" class="text-danger small"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="ZipCode" class="form-label">Zip / postal code</label>
+                    <input asp-for="ZipCode" class="form-control" maxlength="20" />
+                    <span asp-validation-for="ZipCode" class="text-danger small"></span>
+                </div>
             </div>
 
             <div class="row g-3 mb-4">

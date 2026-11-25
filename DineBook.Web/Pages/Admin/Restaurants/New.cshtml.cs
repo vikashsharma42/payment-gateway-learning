@@ -1,11 +1,10 @@
+using DineBook.Application.Services.Interface;
+using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using DineBook.Application.Services.Interface;
-using DineBook.Domain.Exceptions;
-using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Admin.Restaurants
 {
@@ -24,6 +23,11 @@ namespace DineBook.Web.Pages.Admin.Restaurants
         public string Name { get; set; } = string.Empty;
 
         [BindProperty]
+        [Required(ErrorMessage = "Location name is required.")]
+        [StringLength(100)]
+        public string LocationName { get; set; } = "Main";
+
+        [BindProperty]
         [Required(ErrorMessage = "Street is required.")]
         [StringLength(200)]
         public string Street { get; set; } = string.Empty;
@@ -39,9 +43,14 @@ namespace DineBook.Web.Pages.Admin.Restaurants
         public string State { get; set; } = string.Empty;
 
         [BindProperty]
-        [Required(ErrorMessage = "Pincode is required.")]
-        [RegularExpression(@"^\d{6}$", ErrorMessage = "Pincode must be 6 digits.")]
-        public string Pincode { get; set; } = string.Empty;
+        [Required(ErrorMessage = "Country is required.")]
+        [StringLength(100)]
+        public string Country { get; set; } = "India";
+
+        [BindProperty]
+        [Required(ErrorMessage = "Zip code is required.")]
+        [StringLength(20)]
+        public string ZipCode { get; set; } = string.Empty;
 
         [BindProperty]
         [Required(ErrorMessage = "Opening time is required.")]
@@ -62,6 +71,7 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             if (!ModelState.IsValid)
                 return Page();
 
+<<<<<<< Updated upstream
             try
             {
                 var restaurant = await _admin.CreateRestaurantAsync(new CreateRestaurantRequest(
@@ -75,6 +85,14 @@ namespace DineBook.Web.Pages.Admin.Restaurants
                 ToastError(ex.Message);
                 return Page();
             }
+=======
+            var restaurant = await _admin.CreateRestaurantAsync(new CreateRestaurantRequest(
+                Name, OpensAt, ClosesAt, LocationName, Street, City, State, Country, ZipCode, Phone: null), ct);
+
+            ToastSuccess("Restaurant created. Now add its tables and menu.");
+            return RedirectToPage("/Admin/Restaurants/Manage", new { id = restaurant.Id });
+
+>>>>>>> Stashed changes
         }
     }
 }

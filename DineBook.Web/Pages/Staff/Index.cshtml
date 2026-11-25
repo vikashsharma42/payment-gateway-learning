@@ -1,0 +1,82 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Staff · Location";
+}
+
+@if (Model.Workspace is null)
+{
+    <div class="card p-4 text-center text-muted">
+        You are not assigned to a restaurant yet. Ask an admin to set your restaurant.
+    </div>
+}
+else
+{
+    var ws = Model.Workspace;
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+        <div>
+            <h1 class="h2 mb-1">@ws.Restaurant.Name</h1>
+            <p class="text-muted mb-0">Working at <strong>@ws.Current.Name</strong></p>
+        </div>
+
+        <form method="post" asp-page-handler="Switch" class="d-flex gap-2 align-items-end" data-submit-once>
+            <div>
+                <label asp-for="LocationId" class="form-label small mb-1">Location</label>
+                <select asp-for="LocationId" class="form-select">
+                    @foreach (var location in ws.Locations)
+                    {
+                        <option value="@location.Id" selected="@(location.Id == ws.Current.Id)">@location.Name · @location.Address.City</option>
+                    }
+                </select>
+            </div>
+            <button type="submit" class="btn btn-brand">Switch</button>
+        </form>
+    </div>
+
+    <div class="row g-4">
+        <section class="col-lg-5" aria-labelledby="address-heading">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <h2 id="address-heading" class="h5">@ws.Current.Name</h2>
+                    <address class="mb-2">
+                        @ws.Current.Address.Street<br />
+                        @ws.Current.Address.City, @ws.Current.Address.State @ws.Current.Address.ZipCode<br />
+                        @ws.Current.Address.Country
+                    </address>
+                    @if (!string.IsNullOrEmpty(ws.Current.Phone))
+                    {
+                        <p class="mb-0">☎ @ws.Current.Phone</p>
+                    }
+                </div>
+            </div>
+        </section>
+
+        <section class="col-lg-7" aria-labelledby="tables-heading">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 id="tables-heading" class="h5">Tables at this location</h2>
+                    @{
+                        var tables = ws.Restaurant.TablesAt(ws.Current.Id).OrderBy(t => t.Label).ToList();
+                    }
+                    @if (tables.Count == 0)
+                    {
+                        <p class="text-muted mb-0">No tables here yet.</p>
+                    }
+                    else
+                    {
+                        <ul class="list-group">
+                            @foreach (var table in tables)
+                            {
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span>@table.Label</span>
+                                    <span class="text-muted">seats @table.Capacity</span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </div>
+            </div>
+        </section>
+    </div>
+}

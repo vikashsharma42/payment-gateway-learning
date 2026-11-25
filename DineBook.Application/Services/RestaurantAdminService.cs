@@ -28,8 +28,15 @@ namespace DineBook.Application.Services
                 throw new DomainException("A restaurant with this name already exists.");
 
             // Address and time rules are checked by the domain objects below
+<<<<<<< Updated upstream
             var address = Address.Create(request.Street, request.City, request.State, request.Pincode);
             var restaurant = new Restaurant(name, address, request.OpensAt, request.ClosesAt);
+=======
+            var restaurant = new Restaurant(name, request.OpensAt, request.ClosesAt);
+            restaurant.AddLocation(new Location(request.LocationName, CreateAddress(request.Street, request.City, request.State, request.Country, request.ZipCode),
+     request.Phone));
+            restaurant.AssignSlug(await UniqueSlugAsync(restaurant.Slug, ct));
+>>>>>>> Stashed changes
 
             _db.Restaurants.Add(restaurant);
             await _db.SaveChangesAsync(ct);
@@ -37,13 +44,46 @@ namespace DineBook.Application.Services
             return restaurant;
         }
 
+<<<<<<< Updated upstream
         public async Task<RestaurantTable> AddTableAsync(long restaurantId, string label, int capacity, CancellationToken ct = default)
+=======
+        public async Task<Location> AddLocationAsync(long restaurantId, AddLocationRequest request, CancellationToken ct = default)
         {
             var restaurant = await LoadRestaurantAsync(restaurantId, ct);
 
-            // The domain rejects duplicate labels and bad capacities
+            var location = new Location(request.Name, CreateAddress(
+                request.Street, request.City, request.State, request.Country, request.ZipCode), request.Phone);
+            restaurant.AddLocation(location);
+            await _db.SaveChangesAsync(ct);
+
+            return location;
+        }
+
+        public async Task SetLocationActiveAsync(long restaurantId, long locationId, bool active, CancellationToken ct = default)
+        {
+            var restaurant = await LoadRestaurantAsync(restaurantId, ct);
+
+            restaurant.SetLocationActive(locationId, active);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task UpdateChargesAsync(long restaurantId, decimal taxPercent, decimal systemAccessFee, CancellationToken ct = default)
+        {
+            var restaurant = await _db.Restaurants.FirstOrDefaultAsync(r => r.Id == restaurantId, ct)
+                ?? throw new DomainException("Restaurant not found.");
+
+            restaurant.UpdateCharges(taxPercent, systemAccessFee);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task<RestaurantTable> AddTableAsync(long restaurantId, long locationId, string label, int capacity, CancellationToken ct = default)
+>>>>>>> Stashed changes
+        {
+            var restaurant = await LoadRestaurantAsync(restaurantId, ct);
+
+            // The domain rejects duplicate labels, bad capacities and closed locations
             var table = new RestaurantTable(label, capacity, string.Empty);
-            restaurant.AddTable(table);
+            restaurant.AddTable(locationId, table);
             await _db.SaveChangesAsync(ct);
 
             return table;
@@ -104,8 +144,25 @@ namespace DineBook.Application.Services
             await _db.SaveChangesAsync(ct);
         }
 
+<<<<<<< Updated upstream
+=======
+        // spice-garden, then spice-garden-2, spice-garden-3 ... when names are alike
+        private async Task<string> UniqueSlugAsync(string baseSlug, CancellationToken ct)
+        {
+            var slug = baseSlug;
+            for (var number = 2; await _db.Restaurants.AnyAsync(r => r.Slug == slug, ct); number++)
+                slug = RestaurantSlug.WithSuffix(baseSlug, number);
+
+            return slug;
+        }
+
+        private static Address CreateAddress(string street, string city, string state, string country, string zipCode) =>
+            Address.Create(street, city, state, country, zipCode);
+
+>>>>>>> Stashed changes
         private async Task<Restaurant> LoadRestaurantAsync(long restaurantId, CancellationToken ct) =>
-            await _db.Restaurants.Include(r => r.Tables).FirstOrDefaultAsync(r => r.Id == restaurantId, ct)
+            await _db.Restaurants.Include(r => r.Locations).Include(r => r.Tables)
+                .FirstOrDefaultAsync(r => r.Id == restaurantId, ct)
             ?? throw new DomainException("Restaurant not found.");
 
         private async Task<MenuItem> FindMenuItemAsync(long menuItemId, CancellationToken ct) =>

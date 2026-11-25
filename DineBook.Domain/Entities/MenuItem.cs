@@ -8,7 +8,11 @@ namespace DineBook.Domain.Entities
     // Added through Restaurant.AddMenuItem.
     public class MenuItem : Entity, IAuditableEntity
     {
+<<<<<<< Updated upstream
         public MenuItem(string name, string description, decimal price)
+=======
+        public MenuItem(string name, string description, decimal price, string imageUrl = null)
+>>>>>>> Stashed changes
         {
             DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace().HasMaxLength(100);
             DomainValidation<string>.Ensure(description ?? string.Empty, nameof(description)).HasMaxLength(300);
@@ -29,15 +33,17 @@ namespace DineBook.Domain.Entities
 
         public string Description { get; private set; }
 
-        // Name of the category, copied so listings and past orders read it without a join
         public string Category { get; private set; }
 
         public decimal Price { get; private set; }
 
+<<<<<<< Updated upstream
         // Unavailable items cannot be ordered, but they stay on record
-        public bool IsAvailable { get; private set; }
+=======
+        public string ImageUrl { get; private set; }
 
-        public bool IsDeleted { get; private set; }
+>>>>>>> Stashed changes
+        public bool IsAvailable { get; private set; }
 
         public DateTimeOffset? DeletedAt { get; private set; }
 
@@ -53,29 +59,33 @@ namespace DineBook.Domain.Entities
 
         public virtual MenuCategory MenuCategory { get; private set; }
 
+<<<<<<< Updated upstream
         public void ChangePrice(decimal price)
         {
             EnsurePrice(price);
 
             Price = price;
         }
+=======
+        public void ChangeImage(string imageUrl) => ImageUrl = NormalizeImage(imageUrl);
+>>>>>>> Stashed changes
 
         public void SetAvailability(bool available) => IsAvailable = available;
-
-        // Soft delete: the item leaves the menu, but past orders still point at it
-        public void Delete()
-        {
-            if (IsDeleted)
-                return;
-
-            IsDeleted = true;
-            IsAvailable = false;
-            DeletedAt = DateTimeOffset.UtcNow;
-        }
 
         // Called by MenuCategory when the item is added to it
         internal void SetCategoryName(string categoryName) => Category = categoryName;
 
+<<<<<<< Updated upstream
+=======
+        private static string NormalizeImage(string imageUrl)
+        {
+            var value = (imageUrl ?? string.Empty).Trim();
+            DomainValidation<string>.Ensure(value, nameof(imageUrl)).HasMaxLength(50);
+
+            return value.Length == 0 ? null : value;
+        }
+
+>>>>>>> Stashed changes
         private static void EnsurePrice(decimal price) =>
             DomainValidation<decimal>.Ensure(price)
                 .IsGreaterThan(0m, "Price must be greater than zero and at most 100000.")

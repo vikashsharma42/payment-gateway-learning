@@ -73,9 +73,12 @@ namespace DineBook.Web.Pages
             return LandingPageFor(user.Role);
         }
 
-        private RedirectToPageResult LandingPageFor(UserRole role) =>
-            role == UserRole.Admin
-                ? RedirectToPage("/Admin/Index")
-                : RedirectToPage("/Index");
+        // Admins go to the admin list, restaurant staff to their location page, everyone else to the restaurant list
+        private RedirectToPageResult LandingPageFor(UserRole role) => role switch
+        {
+            UserRole.Admin => RedirectToPage("/Admin/Index"),
+            UserRole.Staff or UserRole.Manager => RedirectToPage("/Staff/Index"),
+            _ => RedirectToPage("/Index")
+        };
     }
 }

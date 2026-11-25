@@ -36,8 +36,8 @@ namespace DineBook.Domain.Entities
         }
 
         // Best fit: the smallest active table that seats the party and is free for the whole slot.
-        public static RestaurantTable PickTable(
-            IEnumerable<RestaurantTable> tables,
+        public static Table PickTable(
+            IEnumerable<Table> tables,
             IEnumerable<Reservation> existing,
             int guests,
             DateTime startsAt,

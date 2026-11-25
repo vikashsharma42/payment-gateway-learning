@@ -81,7 +81,21 @@ dotnet restore
 dotnet build
 ```
 
+<<<<<<< Updated upstream
 ### Step 2: Create the database
+=======
+### Step 2: Create or update the database
+This project does not use EF migrations. Schema changes are SQL scripts in `DineBook.Infrastructure/Database/Scripts/`. Run them in order on the database named in `ConnectionStrings:DbConnection`. Each script is safe to run more than once.
+
+| Script | What it does |
+|--------|--------------|
+| `001_dish_images.sql` | Adds `ImageUrl` to `MenuItem` and `OrderItem`, and fills in the sample dish photos |
+| `002_accounts_own_bookings.sql` | Bookings belong to a customer account. Adds `ApplicationUser.Phone` and `Reservation.ApplicationUserId`. Stops if a booking has no account. |
+| `003_restaurant_slugs.sql` | Adds `Restaurant.Slug`, the web address of each restaurant (for example `/spice-garden/`), and fills it in from the names |
+| `004_restaurant_locations.sql` | Adds `RestaurantLocation` (address and phone per branch), moves each restaurant's address into a `Main` location, puts tables at a location, and links staff to a restaurant. Drops the address columns from `Restaurant`. Assumes every address is in India; check the `Country` column afterwards. |
+
+Run one script with sqlcmd:
+>>>>>>> Stashed changes
 ```bash
 dotnet ef migrations add InitialCreate --project DineBook.Infrastructure --startup-project DineBook.API --output-dir Database/Migrations
 dotnet ef database update --project DineBook.Infrastructure --startup-project DineBook.API

@@ -38,5 +38,6 @@ namespace DineBook.Application.Services.Interface
         string LastName,
         string Email,
         string Password,
-        UserRole Role);
+        UserRole Role,
+        long? RestaurantId);
 }

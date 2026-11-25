@@ -52,18 +52,27 @@ namespace DineBook.Application.Services
         public async Task<IReadOnlyList<Restaurant>> GetRestaurantsAsync(CancellationToken ct = default)
         {
             return await _db.Restaurants.AsNoTracking()
-                .Include(r => r.Tables)
+                .Include(r => r.Tables).Include(r => r.Locations)
                 .OrderBy(r => r.Name)
                 .ToListAsync(ct);
         }
 
         public Task<Restaurant> GetRestaurantAsync(long restaurantId, CancellationToken ct = default) =>
             _db.Restaurants.AsNoTracking()
-                .Include(r => r.Tables)
+                .Include(r => r.Tables).Include(r => r.Locations)
                 .FirstOrDefaultAsync(r => r.Id == restaurantId, ct);
 
+<<<<<<< Updated upstream
         public async Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(
             long restaurantId, DateOnly date, int guests, CancellationToken ct = default)
+=======
+        public Task<Restaurant> GetRestaurantBySlugAsync(string slug, CancellationToken ct = default) =>
+            _db.Restaurants.AsNoTracking()
+                .Include(r => r.Tables).Include(r => r.Locations)
+                .FirstOrDefaultAsync(r => r.Slug == slug, ct);
+
+        public async Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(long restaurantId, DateOnly date, int guests, CancellationToken ct = default)
+>>>>>>> Stashed changes
         {
             var policy = _options.ToPolicy();
             if (guests < 1 || guests > policy.MaxGuests)

@@ -35,8 +35,6 @@ namespace DineBook.Domain.Entities
         public void AddMenuItem(MenuItem menuItem)
         {
             DomainValidation<MenuItem>.Ensure(menuItem).IsNotNull();
-
-            menuItem.SetCategoryName(Name);
             _menuItems.Add(menuItem);
         }
     }

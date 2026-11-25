@@ -13,8 +13,7 @@ namespace DineBook.Domain.Entities
 
         public ApplicationUser(string email, string passwordHash, string firstName, string lastName, UserRole role)
         {
-            DomainValidation<string>.Ensure(email).IsNotNullOrWhiteSpace().HasMaxLength(MaxEmailLength)
-                .IsEmail("A valid email is required.");
+            DomainValidation<string>.Ensure(email).IsNotNullOrWhiteSpace().HasMaxLength(MaxEmailLength).IsEmail("A valid email is required.");
             DomainValidation<string>.Ensure(passwordHash).IsNotNullOrWhiteSpace();
             DomainValidation<string>.Ensure(firstName).IsNotNullOrWhiteSpace().HasMaxLength(MaxNameLength);
             DomainValidation<string>.Ensure(lastName).IsNotNullOrWhiteSpace().HasMaxLength(MaxNameLength);
@@ -28,17 +27,27 @@ namespace DineBook.Domain.Entities
             IsActive = true;
         }
 
-        public string Email { get; private set; }
+        //null for only admin users, otherwise the restaurant they work at. Customers must have register to a restaurant.
+        public long? RestaurantId { get; private set; }
 
-        public string PasswordHash { get; private set; }
+        public string Email { get; private set; }
 
         public string FirstName { get; private set; }
 
         public string LastName { get; private set; }
 
+<<<<<<< Updated upstream
         public UserRole Role { get; private set; }
 
         // Inactive users cannot sign in, and their refresh tokens stop working
+=======
+        public string PasswordHash { get; private set; }
+
+        public string Phone { get; private set; }
+
+        public UserRole Role { get; private set; }
+
+>>>>>>> Stashed changes
         public bool IsActive { get; private set; }
 
         public DateTimeOffset CreatedDateTime { get; set; }
@@ -51,10 +60,23 @@ namespace DineBook.Domain.Entities
 
         public string FullName => $"{FirstName} {LastName}".Trim();
 
+        public void ChangePasswordHash(string passwordHash)
+        {
+            DomainValidation<string>.Ensure(passwordHash).IsNotNullOrWhiteSpace();
+
+            PasswordHash = passwordHash.Trim();
+        }
+
+        public void Activate() => IsActive = true;
+
+        public void Deactivate() => IsActive = false;
+
+
         // Stored trimmed and lower-case, so one account per address
         public static string NormalizeEmail(string email) =>
             (email ?? string.Empty).Trim().ToLowerInvariant();
 
+<<<<<<< Updated upstream
         public void ChangePasswordHash(string passwordHash)
         {
             DomainValidation<string>.Ensure(passwordHash).IsNotNullOrWhiteSpace();
@@ -72,5 +94,9 @@ namespace DineBook.Domain.Entities
         public void Activate() => IsActive = true;
 
         public void Deactivate() => IsActive = false;
+=======
+        public static string NormalizePhone(string phone) =>
+            new string((phone ?? string.Empty).Where(char.IsDigit).ToArray());
+>>>>>>> Stashed changes
     }
 }

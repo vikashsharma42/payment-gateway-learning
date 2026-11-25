@@ -16,13 +16,26 @@ namespace DineBook.Web.Pages.Admin.Users
     public class IndexModel : AppPageModel
     {
         private readonly IRegistrationService _registration;
+        private readonly IReservationService _reservations;
 
-        public IndexModel(IRegistrationService registration)
+        public IndexModel(IRegistrationService registration, IReservationService reservations)
         {
             _registration = registration;
+            _reservations = reservations;
         }
 
         public IReadOnlyList<ApplicationUser> Users { get; private set; }
+
+        // Restaurants to choose from, and their names for the list
+        public IReadOnlyList<Restaurant> Restaurants { get; private set; } = new List<Restaurant>();
+
+        public IEnumerable<SelectListItem> RestaurantOptions =>
+            Restaurants.Select(r => new SelectListItem(r.Name, r.Id.ToString()));
+
+        public string RestaurantNameFor(ApplicationUser user) =>
+            user.RestaurantId is null
+                ? string.Empty
+                : Restaurants.FirstOrDefault(r => r.Id == user.RestaurantId)?.Name ?? "(removed)";
 
         [BindProperty]
         public CreateInputModel Input { get; set; }
@@ -61,6 +74,10 @@ namespace DineBook.Web.Pages.Admin.Users
             [Required(ErrorMessage = "Choose a role.")]
             [Display(Name = "Role")]
             public UserRole Role { get; set; } = UserRole.Staff;
+
+            // Required for Staff and Manager. Admins are not tied to a restaurant.
+            [Display(Name = "Restaurant")]
+            public long? RestaurantId { get; set; }
         }
 
         public async Task OnGetAsync(CancellationToken ct)
@@ -83,10 +100,15 @@ namespace DineBook.Web.Pages.Admin.Users
                 return Page();
             }
 
+<<<<<<< Updated upstream
             try
             {
                 await _registration.CreateStaffUserAsync(new StaffUserRequest(
                     Input.FirstName, Input.LastName, Input.Email, Input.Password, Input.Role), ct);
+=======
+            await _registration.CreateStaffUserAsync(new StaffUserRequest(
+                Input.FirstName, Input.LastName, Input.Email, Input.Password, Input.Role, Input.RestaurantId), ct);
+>>>>>>> Stashed changes
 
                 ToastSuccess($"{Input.FirstName} {Input.LastName} was added as {Input.Role}.");
                 return RedirectToPage();
@@ -103,6 +125,7 @@ namespace DineBook.Web.Pages.Admin.Users
         private async Task LoadAsync(CancellationToken ct)
         {
             Users = await _registration.GetUsersAsync(ct);
+            Restaurants = await _reservations.GetRestaurantsAsync(ct);
         }
     }
 }

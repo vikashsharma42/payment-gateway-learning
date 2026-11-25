@@ -93,9 +93,13 @@ namespace DineBook.Domain.Entities
 
         public virtual Restaurant Restaurant { get; private set; }
 
+<<<<<<< Updated upstream
         public virtual Customer Customer { get; private set; }
 
         public virtual RestaurantTable Table { get; private set; }
+=======
+        public virtual Table Table { get; private set; }
+>>>>>>> Stashed changes
 
         private readonly List<Orders> _foodOrders = [];
         public IReadOnlyCollection<Orders> FoodOrders => _foodOrders.AsReadOnly();

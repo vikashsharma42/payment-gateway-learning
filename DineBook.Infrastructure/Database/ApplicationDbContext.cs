@@ -23,7 +23,9 @@ namespace DineBook.Infrastructure.Database
         // Restaurants, tables and reservations
         public DbSet<Restaurant> Restaurants { get; set; }
 
-        public DbSet<RestaurantTable> RestaurantTables { get; set; }
+        public DbSet<Location> RestaurantLocations { get; set; }
+
+        public DbSet<Table> RestaurantTables { get; set; }
 
         public DbSet<Reservation> Reservations { get; set; }
 

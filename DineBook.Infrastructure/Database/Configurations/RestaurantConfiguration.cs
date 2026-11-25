@@ -11,9 +11,8 @@ namespace DineBook.Infrastructure.Database.Configurations
             builder.ToTable(nameof(Restaurant));
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
 
-            builder.OwnsOne(x => x.Address, a => ValueObjectMappings.MapAddress(a));
-
-            // The relations themselves are defined on the dependent side (RestaurantTable, MenuCategory, MenuItem, Reservation, Orders)
+            // The relations themselves are defined on the dependent side (RestaurantLocation, RestaurantTable, MenuCategory, MenuItem, Reservation, Orders)
+            builder.Navigation(nameof(Restaurant.Locations)).UsePropertyAccessMode(PropertyAccessMode.Field);
             builder.Navigation(nameof(Restaurant.Tables)).UsePropertyAccessMode(PropertyAccessMode.Field);
             builder.Navigation(nameof(Restaurant.MenuItems)).UsePropertyAccessMode(PropertyAccessMode.Field);
             builder.Navigation(nameof(Restaurant.MenuCategories)).UsePropertyAccessMode(PropertyAccessMode.Field);

@@ -74,7 +74,19 @@ namespace DineBook.Application.Services
             var email = ApplicationUser.NormalizeEmail(request.Email);
             await EnsureEmailFreeAsync(email, ct);
 
+            // Staff and managers must work at a restaurant. Admins are not tied to one.
+            var needsRestaurant = request.Role == UserRole.Staff || request.Role == UserRole.Manager;
+            if (needsRestaurant)
+            {
+                if (request.RestaurantId is null)
+                    throw new DomainException("Choose the restaurant for this staff member.");
+                if (!await _db.Restaurants.AnyAsync(r => r.Id == request.RestaurantId.Value, ct))
+                    throw new DomainException("Restaurant not found.");
+            }
+
             var user = new ApplicationUser(email, _hasher.Hash(request.Password), request.FirstName, request.LastName, request.Role);
+            if (needsRestaurant)
+                user.AssignRestaurant(request.RestaurantId.Value);
             _db.Users.Add(user);
             await SaveAsync(ct);
 

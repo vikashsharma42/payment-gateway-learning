@@ -5,21 +5,15 @@ using System;
 
 namespace DineBook.Domain.Entities
 {
-    // A table inside one restaurant. Added through Restaurant.AddTable, which keeps labels unique.
+    // A table inside one location of a restaurant. Added through Restaurant.AddTable, which keeps labels unique per location.
     // Removal is a soft delete, so past bookings keep their table.
-    public class RestaurantTable : Entity, IAuditableEntity
+    public class Table : Entity, IAuditableEntity
     {
-        public const int MaxLabelLength = 20;
-        public const int MaxLocationLength = 50;
-        public const int MinCapacity = 1;
-        public const int MaxCapacity = 20;
-
-        public RestaurantTable(string label, int capacity, string location)
+        public Table(string label, int capacity, string location)
         {
-            DomainValidation<string>.Ensure(label).IsNotNullOrWhiteSpace().HasMaxLength(MaxLabelLength);
-            DomainValidation<int>.Ensure(capacity)
-                .IsBetween(MinCapacity, MaxCapacity, "Table capacity must be between 1 and 20 guests.");
-            DomainValidation<string>.Ensure(location ?? string.Empty, nameof(location)).HasMaxLength(MaxLocationLength);
+            DomainValidation<string>.Ensure(label).IsNotNullOrWhiteSpace().HasMaxLength(20);
+            DomainValidation<int>.Ensure(capacity).IsBetween(1, 20, "Table capacity must be between 1 and 20 guests.");
+            DomainValidation<string>.Ensure(location ?? string.Empty, nameof(location)).HasMaxLength(50);
 
             Label = label.Trim();
             Capacity = capacity;
@@ -28,6 +22,9 @@ namespace DineBook.Domain.Entities
         }
 
         public long RestaurantId { get; private set; }
+
+        // The location this table is at. Set by Restaurant.AddTable.
+        public long LocationId { get; private set; }
 
         public string Label { get; private set; }
 
@@ -55,6 +52,13 @@ namespace DineBook.Domain.Entities
 
         public virtual Restaurant Restaurant { get; private set; }
 
+        internal void PlaceAt(long locationId)
+        {
+            DomainValidation<bool>.Ensure(locationId > 0).IsTrue("A table must belong to a location.");
+
+            LocationId = locationId;
+        }
+
         public void Activate()
         {
             DomainValidation<bool>.Ensure(IsDeleted).IsFalse("A removed table cannot be activated.");
@@ -79,7 +83,7 @@ namespace DineBook.Domain.Entities
 
         public void Rename(string label)
         {
-            DomainValidation<string>.Ensure(label).IsNotNullOrWhiteSpace().HasMaxLength(MaxLabelLength);
+            DomainValidation<string>.Ensure(label).IsNotNullOrWhiteSpace().HasMaxLength(20);
 
             Label = label.Trim();
         }

@@ -25,6 +25,7 @@ else
                     <th scope="col">Name</th>
                     <th scope="col">Email</th>
                     <th scope="col">Role</th>
+                    <th scope="col">Restaurant</th>
                     <th scope="col">Status</th>
                 </tr>
             </thead>
@@ -35,6 +36,7 @@ else
                         <td>@user.FullName</td>
                         <td>@user.Email</td>
                         <td>@user.Role</td>
+                        <td>@Model.RestaurantNameFor(user)</td>
                         <td>
                             @if (user.IsActive)
                             {
@@ -88,6 +90,15 @@ else
                         <label asp-for="Input.Role" class="form-label"></label>
                         <select asp-for="Input.Role" asp-items="Model.RoleOptions" class="form-select"></select>
                         <span asp-validation-for="Input.Role" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Input.RestaurantId" class="form-label"></label>
+                        <select asp-for="Input.RestaurantId" asp-items="Model.RestaurantOptions" class="form-select">
+                            <option value="">Choose a restaurant (not needed for Admin)</option>
+                        </select>
+                        <div class="form-text">Staff and managers switch between this restaurant's locations after sign-in.</div>
+                        <span asp-validation-for="Input.RestaurantId" class="text-danger small"></span>
                     </div>
 
                     <div class="mb-1">

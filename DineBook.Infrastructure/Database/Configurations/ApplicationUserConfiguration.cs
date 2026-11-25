@@ -11,6 +11,12 @@ namespace DineBook.Infrastructure.Database.Configurations
             builder.ToTable(nameof(ApplicationUser));
             builder.Property(x => x.Role).HasConversion<string>().HasMaxLength(20).IsRequired();
 
+            // Staff and managers belong to one restaurant. Customers and admins have none.
+            builder.HasOne<Restaurant>()
+                .WithMany()
+                .HasForeignKey(x => x.RestaurantId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // FullName is computed from the two name columns
             builder.Ignore(x => x.FullName);
 

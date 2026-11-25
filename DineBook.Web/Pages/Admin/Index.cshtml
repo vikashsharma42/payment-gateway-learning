@@ -26,7 +26,7 @@ else
             <thead>
                 <tr>
                     <th scope="col">Name</th>
-                    <th scope="col">City</th>
+                    <th scope="col">Locations</th>
                     <th scope="col">Hours</th>
                     <th scope="col" class="text-center">Tables</th>
                     <th scope="col"><span class="visually-hidden">Actions</span></th>
@@ -37,7 +37,7 @@ else
                 {
                     <tr>
                         <td>@restaurant.Name</td>
-                        <td>@restaurant.Address.City</td>
+                        <td>@string.Join(", ", restaurant.ActiveLocations.Select(l => l.Name))</td>
                         <td>@restaurant.OpensAt.ToString("HH:mm") to @restaurant.ClosesAt.ToString("HH:mm")</td>
                         <td class="text-center">@restaurant.Tables.Count</td>
                         <td class="text-end">
