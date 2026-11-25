@@ -113,25 +113,6 @@ namespace DineBook.Domain.Entities
             SystemAccessFee = decimal.Round(systemAccessFee, 2, MidpointRounding.AwayFromZero);
         }
 
-<<<<<<< Updated upstream
-        public void UpdateDetails(string phone, string description, string cuisine)
-        {
-            DomainValidation<string>.Ensure(phone ?? string.Empty, nameof(phone)).HasMaxLength(MaxPhoneLength);
-            DomainValidation<string>.Ensure(description ?? string.Empty, nameof(description)).HasMaxLength(MaxDescriptionLength);
-            DomainValidation<string>.Ensure(cuisine ?? string.Empty, nameof(cuisine)).HasMaxLength(MaxCuisineLength);
-
-            Phone = (phone ?? string.Empty).Trim();
-            Description = (description ?? string.Empty).Trim();
-            Cuisine = (cuisine ?? string.Empty).Trim();
-=======
-        // Set once by the admin service, when another restaurant already has the base slug (spice-garden-2)
-        public void AssignSlug(string slug)
-        {
-            DomainValidation<bool>.Ensure(RestaurantSlug.IsValid(slug)).IsTrue("The web address is not valid.");
-            Slug = slug;
->>>>>>> Stashed changes
-        }
-
         // Compares times of day only. A booking that runs past midnight is not supported.
         public bool IsOpenFor(DateTime startsAt, int durationMinutes)
         {

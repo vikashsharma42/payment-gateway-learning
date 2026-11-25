@@ -2,6 +2,7 @@ using DineBook.Domain.Abstractions;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Validation;
 using System;
+using System.Linq;
 
 namespace DineBook.Domain.Entities
 {
@@ -11,19 +12,21 @@ namespace DineBook.Domain.Entities
         public const int MaxEmailLength = 254;
         public const int MaxNameLength = 100;
 
-        public ApplicationUser(string email, string passwordHash, string firstName, string lastName, UserRole role)
+        public ApplicationUser(string email, string passwordHash, string firstName, string lastName, UserRole role, string phone)
         {
             DomainValidation<string>.Ensure(email).IsNotNullOrWhiteSpace().HasMaxLength(MaxEmailLength).IsEmail("A valid email is required.");
             DomainValidation<string>.Ensure(passwordHash).IsNotNullOrWhiteSpace();
             DomainValidation<string>.Ensure(firstName).IsNotNullOrWhiteSpace().HasMaxLength(MaxNameLength);
             DomainValidation<string>.Ensure(lastName).IsNotNullOrWhiteSpace().HasMaxLength(MaxNameLength);
             DomainValidation<UserRole>.Ensure(role).IsDefinedEnum();
+            DomainValidation<string>.Ensure(phone).IsNotNullOrWhiteSpace().HasMaxLength(15);
 
             Email = NormalizeEmail(email);
             PasswordHash = passwordHash;
             FirstName = firstName.Trim();
             LastName = lastName.Trim();
             Role = role;
+            Phone = NormalizePhone(phone);
             IsActive = true;
         }
 
@@ -36,18 +39,12 @@ namespace DineBook.Domain.Entities
 
         public string LastName { get; private set; }
 
-<<<<<<< Updated upstream
         public UserRole Role { get; private set; }
 
-        // Inactive users cannot sign in, and their refresh tokens stop working
-=======
         public string PasswordHash { get; private set; }
 
         public string Phone { get; private set; }
 
-        public UserRole Role { get; private set; }
-
->>>>>>> Stashed changes
         public bool IsActive { get; private set; }
 
         public DateTimeOffset CreatedDateTime { get; set; }
@@ -63,7 +60,6 @@ namespace DineBook.Domain.Entities
         public void ChangePasswordHash(string passwordHash)
         {
             DomainValidation<string>.Ensure(passwordHash).IsNotNullOrWhiteSpace();
-
             PasswordHash = passwordHash.Trim();
         }
 
@@ -76,27 +72,7 @@ namespace DineBook.Domain.Entities
         public static string NormalizeEmail(string email) =>
             (email ?? string.Empty).Trim().ToLowerInvariant();
 
-<<<<<<< Updated upstream
-        public void ChangePasswordHash(string passwordHash)
-        {
-            DomainValidation<string>.Ensure(passwordHash).IsNotNullOrWhiteSpace();
-
-            PasswordHash = passwordHash;
-        }
-
-        public void ChangeRole(UserRole role)
-        {
-            DomainValidation<UserRole>.Ensure(role).IsDefinedEnum();
-
-            Role = role;
-        }
-
-        public void Activate() => IsActive = true;
-
-        public void Deactivate() => IsActive = false;
-=======
         public static string NormalizePhone(string phone) =>
             new string((phone ?? string.Empty).Where(char.IsDigit).ToArray());
->>>>>>> Stashed changes
     }
 }
