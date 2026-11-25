@@ -1,14 +1,13 @@
+using DineBook.Application.Services.Interface;
+using DineBook.Domain.Entities;
+using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities;
-using DineBook.Domain.Exceptions;
-using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Admin.Restaurants
 {
@@ -94,12 +93,19 @@ namespace DineBook.Web.Pages.Admin.Restaurants
         [Range(0.01, 100000, ErrorMessage = "Price must be between 0.01 and 100000.")]
         public decimal ItemPrice { get; set; }
 
+        // Bill charges form. Range is checked by the domain (UpdateCharges), so a bad value shows as a toast.
+        [BindProperty]
+        public decimal TaxPercent { get; set; }
+
+        [BindProperty]
+        public decimal SystemAccessFee { get; set; }
+
         public Restaurant Restaurant { get; private set; }
 
         // The location shown below. Always one of the restaurant's locations once loaded.
         public Location SelectedLocation { get; private set; }
 
-        public IReadOnlyList<RestaurantTable> SelectedTables { get; private set; } = Array.Empty<RestaurantTable>();
+        public IReadOnlyList<Table> SelectedTables { get; private set; } = Array.Empty<Table>();
 
         public IReadOnlyList<MenuItem> Menu { get; private set; } = Array.Empty<MenuItem>();
 
@@ -150,20 +156,8 @@ namespace DineBook.Web.Pages.Admin.Restaurants
                 return await ReloadAsync(ct);
             }
 
-<<<<<<< Updated upstream
-            try
-            {
-                await _admin.AddTableAsync(Id, TableLabel.Trim(), TableCapacity, ct);
-                ToastSuccess($"Table {TableLabel.Trim()} added.");
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
-            }
-=======
             await _admin.AddTableAsync(Id, LocationId, TableLabel.Trim(), TableCapacity, ct);
             ToastSuccess($"Table {TableLabel.Trim()} added.");
->>>>>>> Stashed changes
 
             return RedirectToPage(new { id = Id, locationId = LocationId });
         }
@@ -179,17 +173,6 @@ namespace DineBook.Web.Pages.Admin.Restaurants
                 return await ReloadAsync(ct);
             }
 
-<<<<<<< Updated upstream
-            try
-            {
-                await _admin.AddMenuItemAsync(Id, ItemName, ItemDescription, ItemCategory, ItemPrice, ct);
-                ToastSuccess($"{ItemName.Trim()} added to the menu.");
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
-            }
-=======
             await _admin.AddMenuItemAsync(Id, ItemName, ItemDescription, ItemCategory, ItemPrice, ct);
             ToastSuccess($"{ItemName.Trim()} added to the menu.");
 
@@ -204,27 +187,14 @@ namespace DineBook.Web.Pages.Admin.Restaurants
 
             await _admin.UpdateChargesAsync(Id, TaxPercent, SystemAccessFee, ct);
             ToastSuccess("Charges saved. New bills at this restaurant use these rates.");
->>>>>>> Stashed changes
 
             return RedirectToPage(new { id = Id, locationId = LocationId });
         }
 
         public async Task<IActionResult> OnPostToggleItemAsync(long itemId, bool available, CancellationToken ct)
         {
-<<<<<<< Updated upstream
-            try
-            {
-                await _admin.SetMenuItemAvailabilityAsync(itemId, available, ct);
-                ToastSuccess(available ? "Item is available again." : "Item hidden from customers.");
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
-            }
-=======
             await _admin.SetMenuItemAvailabilityAsync(itemId, available, ct);
             ToastSuccess(available ? "Item is available again." : "Item hidden from customers.");
->>>>>>> Stashed changes
 
             return RedirectToPage(new { id = Id, locationId = LocationId });
         }
@@ -272,8 +242,8 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             LocationId = SelectedLocation?.Id ?? 0;
 
             SelectedTables = SelectedLocation is null
-                ? Array.Empty<RestaurantTable>()
-                : Restaurant.Tables.Where(t => t.RestaurantLocationId == SelectedLocation.Id)
+                ? Array.Empty<Table>()
+                : Restaurant.Tables.Where(t => t.LocationId == SelectedLocation.Id)
                     .OrderBy(t => t.Label).ToList();
 
             Menu = await _admin.GetMenuAsync(Id, ct);

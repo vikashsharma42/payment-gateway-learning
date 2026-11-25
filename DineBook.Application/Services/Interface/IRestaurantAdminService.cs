@@ -14,9 +14,6 @@ namespace DineBook.Application.Services.Interface
         /// <summary>Creates the restaurant and its first location (the address is stored on the location).</summary>
         Task<Restaurant> CreateRestaurantAsync(CreateRestaurantRequest request, CancellationToken ct = default);
 
-<<<<<<< Updated upstream
-        Task<RestaurantTable> AddTableAsync(long restaurantId, string label, int capacity, CancellationToken ct = default);
-=======
         Task<Location> AddLocationAsync(long restaurantId, AddLocationRequest request, CancellationToken ct = default);
 
         /// <summary>Closes or reopens a location for staff. The last open location cannot be closed.</summary>
@@ -25,8 +22,7 @@ namespace DineBook.Application.Services.Interface
         /// <summary>Sets the GST percent and system access fee that the bills of this restaurant use.</summary>
         Task UpdateChargesAsync(long restaurantId, decimal taxPercent, decimal systemAccessFee, CancellationToken ct = default);
 
-        Task<RestaurantTable> AddTableAsync(long restaurantId, long locationId, string label, int capacity, CancellationToken ct = default);
->>>>>>> Stashed changes
+        Task<Table> AddTableAsync(long restaurantId, long locationId, string label, int capacity, CancellationToken ct = default);
 
         Task RenameTableAsync(long restaurantId, long tableId, string label, CancellationToken ct = default);
 
