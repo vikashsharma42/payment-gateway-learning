@@ -1,4 +1,5 @@
 using DineBook.Domain.ValueObjects;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DineBook.Infrastructure.Database.Configurations
@@ -11,18 +12,11 @@ namespace DineBook.Infrastructure.Database.Configurations
         public static void MapAddress<TOwner>(OwnedNavigationBuilder<TOwner, Address> builder)
             where TOwner : class
         {
-<<<<<<< Updated upstream
-            builder.Property(a => a.Street).HasMaxLength(200).IsRequired();
-            builder.Property(a => a.City).HasMaxLength(100).IsRequired();
-            builder.Property(a => a.State).HasMaxLength(100).IsRequired();
-            builder.Property(a => a.Pincode).HasMaxLength(6).IsRequired();
-=======
             builder.Property(a => a.Street).HasColumnName("Street").HasMaxLength(Address.MaxStreetLength).IsRequired();
             builder.Property(a => a.City).HasColumnName("City").HasMaxLength(Address.MaxCityLength).IsRequired();
             builder.Property(a => a.State).HasColumnName("State").HasMaxLength(Address.MaxStateLength).IsRequired();
             builder.Property(a => a.Country).HasColumnName("Country").HasMaxLength(Address.MaxCountryLength).IsRequired();
             builder.Property(a => a.ZipCode).HasColumnName("ZipCode").HasMaxLength(Address.MaxZipCodeLength).IsRequired();
->>>>>>> Stashed changes
         }
 
         public static void MapMoney<TOwner>(OwnedNavigationBuilder<TOwner, Money> builder)

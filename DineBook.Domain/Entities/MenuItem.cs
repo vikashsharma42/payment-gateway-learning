@@ -36,7 +36,6 @@ namespace DineBook.Domain.Entities
 
         public string ImageUrl { get; private set; }
 
-        // Unavailable items cannot be ordered, but they stay on record
         public bool IsAvailable { get; private set; }
 
         public DateTimeOffset? DeletedAt { get; private set; }
@@ -64,7 +63,6 @@ namespace DineBook.Domain.Entities
 
         public void SetAvailability(bool available) => IsAvailable = available;
 
-        // Called by MenuCategory when the item is added to it
         internal void SetCategoryName(string categoryName) => Category = categoryName;
 
         private static string NormalizeImage(string imageUrl)

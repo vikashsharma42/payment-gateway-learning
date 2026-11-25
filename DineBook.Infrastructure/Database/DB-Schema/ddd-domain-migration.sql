@@ -85,13 +85,6 @@ BEGIN TRY
     (
         Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Restaurants PRIMARY KEY,
         Name NVARCHAR(100) NOT NULL,
-<<<<<<< Updated upstream
-        Address_Street NVARCHAR(200) NOT NULL,
-        Address_City NVARCHAR(100) NOT NULL,
-        Address_State NVARCHAR(100) NOT NULL,
-        Address_Pincode NVARCHAR(6) NOT NULL,
-=======
->>>>>>> Stashed changes
         OpensAt TIME NOT NULL,
         ClosesAt TIME NOT NULL,
         Status NVARCHAR(20) NOT NULL CONSTRAINT DF_Restaurants_Status DEFAULT (N'Active'),

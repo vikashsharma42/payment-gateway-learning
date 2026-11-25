@@ -2,6 +2,7 @@ using DineBook.Domain.Entities;
 using DineBook.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -29,7 +30,7 @@ namespace DineBook.Infrastructure.Database
 
                 // Locations have ids now, so tables can be placed at them
                 var spiceRoute = await db.Restaurants.Include(r => r.Locations).SingleAsync(r => r.Name == "Spice Route", ct);
-                var chai = await db.Restaurants.Include(r => r.Locations).SingleAsync(r => r.Name == "Chai & Co.", ct);
+                var chai = await db.Restaurants.Include(r => r.Locations).FirstOrDefaultAsync(r => r.Name == "Chai & Co.", ct);
                 var main = spiceRoute.Locations.Single(l => l.Name == "Main").Id;
                 var south = spiceRoute.Locations.Single(l => l.Name == "South").Id;
                 var chaiMain = chai.Locations.Single(l => l.Name == "Main").Id;
@@ -49,19 +50,32 @@ namespace DineBook.Infrastructure.Database
                 return;
 
             var spice = await db.Restaurants.Include(r => r.MenuCategories).SingleAsync(r => r.Name == "Spice Route", ct);
-            var chai = await db.Restaurants.Include(r => r.MenuCategories).SingleAsync(r => r.Name == "Chai & Co.", ct);
+            var chaiRestaurant = await db.Restaurants.Include(r => r.MenuCategories).SingleAsync(r => r.Name == "Chai & Co.", ct);
 
             AddDish(spice, "Dal Makhani", "Slow-cooked black lentils", "Mains", 320m);
             AddDish(spice, "Paneer Tikka", "Char-grilled cottage cheese", "Starters", 280m);
             AddDish(spice, "Garlic Naan", "Tandoor-baked bread", "Breads", 60m);
             AddDish(spice, "Sweet Lassi", "Chilled yoghurt drink", "Drinks", 120m);
-            AddDish(chai, "Masala Chai", "Spiced milk tea", "Drinks", 40m);
-            AddDish(chai, "Veg Sandwich", "Grilled vegetables on toast", "Snacks", 150m);
+            AddDish(chaiRestaurant, "Masala Chai", "Spiced milk tea", "Drinks", 40m);
+            AddDish(chaiRestaurant, "Veg Sandwich", "Grilled vegetables on toast", "Snacks", 150m);
 
             await db.SaveChangesAsync(ct);
         }
 
-        private static void AddDish(Restaurant restaurant, string name, string description, string category, decimal price) =>
-            restaurant.AddMenuItem(new MenuItem(name, description, price), restaurant.GetOrAddMenuCategory(category));
+        private static void AddDish(Restaurant restaurant, string name, string description, string categoryName, decimal price)
+        {
+            // Find existing category or create a new one
+            var category = restaurant.MenuCategories
+                .FirstOrDefault(c => c.Name == categoryName);
+
+            if (category == null)
+            {
+                category = new MenuCategory(categoryName);
+                restaurant.AddMenuCategory(category);
+            }
+
+            var menuItem = new MenuItem(name, description, price);
+            restaurant.AddMenuItem(category.Id, menuItem);
+        }
     }
 }

@@ -22,9 +22,6 @@ namespace DineBook.Infrastructure.Database.Configurations
                 .HasForeignKey(x => x.RestaurantId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Removed dishes are soft-deleted: hidden from the menu, but kept for past orders
-            builder.HasQueryFilter(x => !x.IsDeleted);
-
             builder.HasIndex(x => new { x.RestaurantId, x.IsAvailable });
         }
     }

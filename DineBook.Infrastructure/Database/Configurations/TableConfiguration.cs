@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace DineBook.Infrastructure.Database.Configurations
 {
-    public class RestaurantTableConfiguration : IEntityTypeConfiguration<Table>
+    public class TableConfiguration : IEntityTypeConfiguration<Table>
     {
         public void Configure(EntityTypeBuilder<Table> builder)
         {

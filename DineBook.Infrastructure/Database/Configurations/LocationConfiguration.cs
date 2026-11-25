@@ -10,8 +10,8 @@ namespace DineBook.Infrastructure.Database.Configurations
         {
             builder.ToTable(nameof(Location));
 
-            builder.Property(x => x.Name).HasMaxLength(Location.MaxNameLength).IsRequired();
-            builder.Property(x => x.Phone).HasMaxLength(Location.MaxPhoneLength).IsRequired();
+            builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            builder.Property(x => x.Phone).HasMaxLength(15).IsRequired();
 
             builder.OwnsOne(x => x.Address, a => ValueObjectMappings.MapAddress(a));
 
