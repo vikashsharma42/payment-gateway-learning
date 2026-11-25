@@ -9,6 +9,7 @@ namespace DineBook.Domain.Entities
     // One gateway payment attempt for one food order. The gateway order id ties it to Cashfree.
     public class Payment : Entity, IAuditableEntity
     {
+        // Used by EF Core when loading. Validation runs only in the public constructor.
         private Payment()
         {
         }
@@ -43,7 +44,7 @@ namespace DineBook.Domain.Entities
             Status = PaymentStatus.Pending;
         }
 
-        public long OrderId { get; private set; }
+        public long OrderId { get; internal set; }
 
         public Guid PublicId { get; private set; }
 
@@ -72,23 +73,19 @@ namespace DineBook.Domain.Entities
 
         public virtual Orders Order { get; private set; }
 
-        // Returns true only when the status actually changed.
-        // Duplicate webhooks or repeated status checks return false and change nothing.
         public bool MarkAsPaid()
         {
             if (Status == PaymentStatus.Paid)
                 return false;
 
             DomainValidation<PaymentStatus>.Ensure(Status).IsEqualTo(PaymentStatus.Pending);
-
             Status = PaymentStatus.Paid;
             return true;
         }
 
         public void MarkAsFailed()
         {
-            DomainValidation<PaymentStatus>.Ensure(Status)
-                .IsNotEqualTo(PaymentStatus.Paid);
+            DomainValidation<PaymentStatus>.Ensure(Status).IsNotEqualTo(PaymentStatus.Paid);
 
             Status = PaymentStatus.Failed;
         }
@@ -98,8 +95,7 @@ namespace DineBook.Domain.Entities
         {
             DomainValidation<string>.Ensure(refundId).IsNotNullOrWhiteSpace();
             DomainValidation<PaymentStatus>.Ensure(Status).IsEqualTo(PaymentStatus.Paid);
-            DomainValidation<bool>.Ensure(RefundId is null || RefundId == refundId)
-                .IsTrue("This payment already has a different refund in progress.");
+            DomainValidation<bool>.Ensure(RefundId is null || RefundId == refundId).IsTrue("This payment already has a different refund in progress.");
 
             RefundId = refundId;
         }

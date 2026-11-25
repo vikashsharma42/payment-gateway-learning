@@ -1,11 +1,6 @@
+using DineBook.Common.Domain;
 using DineBook.Domain.Validation;
 using System.Collections.Generic;
-<<<<<<< Updated upstream
-using DineBook.Common.Domain;
-using DineBook.Domain.Exceptions;
-=======
-using DineBook.Domain.Abstractions;
->>>>>>> Stashed changes
 
 namespace DineBook.Domain.ValueObjects
 {

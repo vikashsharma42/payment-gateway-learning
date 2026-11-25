@@ -8,22 +8,20 @@ namespace DineBook.Domain.Entities
     // Added through Orders.AddOrderItem.
     public class OrderItem : Entity, IAuditableEntity
     {
-        public OrderItem(long menuItemId, string itemName, decimal unitPrice, int quantity)
+        public OrderItem(string itemName, decimal unitPrice, int quantity)
         {
-            DomainValidation<long>.Ensure(menuItemId, "Menu item").IsGreaterThan(0);
             DomainValidation<string>.Ensure(itemName, "Item name").IsNotNullOrWhiteSpace();
             DomainValidation<decimal>.Ensure(unitPrice, "Unit price").IsGreaterThan(0);
             DomainValidation<int>.Ensure(quantity).IsGreaterThanOrEqualTo(1);
 
-            MenuItemId = menuItemId;
             ItemName = itemName.Trim();
             UnitPrice = unitPrice;
             Quantity = quantity;
         }
 
-        public long OrderId { get; private set; }
+        public long OrderId { get; internal set; }
 
-        public long MenuItemId { get; private set; }
+        public long MenuItemId { get; internal set; }
 
         public string ItemName { get; private set; }
 

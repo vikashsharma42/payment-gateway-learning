@@ -21,10 +21,10 @@ namespace DineBook.Domain.Entities
             Status = TableStatus.Available;
         }
 
-        public long RestaurantId { get; private set; }
+        public long RestaurantId { get; internal set; }
 
         // The location this table is at. Set by Restaurant.AddTable.
-        public long LocationId { get; private set; }
+        public long LocationId { get; internal set; }
 
         public string Label { get; private set; }
 
@@ -51,13 +51,6 @@ namespace DineBook.Domain.Entities
         public bool IsActive => Status != TableStatus.OutOfService;
 
         public virtual Restaurant Restaurant { get; private set; }
-
-        internal void PlaceAt(long locationId)
-        {
-            DomainValidation<bool>.Ensure(locationId > 0).IsTrue("A table must belong to a location.");
-
-            LocationId = locationId;
-        }
 
         public void Activate()
         {

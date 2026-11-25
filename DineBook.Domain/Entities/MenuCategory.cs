@@ -15,7 +15,7 @@ namespace DineBook.Domain.Entities
             Name = name.Trim();
         }
 
-        public long RestaurantId { get; private set; }
+        public long RestaurantId { get; internal set; }
 
         public string Name { get; private set; }
 
@@ -32,9 +32,11 @@ namespace DineBook.Domain.Entities
         private readonly List<MenuItem> _menuItems = [];
         public IReadOnlyCollection<MenuItem> MenuItems => _menuItems.AsReadOnly();
 
-        public void AddMenuItem(MenuItem menuItem)
+        // Called by Restaurant.AddMenuItem, which has already checked the category belongs to the restaurant
+        internal void AddMenuItem(MenuItem menuItem)
         {
             DomainValidation<MenuItem>.Ensure(menuItem).IsNotNull();
+            menuItem.SetCategoryName(Name);
             _menuItems.Add(menuItem);
         }
     }

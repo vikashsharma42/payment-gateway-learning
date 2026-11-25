@@ -23,16 +23,11 @@ namespace DineBook.Domain.Entities
             DateTime startsAt,
             DateTime nowLocal)
         {
-            DomainValidation<bool>.Ensure(restaurant.IsActive)
-                .IsTrue("This restaurant is not taking bookings right now.");
-            DomainValidation<int>.Ensure(guests)
-                .IsBetween(1, policy.MaxGuests, $"Party size must be between 1 and {policy.MaxGuests} guests.");
-            DomainValidation<DateTime>.Ensure(startsAt)
-                .IsGreaterThanOrEqualTo(nowLocal.AddMinutes(policy.MinNoticeMinutes), $"Please book at least {policy.MinNoticeMinutes} minutes in advance.");
-            DomainValidation<DateTime>.Ensure(startsAt.Date, nameof(startsAt))
-                .IsLessThanOrEqualTo(nowLocal.Date.AddDays(policy.MaxAdvanceDays), $"Bookings open up to {policy.MaxAdvanceDays} days in advance.");
-            DomainValidation<bool>.Ensure(restaurant.IsOpenFor(startsAt, policy.DurationMinutes))
-                .IsTrue("The restaurant is closed at that time.");
+            DomainValidation<bool>.Ensure(restaurant.IsActive).IsTrue("This restaurant is not taking bookings right now.");
+            DomainValidation<int>.Ensure(guests).IsBetween(1, policy.MaxGuests, $"Party size must be between 1 and {policy.MaxGuests} guests.");
+            DomainValidation<DateTime>.Ensure(startsAt).IsGreaterThanOrEqualTo(nowLocal.AddMinutes(policy.MinNoticeMinutes), $"Please book at least {policy.MinNoticeMinutes} minutes in advance.");
+            DomainValidation<DateTime>.Ensure(startsAt.Date, nameof(startsAt)).IsLessThanOrEqualTo(nowLocal.Date.AddDays(policy.MaxAdvanceDays), $"Bookings open up to {policy.MaxAdvanceDays} days in advance.");
+            DomainValidation<bool>.Ensure(restaurant.IsOpenFor(startsAt, policy.DurationMinutes)).IsTrue("The restaurant is closed at that time.");
         }
 
         // Best fit: the smallest active table that seats the party and is free for the whole slot.
@@ -47,8 +42,7 @@ namespace DineBook.Domain.Entities
 
             return tables
                 .Where(t => t.IsActive && t.Capacity >= guests)
-                .Where(t => !blocking.Any(r =>
-                    r.TableId == t.Id && Overlaps(r.StartsAt, r.DurationMinutes, startsAt, durationMinutes)))
+                .Where(t => !blocking.Any(r => r.TableId == t.Id && Overlaps(r.StartsAt, r.DurationMinutes, startsAt, durationMinutes)))
                 .OrderBy(t => t.Capacity)
                 .ThenBy(t => t.Label, StringComparer.OrdinalIgnoreCase)
                 .FirstOrDefault();

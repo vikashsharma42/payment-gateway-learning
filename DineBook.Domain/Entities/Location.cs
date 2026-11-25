@@ -20,7 +20,7 @@ namespace DineBook.Domain.Entities
             IsActive = true;
         }
 
-        public long RestaurantId { get; private set; }
+        public long RestaurantId { get; internal set; }
 
         public string Name { get; private set; }
 
@@ -39,13 +39,9 @@ namespace DineBook.Domain.Entities
 
         public string UpdatedBy { get; set; }
 
+        public virtual Restaurant Restaurant { get; set; }
+
         private readonly List<Table> _tables = [];
         public virtual IReadOnlyCollection<Table> Tables => _tables.AsReadOnly();
-
-        public void AddTable(Table table)
-        {
-            DomainValidation<Table>.Ensure(table).IsNotNull();
-            _tables.Add(table);
-        }
     }
 }

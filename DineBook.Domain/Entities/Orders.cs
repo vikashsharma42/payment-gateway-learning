@@ -11,17 +11,14 @@ namespace DineBook.Domain.Entities
     // Added through Reservation.AddFoodOrder.
     public class Orders : Entity, IAuditableEntity
     {
-        public Orders(long restaurantId)
+        public Orders()
         {
-            DomainValidation<long>.Ensure(restaurantId, "Restaurant").IsGreaterThan(0);
-
-            RestaurantId = restaurantId;
             Status = OrderStatus.Placed;
         }
 
-        public long ReservationId { get; private set; }
+        public long ReservationId { get; internal set; }
 
-        public long RestaurantId { get; private set; }
+        public long RestaurantId { get; internal set; }
 
         public OrderStatus Status { get; private set; }
 
@@ -40,10 +37,11 @@ namespace DineBook.Domain.Entities
         private readonly List<OrderItem> _items = [];
         public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
 
-        public decimal Total() => _items.Sum(i => i.LineTotal());
-
         private readonly List<Payment> _payments = [];
         public IReadOnlyCollection<Payment> Payments => _payments.AsReadOnly();
+
+
+        public decimal Total() => _items.Sum(i => i.LineTotal());
 
         // True once a payment for this order has succeeded. Needs Payments to be loaded.
         public bool IsPaid => _payments.Any(p => p.Status == PaymentStatus.Paid);
@@ -56,14 +54,14 @@ namespace DineBook.Domain.Entities
 
             DomainValidation<long>.Ensure(menuItem.RestaurantId, nameof(menuItem)).IsEqualTo(RestaurantId);
             DomainValidation<bool>.Ensure(menuItem.IsAvailable).IsTrue($"{menuItem.Name} is not available right now.");
-            DomainValidation<bool>.Ensure(_items.Any(i => i.MenuItemId == menuItem.Id))
-                .IsFalse("Each item can appear only once in an order.");
-            DomainValidation<int>.Ensure(quantity)
-                .IsBetween(1, 20, $"Quantity for {menuItem.Name} must be between 1 and 20.");
-            DomainValidation<int>.Ensure(_items.Count)
-                .IsLessThanOrEqualTo(29, $"An order can have at most 30 different items.");
+            DomainValidation<bool>.Ensure(_items.Any(i => i.MenuItemId == menuItem.Id)).IsFalse("Each item can appear only once in an order.");
+            DomainValidation<int>.Ensure(quantity).IsBetween(1, 20, $"Quantity for {menuItem.Name} must be between 1 and 20.");
+            DomainValidation<int>.Ensure(_items.Count).IsLessThanOrEqualTo(29, $"An order can have at most 30 different items.");
 
-            _items.Add(new OrderItem(menuItem.Id, menuItem.Name, menuItem.Price, quantity));
+            var item = new OrderItem(menuItem.Name, menuItem.Price, quantity);
+            item.MenuItemId = menuItem.Id;
+            item.OrderId = Id;
+            _items.Add(item);
         }
 
         public void MarkServed() => MoveFrom(OrderStatus.Placed, OrderStatus.Served, "Only placed orders can be served.");
@@ -74,9 +72,6 @@ namespace DineBook.Domain.Entities
 
             MoveFrom(OrderStatus.Placed, OrderStatus.Cancelled, "Only placed orders can be cancelled.");
         }
-
-        // Called by Reservation.AddFoodOrder
-        internal void AssignReservation(long reservationId) => ReservationId = reservationId;
 
         private void MoveFrom(OrderStatus expected, OrderStatus next, string message)
         {

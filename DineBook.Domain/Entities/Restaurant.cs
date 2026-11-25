@@ -1,7 +1,6 @@
 using DineBook.Domain.Abstractions;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Validation;
-using DineBook.Domain.ValueObjects;
 using System;
 using System.Collections.Generic;
 
@@ -9,17 +8,10 @@ namespace DineBook.Domain.Entities
 {
     public class Restaurant : Entity, IAuditableEntity
     {
-<<<<<<< Updated upstream
-        public const int MaxNameLength = 100;
-        public const int MaxPhoneLength = 15;
-        public const int MaxDescriptionLength = 500;
-        public const int MaxCuisineLength = 50;
-=======
         public const decimal DefaultTaxPercent = 18.00m;
         public const decimal DefaultSystemAccessFee = 10.00m;
         public const decimal MaxTaxPercent = 28.00m;
         public const decimal MaxSystemAccessFee = 500.00m;
->>>>>>> Stashed changes
 
         // A restaurant starts with no locations. Add at least one with AddLocation before it takes bookings.
         public Restaurant(string name, TimeOnly opensAt, TimeOnly closesAt)
@@ -28,15 +20,6 @@ namespace DineBook.Domain.Entities
             DomainValidation<TimeOnly>.Ensure(closesAt).IsDateNewerThan(opensAt, "Closing time must be after opening time.");
 
             Name = name.Trim();
-<<<<<<< Updated upstream
-            Address = address;
-            OpensAt = opensAt;
-            ClosesAt = closesAt;
-            Status = RestaurantStatus.Active;
-            Phone = string.Empty;
-            Description = string.Empty;
-            Cuisine = string.Empty;
-=======
             Slug = RestaurantSlug.FromName(Name);
             OpensAt = opensAt;
             ClosesAt = closesAt;
@@ -44,16 +27,11 @@ namespace DineBook.Domain.Entities
             TaxPercent = DefaultTaxPercent;
             SystemAccessFee = DefaultSystemAccessFee;
             TaxType = "GST";
->>>>>>> Stashed changes
         }
 
         public string Name { get; private set; }
 
-<<<<<<< Updated upstream
-        public Address Address { get; private set; }
-=======
         public string Slug { get; private set; }
->>>>>>> Stashed changes
 
         public TimeOnly OpensAt { get; private set; }
 
@@ -65,10 +43,6 @@ namespace DineBook.Domain.Entities
 
         public string Description { get; private set; }
 
-        public string Cuisine { get; private set; }
-
-<<<<<<< Updated upstream
-=======
         // GST rate applied to each bill (percent), and the flat system access fee added per food order
         public decimal TaxPercent { get; private set; }
 
@@ -77,7 +51,6 @@ namespace DineBook.Domain.Entities
         // Label shown on the bill, for example GST or VAT
         public string TaxType { get; private set; }
 
->>>>>>> Stashed changes
         public DateTimeOffset CreatedDateTime { get; set; }
 
         public string CreatedBy { get; set; }
@@ -86,14 +59,10 @@ namespace DineBook.Domain.Entities
 
         public string UpdatedBy { get; set; }
 
-        // Inactive restaurants take no new bookings. Bookings and orders already made are kept.
-        //public bool IsActive => Status == RestaurantStatus.Active;
+        public bool IsActive => Status == RestaurantStatus.Active;
 
         private readonly List<Location> _locations = [];
         public virtual IReadOnlyCollection<Location> Locations => _locations.AsReadOnly();
-
-        // Locations that staff can switch to
-        // public IEnumerable<Location> ActiveLocations => _locations.Where(l => l.IsActive);
 
         private readonly List<Table> _tables = [];
         public virtual IReadOnlyCollection<Table> Tables => _tables.AsReadOnly();
@@ -103,6 +72,9 @@ namespace DineBook.Domain.Entities
 
         private readonly List<MenuItem> _menuItems = [];
         public virtual IReadOnlyCollection<MenuItem> MenuItems => _menuItems.AsReadOnly();
+
+        private readonly List<Reservation> _reservations = [];
+        public virtual IReadOnlyCollection<Reservation> Reservations => _reservations.AsReadOnly();
 
         public void UpdateCharges(decimal taxPercent, decimal systemAccessFee)
         {
@@ -125,18 +97,43 @@ namespace DineBook.Domain.Entities
         public void AddLocation(Location location)
         {
             DomainValidation<Location>.Ensure(location).IsNotNull();
+
+            location.RestaurantId = Id;
             _locations.Add(location);
+        }
+
+        public void AddMenuCategory(MenuCategory menuCategory)
+        {
+            DomainValidation<MenuCategory>.Ensure(menuCategory).IsNotNull();
+
+            menuCategory.RestaurantId = Id;
+            _menuCategories.Add(menuCategory);
+        }
+
+        public void AddReservation(long tableId, Reservation reservation)
+        {
+            DomainValidation<Reservation>.Ensure(reservation).IsNotNull();
+
+            reservation.RestaurantId = Id;
+            reservation.TableId = tableId;
+            _reservations.Add(reservation);
         }
 
         public void AddTable(long locationId, Table table)
         {
             DomainValidation<Table>.Ensure(table).IsNotNull();
+
+            table.RestaurantId = Id;
+            table.LocationId = locationId;
             _tables.Add(table);
         }
 
-        public void AddMenuItem(MenuItem menuItem)
+        public void AddMenuItem(long menuCategoryId, MenuItem menuItem)
         {
             DomainValidation<MenuItem>.Ensure(menuItem).IsNotNull();
+
+            menuItem.RestaurantId = Id;
+            menuItem.MenuCategoryId = menuCategoryId;
             _menuItems.Add(menuItem);
         }
     }

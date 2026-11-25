@@ -8,11 +8,7 @@ namespace DineBook.Domain.Entities
     // Added through Restaurant.AddMenuItem.
     public class MenuItem : Entity, IAuditableEntity
     {
-<<<<<<< Updated upstream
-        public MenuItem(string name, string description, decimal price)
-=======
         public MenuItem(string name, string description, decimal price, string imageUrl = null)
->>>>>>> Stashed changes
         {
             DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace().HasMaxLength(100);
             DomainValidation<string>.Ensure(description ?? string.Empty, nameof(description)).HasMaxLength(300);
@@ -22,12 +18,13 @@ namespace DineBook.Domain.Entities
             Description = (description ?? string.Empty).Trim();
             Price = price;
             Category = string.Empty;
+            ImageUrl = NormalizeImage(imageUrl);
             IsAvailable = true;
         }
 
-        public long RestaurantId { get; private set; }
+        public long RestaurantId { get; internal set; }
 
-        public long MenuCategoryId { get; private set; }
+        public long MenuCategoryId { get; internal set; }
 
         public string Name { get; private set; }
 
@@ -37,12 +34,9 @@ namespace DineBook.Domain.Entities
 
         public decimal Price { get; private set; }
 
-<<<<<<< Updated upstream
-        // Unavailable items cannot be ordered, but they stay on record
-=======
         public string ImageUrl { get; private set; }
 
->>>>>>> Stashed changes
+        // Unavailable items cannot be ordered, but they stay on record
         public bool IsAvailable { get; private set; }
 
         public DateTimeOffset? DeletedAt { get; private set; }
@@ -59,24 +53,20 @@ namespace DineBook.Domain.Entities
 
         public virtual MenuCategory MenuCategory { get; private set; }
 
-<<<<<<< Updated upstream
         public void ChangePrice(decimal price)
         {
             EnsurePrice(price);
 
             Price = price;
         }
-=======
+
         public void ChangeImage(string imageUrl) => ImageUrl = NormalizeImage(imageUrl);
->>>>>>> Stashed changes
 
         public void SetAvailability(bool available) => IsAvailable = available;
 
         // Called by MenuCategory when the item is added to it
         internal void SetCategoryName(string categoryName) => Category = categoryName;
 
-<<<<<<< Updated upstream
-=======
         private static string NormalizeImage(string imageUrl)
         {
             var value = (imageUrl ?? string.Empty).Trim();
@@ -85,7 +75,6 @@ namespace DineBook.Domain.Entities
             return value.Length == 0 ? null : value;
         }
 
->>>>>>> Stashed changes
         private static void EnsurePrice(decimal price) =>
             DomainValidation<decimal>.Ensure(price)
                 .IsGreaterThan(0m, "Price must be greater than zero and at most 100000.")
