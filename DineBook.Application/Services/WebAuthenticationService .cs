@@ -19,7 +19,6 @@ namespace DineBook.Application.Services
         private readonly ApplicationDbContext _db;
         private readonly IPasswordHasher _hasher;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly Lazy<string> _unknownUserHash;
 
         public WebAuthenticationService(ApplicationDbContext db, IPasswordHasher hasher,
             IHttpContextAccessor httpContextAccessor)
@@ -27,8 +26,6 @@ namespace DineBook.Application.Services
             _db = db;
             _hasher = hasher;
             _httpContextAccessor = httpContextAccessor;
-
-            _unknownUserHash = new Lazy<string>(() => _hasher.Hash("not-a-real-password"));
         }
 
         public async Task<ApplicationUser> LoginAsync(string email, string password, CancellationToken ct = default)
@@ -38,10 +35,7 @@ namespace DineBook.Application.Services
             var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail, ct);
 
             if (user is null)
-            {
-                _hasher.Verify(password, _unknownUserHash.Value);
                 return null;
-            }
 
             var passwordValid = _hasher.Verify(password, user.PasswordHash);
 

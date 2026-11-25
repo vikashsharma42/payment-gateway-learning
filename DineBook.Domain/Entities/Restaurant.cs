@@ -1,6 +1,7 @@
 using DineBook.Domain.Abstractions;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Validation;
+using DineBook.Domain.ValueObjects;
 using System;
 using System.Collections.Generic;
 
