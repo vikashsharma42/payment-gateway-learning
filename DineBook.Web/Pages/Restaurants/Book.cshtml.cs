@@ -1,3 +1,9 @@
+using DineBook.Application.Services.Interface;
+using DineBook.Domain.Entities;
+using DineBook.Domain.Exceptions;
+using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
@@ -5,12 +11,6 @@ using System.Linq;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities;
-using DineBook.Domain.Exceptions;
-using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Restaurants
 {
@@ -54,7 +54,7 @@ namespace DineBook.Web.Pages.Restaurants
         // The open location this booking page is for
         public Location SelectedLocation { get; private set; }
 
-        public IReadOnlyList<DateTime> Slots { get; private set; } = Array.Empty<DateTime>();
+        public IReadOnlyList<DateTime> Slots { get; private set; }
 
         public bool IsSignedIn => User.Identity?.IsAuthenticated == true;
 

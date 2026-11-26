@@ -1,13 +1,14 @@
-using System;
-using System.Collections.Generic;
-using System.Security.Claims;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace DineBook.Web.Pages.Restaurants
 {
@@ -29,6 +30,9 @@ namespace DineBook.Web.Pages.Restaurants
 
         public Restaurant Restaurant { get; private set; }
 
+        // Location used by the "Book a table" and "View menu" buttons when there are no orders yet
+        public Location DefaultLocation { get; private set; }
+
         public IReadOnlyList<Orders> Orders { get; private set; } = Array.Empty<Orders>();
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
@@ -44,6 +48,9 @@ namespace DineBook.Web.Pages.Restaurants
             // Only customers have orders. Other accounts go to their own area.
             if (User.FindFirstValue(ClaimTypes.Role) != nameof(UserRole.Customer))
                 return RedirectToPage("/Restaurants/Login", new { slug = Slug });
+
+            DefaultLocation = Restaurant.ActiveLocations.FirstOrDefault(l => l.IsDefault)
+                ?? Restaurant.ActiveLocations.FirstOrDefault();
 
             Orders = await _customers.GetRestaurantOrdersAsync(UserId, Restaurant.Id, ct);
             return Page();

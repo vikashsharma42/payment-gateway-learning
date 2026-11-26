@@ -1,5 +1,15 @@
 # Changes
 
+## Header, customer links and favicon (latest)
+
+- The site header is back in the shared layout, with links for the signed-in role (`_RoleNav.cshtml`). Staff, manager and admin links are as before.
+- Customers see **Orders** (`/{slug}/Orders`), **Profile** (`/{slug}/Profile`) and **Sign out**. **My dashboard** links to `/Customer/Dashboard`.
+- The restaurant for those links comes from the address. Visiting `/{slug}/...` remembers the restaurant in the `DineBook.Restaurant` cookie (30 days), so the header and "Edit profile" still work on pages without a slug. Not-found pages do not set it.
+- Profile moved from `/Customer/Profile` to `/{slug}/Profile`. It needs a signed-in customer, like the orders page.
+- Sign out is in the header for every signed-in user. Customers are sent back to their restaurant. Other roles go to `/Login` as before.
+- `customer` and `profile` are reserved slugs, so a restaurant or location cannot take them. Existing restaurants with those slugs are not changed.
+- A favicon (`wwwroot/favicon.svg` and `wwwroot/favicon.ico`) is linked from the shared layout, so it shows on every page.
+
 ## Restaurant dashboard by slug (latest)
 
 Restaurants are reached only by their slug. The old restaurant list at `/` is gone.

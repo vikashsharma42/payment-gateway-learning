@@ -1,6 +1,9 @@
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
 using System.Text.Json;
+using DineBook.Domain.ValueObjects;
 
 namespace DineBook.Web.Infrastructure
 {
@@ -18,6 +21,23 @@ namespace DineBook.Web.Infrastructure
 
         private void SetToast(string type, string message) =>
             TempData[ToastKey] = JsonSerializer.Serialize(new ToastMessage(type, message));
+
+        // A page under /{slug}/... remembers that restaurant, so the header can link to it elsewhere.
+        // Pages that answer "not found" do not count.
+        public override void OnPageHandlerExecuted(PageHandlerExecutedContext context)
+        {
+            base.OnPageHandlerExecuted(context);
+
+            if (context.Result is NotFoundResult)
+                return;
+
+            if (context.RouteData.Values.TryGetValue("slug", out var value)
+                && value is string slug
+                && RestaurantSlug.IsValid(slug))
+            {
+                RestaurantCookie.Remember(Response, slug);
+            }
+        }
     }
 
     // Read by _Layout.cshtml and shown by app.js
