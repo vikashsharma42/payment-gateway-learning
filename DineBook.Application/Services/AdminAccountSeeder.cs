@@ -1,7 +1,6 @@
 using DineBook.Application.Security;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
-using DineBook.Domain.Exceptions;
 using DineBook.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -12,8 +11,9 @@ using System.Threading.Tasks;
 namespace DineBook.Application.Services
 {
     /// <summary>
-    /// Creates the first admin account from user-secrets (Admin:Email and Admin:Password)
-    /// when no admin exists yet. Does nothing once an admin exists.
+    /// Creates the first admin account when no admin exists yet. Does nothing once an admin exists.
+    /// The email and password come from configuration (Admin:Email and Admin:Password, for example
+    /// in user-secrets). The password is stored only as a hash, produced by IPasswordHasher.
     /// </summary>
     public sealed class AdminAccountSeeder(
         ApplicationDbContext db,
@@ -21,8 +21,6 @@ namespace DineBook.Application.Services
         IConfiguration configuration,
         ILogger<AdminAccountSeeder> logger)
     {
-        private const int MinPasswordLength = 12;
-
         public async Task SeedAsync(CancellationToken ct = default)
         {
             if (await db.Users.AnyAsync(u => u.Role == UserRole.Admin, ct))
@@ -36,9 +34,6 @@ namespace DineBook.Application.Services
                 logger.LogWarning("No admin account exists and Admin:Email or Admin:Password is not set.");
                 return;
             }
-
-            if (password.Length < MinPasswordLength)
-                throw new DomainException($"Admin:Password must be at least {MinPasswordLength} characters.");
 
             if (await db.Users.AnyAsync(u => u.Email == email, ct))
             {

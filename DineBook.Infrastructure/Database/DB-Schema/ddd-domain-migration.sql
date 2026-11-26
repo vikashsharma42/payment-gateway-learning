@@ -1,20 +1,25 @@
 /*
-    DineBook CREATE-ONLY schema script
-    Generated from the supplied DineBook.Domain.zip entity classes.
-    Creates 10 tables: Users, Customers, Restaurants, RestaurantTables,
-    MenuCategories, MenuItems, Reservations, Orders, OrderItems, Payments.
+    DineBook CREATE-ONLY schema script, matching the current Domain (DineBook.Domain)
+    and the EF Core mapping (DineBook.Infrastructure/Database/Configurations).
+
+    Tables (10):
+      ApplicationUser, Restaurant, Location, Table, MenuCategory, MenuItem,
+      Reservation, Orders, OrderItem, Payment
 
     Mapping notes:
-    - Address is stored as columns in Restaurants (owned value object).
-    - ReservationPolicy and ReservationRules are not database tables.
-    - Money is a value object, not a standalone entity/table.
-    - Enum values are stored as text and protected by CHECK constraints.
+    - Address (Location) and Money (MenuItem.Price, OrderItem.UnitPrice, Payment.Amount)
+      are owned value objects stored as columns in the owning table.
+      Money columns are <Property>_Amount and <Property>_Currency.
+    - Enums are stored as text and protected by CHECK constraints.
+    - Table.Location is the location name (free text copied from Location).
+    - Orders.OrderNo is unique (for example ORD-20261126-K7Q2MX).
+    - Tables are soft-deleted with IsDeleted; a removed label can be reused in the same location.
+    - Customer details for a booking come from ApplicationUser (Reservation.ApplicationUserId).
 
     IMPORTANT:
-    - Run this only against the DineBook database.
-    - This script does NOT rename or modify Legacy_ProductShop_* tables.
-    - It creates the DineBook tables only; it does not migrate old ProductShop data.
-    - Back up the database before execution.
+    - Run this only against the DineBook database, on a database with none of these tables.
+    - It creates tables only. It does not migrate old data.
+    - Back up the database before running it.
 */
 USE [DineBook];
 GO
@@ -24,241 +29,241 @@ SET XACT_ABORT ON;
 IF DB_NAME() <> N'DineBook'
     THROW 51000, 'Run this script only in the DineBook database.', 1;
 
-/*
-  Preflight is deliberately in the SAME batch as the DDL.
-  This prevents later CREATE TABLE batches from running if a table already exists.
-*/
+-- Preflight in the same batch as the DDL, so a partly created schema is never extended
 IF EXISTS
 (
-    SELECT 1
-    FROM sys.tables
+    SELECT 1 FROM sys.tables
     WHERE schema_id = SCHEMA_ID(N'dbo')
-      AND name IN
-      (
-          N'Users', N'Customers', N'Restaurants', N'RestaurantTables',
-          N'MenuCategories', N'MenuItems', N'Reservations', N'Orders',
-          N'OrderItems', N'Payments'
-      )
+      AND name IN (N'ApplicationUser', N'Restaurant', N'Location', N'Table', N'MenuCategory',
+                   N'MenuItem', N'Reservation', N'Orders', N'OrderItem', N'Payment')
 )
-    THROW 51002, 'One or more DineBook tables already exist. Do not rerun this script on a partially created schema.', 1;
+    THROW 51002, 'One or more DineBook tables already exist. Do not rerun this script on a partly created schema.', 1;
 
 BEGIN TRY
     BEGIN TRANSACTION;
 
-    /* Users */
-    CREATE TABLE dbo.Users
+    /* Restaurant (Organization). Slug is the unique web address, for example spice-garden. */
+    CREATE TABLE dbo.Restaurant
     (
-        Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Users PRIMARY KEY,
-        Email NVARCHAR(254) NOT NULL,
-        PasswordHash NVARCHAR(500) NOT NULL,
-        FirstName NVARCHAR(100) NOT NULL,
-        LastName NVARCHAR(100) NOT NULL,
-        Role NVARCHAR(20) NOT NULL,
-        IsActive BIT NOT NULL CONSTRAINT DF_Users_IsActive DEFAULT (1),
-        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Users_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
-        CreatedBy NVARCHAR(256) NULL,
-        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Users_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
-        UpdatedBy NVARCHAR(256) NULL,
-        CONSTRAINT UQ_Users_Email UNIQUE (Email),
-        CONSTRAINT CK_Users_Role CHECK (Role IN (N'Customer', N'Staff', N'Manager', N'Admin'))
+        Id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Restaurant PRIMARY KEY,
+        Name            NVARCHAR(100)  NOT NULL,
+        Slug            NVARCHAR(60)   NOT NULL,
+        OpensAt         TIME(7)        NOT NULL,
+        ClosesAt        TIME(7)        NOT NULL,
+        Status          NVARCHAR(20)   NOT NULL,
+        Phone           NVARCHAR(15)   NULL,
+        Description     NVARCHAR(500)  NULL,
+        TaxPercent      DECIMAL(5,2)   NOT NULL,
+        SystemAccessFee DECIMAL(18,2)  NOT NULL,
+        TaxType         NVARCHAR(20)   NOT NULL,
+        CreatedDateTime DATETIMEOFFSET NOT NULL,
+        CreatedBy       NVARCHAR(256)  NULL,
+        UpdatedDateTime DATETIMEOFFSET NOT NULL,
+        UpdatedBy       NVARCHAR(256)  NULL,
+        CONSTRAINT CK_Restaurant_Status CHECK (Status IN (N'Active', N'Inactive')),
+        CONSTRAINT CK_Restaurant_TaxPercent CHECK (TaxPercent BETWEEN 0 AND 28),
+        CONSTRAINT CK_Restaurant_SystemAccessFee CHECK (SystemAccessFee BETWEEN 0 AND 500)
+    );
+    CREATE UNIQUE INDEX IX_Restaurant_Slug ON dbo.Restaurant (Slug);
+
+    /* ApplicationUser (Identity). Customers and staff belong to a restaurant; admins do not. */
+    CREATE TABLE dbo.ApplicationUser
+    (
+        Id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_ApplicationUser PRIMARY KEY,
+        Email           NVARCHAR(254) NOT NULL,
+        PasswordHash    NVARCHAR(500) NOT NULL,
+        FirstName       NVARCHAR(100) NOT NULL,
+        LastName        NVARCHAR(100) NOT NULL,
+        Role            NVARCHAR(20)  NOT NULL,
+        Phone           NVARCHAR(15)  NULL,
+        RestaurantId    BIGINT        NULL,
+        IsActive        BIT           NOT NULL,
+        CreatedDateTime DATETIMEOFFSET NOT NULL,
+        CreatedBy       NVARCHAR(256) NULL,
+        UpdatedDateTime DATETIMEOFFSET NOT NULL,
+        UpdatedBy       NVARCHAR(256) NULL,
+        CONSTRAINT FK_ApplicationUser_Restaurant FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurant (Id),
+        CONSTRAINT CK_ApplicationUser_Role CHECK (Role IN (N'Customer', N'Staff', N'Manager', N'Admin')),
+        CONSTRAINT CK_ApplicationUser_Restaurant CHECK
+        (
+            (Role = N'Admin' AND RestaurantId IS NULL)
+            OR (Role <> N'Admin' AND RestaurantId IS NOT NULL)
+        )
+    );
+    CREATE UNIQUE INDEX IX_ApplicationUser_Email ON dbo.ApplicationUser (Email);
+    CREATE UNIQUE INDEX IX_ApplicationUser_Phone ON dbo.ApplicationUser (Phone) WHERE Phone IS NOT NULL;
+
+    /* Location (branch of a restaurant). Address is owned: columns Street, City, State, Country, ZipCode. */
+    CREATE TABLE dbo.Location
+    (
+        Id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Location PRIMARY KEY,
+        RestaurantId    BIGINT         NOT NULL,
+        Name            NVARCHAR(100)  NOT NULL,
+        Phone           NVARCHAR(15)   NULL,
+        IsActive        BIT            NOT NULL,
+        Street          NVARCHAR(200)  NOT NULL,
+        City            NVARCHAR(100)  NOT NULL,
+        State           NVARCHAR(100)  NOT NULL,
+        Country         NVARCHAR(100)  NOT NULL,
+        ZipCode         NVARCHAR(20)   NOT NULL,
+        CreatedDateTime DATETIMEOFFSET NOT NULL,
+        CreatedBy       NVARCHAR(256)  NULL,
+        UpdatedDateTime DATETIMEOFFSET NOT NULL,
+        UpdatedBy       NVARCHAR(256)  NULL,
+        CONSTRAINT FK_Location_Restaurant FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurant (Id)
     );
 
-    /* Customers */
-    CREATE TABLE dbo.Customers
+    /* Table (seats at one location). Labels are unique per location among active (not removed) tables. */
+    CREATE TABLE dbo.[Table]
     (
-        Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Customers PRIMARY KEY,
-        Name NVARCHAR(100) NOT NULL,
-        Phone NVARCHAR(15) NOT NULL,
-        Email NVARCHAR(254) NOT NULL,
-        ApplicationUserId BIGINT NULL,
-        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Customers_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
-        CreatedBy NVARCHAR(256) NULL,
-        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Customers_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
-        UpdatedBy NVARCHAR(256) NULL,
-        CONSTRAINT UQ_Customers_Phone UNIQUE (Phone),
-        CONSTRAINT CK_Customers_Phone CHECK (Phone NOT LIKE N'%[^0-9]%' AND LEN(Phone) BETWEEN 10 AND 15),
-        CONSTRAINT FK_Customers_Users FOREIGN KEY (ApplicationUserId) REFERENCES dbo.Users(Id)
+        Id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Table PRIMARY KEY,
+        RestaurantId    BIGINT         NOT NULL,
+        LocationId      BIGINT         NOT NULL,
+        Label           NVARCHAR(20)   NOT NULL,
+        Capacity        INT            NOT NULL,
+        Location        NVARCHAR(100)  NOT NULL,
+        Status          NVARCHAR(20)   NOT NULL,
+        IsDeleted       BIT            NOT NULL,
+        DeletedAt       DATETIMEOFFSET NULL,
+        CreatedDateTime DATETIMEOFFSET NOT NULL,
+        CreatedBy       NVARCHAR(256)  NULL,
+        UpdatedDateTime DATETIMEOFFSET NOT NULL,
+        UpdatedBy       NVARCHAR(256)  NULL,
+        CONSTRAINT FK_Table_Restaurant FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurant (Id),
+        CONSTRAINT FK_Table_Location FOREIGN KEY (LocationId) REFERENCES dbo.Location (Id),
+        CONSTRAINT CK_Table_Capacity CHECK (Capacity BETWEEN 1 AND 20),
+        CONSTRAINT CK_Table_Status CHECK (Status IN (N'Available', N'Occupied', N'OutOfService'))
     );
+    CREATE UNIQUE INDEX IX_Table_Location_Label ON dbo.[Table] (LocationId, Label) WHERE IsDeleted = 0;
 
-    /* Restaurants: Address is an owned value object, stored as columns on Restaurants. */
-    CREATE TABLE dbo.Restaurants
+    /* MenuCategory (section of a menu, for example Starters). */
+    CREATE TABLE dbo.MenuCategory
     (
-        Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Restaurants PRIMARY KEY,
-        Name NVARCHAR(100) NOT NULL,
-        OpensAt TIME NOT NULL,
-        ClosesAt TIME NOT NULL,
-        Status NVARCHAR(20) NOT NULL CONSTRAINT DF_Restaurants_Status DEFAULT (N'Active'),
-        Phone NVARCHAR(15) NOT NULL CONSTRAINT DF_Restaurants_Phone DEFAULT (N''),
-        Description NVARCHAR(500) NOT NULL CONSTRAINT DF_Restaurants_Description DEFAULT (N''),
-        Cuisine NVARCHAR(50) NOT NULL CONSTRAINT DF_Restaurants_Cuisine DEFAULT (N''),
-        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Restaurants_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
-        CreatedBy NVARCHAR(256) NULL,
-        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Restaurants_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
-        UpdatedBy NVARCHAR(256) NULL,
-        CONSTRAINT CK_Restaurants_Status CHECK (Status IN (N'Active', N'Inactive')),
-        CONSTRAINT CK_Restaurants_Address_Pincode CHECK (Address_Pincode NOT LIKE N'%[^0-9]%' AND LEN(Address_Pincode) = 6)
+        Id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_MenuCategory PRIMARY KEY,
+        RestaurantId    BIGINT         NOT NULL,
+        Name            NVARCHAR(50)   NOT NULL,
+        CreatedDateTime DATETIMEOFFSET NOT NULL,
+        CreatedBy       NVARCHAR(256)  NULL,
+        UpdatedDateTime DATETIMEOFFSET NOT NULL,
+        UpdatedBy       NVARCHAR(256)  NULL,
+        CONSTRAINT FK_MenuCategory_Restaurant FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurant (Id)
     );
+    CREATE UNIQUE INDEX IX_MenuCategory_Restaurant_Name ON dbo.MenuCategory (RestaurantId, Name);
 
-    /* Restaurant tables */
-    CREATE TABLE dbo.RestaurantTables
+    /* MenuItem (dish). Price is Money: Price_Amount and Price_Currency. */
+    CREATE TABLE dbo.MenuItem
     (
-        Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_RestaurantTables PRIMARY KEY,
-        RestaurantId BIGINT NOT NULL,
-        Label NVARCHAR(20) NOT NULL,
-        Capacity INT NOT NULL,
-        Location NVARCHAR(50) NOT NULL,
-        Status NVARCHAR(20) NOT NULL CONSTRAINT DF_RestaurantTables_Status DEFAULT (N'Available'),
-        IsDeleted BIT NOT NULL CONSTRAINT DF_RestaurantTables_IsDeleted DEFAULT (0),
-        DeletedAt DATETIMEOFFSET NULL,
-        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_RestaurantTables_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
-        CreatedBy NVARCHAR(256) NULL,
-        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_RestaurantTables_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
-        UpdatedBy NVARCHAR(256) NULL,
-        CONSTRAINT FK_RestaurantTables_Restaurants FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurants(Id) ON DELETE CASCADE,
-        CONSTRAINT CK_RestaurantTables_Capacity CHECK (Capacity BETWEEN 1 AND 20),
-        CONSTRAINT CK_RestaurantTables_Status CHECK (Status IN (N'Available', N'Occupied', N'OutOfService'))
+        Id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_MenuItem PRIMARY KEY,
+        RestaurantId    BIGINT         NOT NULL,
+        MenuCategoryId  BIGINT         NOT NULL,
+        Name            NVARCHAR(100)  NOT NULL,
+        Description     NVARCHAR(300)  NULL,
+        Category        NVARCHAR(50)   NULL,
+        Price_Amount    DECIMAL(18,2)  NOT NULL,
+        Price_Currency  NVARCHAR(3)    NOT NULL,
+        ImageUrl        NVARCHAR(50)   NULL,
+        IsAvailable     BIT            NOT NULL,
+        DeletedAt       DATETIMEOFFSET NULL,
+        CreatedDateTime DATETIMEOFFSET NOT NULL,
+        CreatedBy       NVARCHAR(256)  NULL,
+        UpdatedDateTime DATETIMEOFFSET NOT NULL,
+        UpdatedBy       NVARCHAR(256)  NULL,
+        CONSTRAINT FK_MenuItem_Restaurant FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurant (Id),
+        CONSTRAINT FK_MenuItem_MenuCategory FOREIGN KEY (MenuCategoryId) REFERENCES dbo.MenuCategory (Id),
+        CONSTRAINT CK_MenuItem_Price CHECK (Price_Amount > 0 AND Price_Amount <= 100000)
     );
-    CREATE INDEX IX_RestaurantTables_RestaurantId ON dbo.RestaurantTables(RestaurantId);
-    CREATE UNIQUE INDEX UX_RestaurantTables_RestaurantId_Label_Active
-        ON dbo.RestaurantTables(RestaurantId, Label) WHERE IsDeleted = 0;
+    CREATE INDEX IX_MenuItem_Restaurant_Available ON dbo.MenuItem (RestaurantId, IsAvailable);
 
-    /* Menu categories */
-    CREATE TABLE dbo.MenuCategories
+    /* Reservation (booking). Guest name, phone and email are read from ApplicationUser. */
+    CREATE TABLE dbo.Reservation
     (
-        Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_MenuCategories PRIMARY KEY,
-        RestaurantId BIGINT NOT NULL,
-        Name NVARCHAR(50) NOT NULL,
-        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_MenuCategories_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
-        CreatedBy NVARCHAR(256) NULL,
-        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_MenuCategories_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
-        UpdatedBy NVARCHAR(256) NULL,
-        CONSTRAINT FK_MenuCategories_Restaurants FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurants(Id) ON DELETE CASCADE,
-        CONSTRAINT UQ_MenuCategories_RestaurantId_Name UNIQUE (RestaurantId, Name)
+        Id                BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Reservation PRIMARY KEY,
+        Code              NVARCHAR(8)    NOT NULL,
+        RestaurantId      BIGINT         NOT NULL,
+        ApplicationUserId BIGINT         NOT NULL,
+        TableId           BIGINT         NOT NULL,
+        Guests            INT            NOT NULL,
+        StartsAt          DATETIME2(7)   NOT NULL,
+        DurationMinutes   INT            NOT NULL,
+        SpecialRequests   NVARCHAR(200)  NULL,
+        Status            NVARCHAR(20)   NOT NULL,
+        CreatedDateTime   DATETIMEOFFSET NOT NULL,
+        CreatedBy         NVARCHAR(256)  NULL,
+        UpdatedDateTime   DATETIMEOFFSET NOT NULL,
+        UpdatedBy         NVARCHAR(256)  NULL,
+        CONSTRAINT FK_Reservation_Restaurant FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurant (Id),
+        CONSTRAINT FK_Reservation_ApplicationUser FOREIGN KEY (ApplicationUserId) REFERENCES dbo.ApplicationUser (Id),
+        CONSTRAINT FK_Reservation_Table FOREIGN KEY (TableId) REFERENCES dbo.[Table] (Id),
+        CONSTRAINT CK_Reservation_Guests CHECK (Guests >= 1),
+        CONSTRAINT CK_Reservation_Duration CHECK (DurationMinutes >= 30),
+        CONSTRAINT CK_Reservation_Status CHECK (Status IN (N'Confirmed', N'Seated', N'Completed', N'Cancelled', N'NoShow'))
     );
+    CREATE UNIQUE INDEX IX_Reservation_Code ON dbo.Reservation (Code);
+    CREATE INDEX IX_Reservation_Restaurant_StartsAt ON dbo.Reservation (RestaurantId, StartsAt);
 
-    /* Menu items */
-    CREATE TABLE dbo.MenuItems
-    (
-        Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_MenuItems PRIMARY KEY,
-        RestaurantId BIGINT NOT NULL,
-        MenuCategoryId BIGINT NOT NULL,
-        Name NVARCHAR(100) NOT NULL,
-        Description NVARCHAR(300) NOT NULL,
-        Category NVARCHAR(50) NOT NULL,
-        Price DECIMAL(18,2) NOT NULL,
-        IsAvailable BIT NOT NULL CONSTRAINT DF_MenuItems_IsAvailable DEFAULT (1),
-        IsDeleted BIT NOT NULL CONSTRAINT DF_MenuItems_IsDeleted DEFAULT (0),
-        DeletedAt DATETIMEOFFSET NULL,
-        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_MenuItems_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
-        CreatedBy NVARCHAR(256) NULL,
-        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_MenuItems_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
-        UpdatedBy NVARCHAR(256) NULL,
-        CONSTRAINT FK_MenuItems_Restaurants FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurants(Id),
-        CONSTRAINT FK_MenuItems_MenuCategories FOREIGN KEY (MenuCategoryId) REFERENCES dbo.MenuCategories(Id),
-        CONSTRAINT CK_MenuItems_Price CHECK (Price > 0 AND Price <= 100000)
-    );
-    CREATE INDEX IX_MenuItems_RestaurantId ON dbo.MenuItems(RestaurantId);
-    CREATE INDEX IX_MenuItems_MenuCategoryId ON dbo.MenuItems(MenuCategoryId);
-
-    /* Reservations */
-    CREATE TABLE dbo.Reservations
-    (
-        Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Reservations PRIMARY KEY,
-        Code NVARCHAR(8) NOT NULL,
-        RestaurantId BIGINT NOT NULL,
-        CustomerId BIGINT NULL,
-        TableId BIGINT NOT NULL,
-        CustomerName NVARCHAR(100) NOT NULL,
-        CustomerPhone NVARCHAR(15) NOT NULL,
-        CustomerEmail NVARCHAR(254) NOT NULL,
-        Guests INT NOT NULL,
-        StartsAt DATETIME2 NOT NULL,
-        DurationMinutes INT NOT NULL,
-        SpecialRequests NVARCHAR(200) NOT NULL,
-        Status NVARCHAR(20) NOT NULL,
-        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Reservations_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
-        CreatedBy NVARCHAR(256) NULL,
-        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Reservations_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
-        UpdatedBy NVARCHAR(256) NULL,
-        CONSTRAINT UQ_Reservations_Code UNIQUE (Code),
-        CONSTRAINT FK_Reservations_Restaurants FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurants(Id),
-        CONSTRAINT FK_Reservations_Customers FOREIGN KEY (CustomerId) REFERENCES dbo.Customers(Id),
-        CONSTRAINT FK_Reservations_RestaurantTables FOREIGN KEY (TableId) REFERENCES dbo.RestaurantTables(Id),
-        CONSTRAINT CK_Reservations_Phone CHECK (CustomerPhone NOT LIKE N'%[^0-9]%' AND LEN(CustomerPhone) BETWEEN 10 AND 15),
-        CONSTRAINT CK_Reservations_Guests CHECK (Guests > 0),
-        CONSTRAINT CK_Reservations_Duration CHECK (DurationMinutes >= 30),
-        CONSTRAINT CK_Reservations_Status CHECK (Status IN (N'Confirmed', N'Seated', N'Completed', N'Cancelled', N'NoShow'))
-    );
-    CREATE INDEX IX_Reservations_RestaurantId ON dbo.Reservations(RestaurantId);
-    CREATE INDEX IX_Reservations_CustomerId ON dbo.Reservations(CustomerId);
-    CREATE INDEX IX_Reservations_TableId ON dbo.Reservations(TableId);
-    CREATE INDEX IX_Reservations_StartsAt ON dbo.Reservations(StartsAt);
-
-    /* Food orders */
+    /* Orders (food order for one booking). OrderNo is created by OrderNumberHelper. */
     CREATE TABLE dbo.Orders
     (
-        Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Orders PRIMARY KEY,
-        ReservationId BIGINT NOT NULL,
-        RestaurantId BIGINT NOT NULL,
-        Status NVARCHAR(20) NOT NULL,
-        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Orders_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
-        CreatedBy NVARCHAR(256) NULL,
-        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Orders_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
-        UpdatedBy NVARCHAR(256) NULL,
-        CONSTRAINT FK_Orders_Reservations FOREIGN KEY (ReservationId) REFERENCES dbo.Reservations(Id),
-        CONSTRAINT FK_Orders_Restaurants FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurants(Id),
+        Id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Orders PRIMARY KEY,
+        ReservationId   BIGINT         NOT NULL,
+        RestaurantId    BIGINT         NOT NULL,
+        OrderNo         NVARCHAR(20)   NOT NULL,
+        Status          NVARCHAR(20)   NOT NULL,
+        CreatedDateTime DATETIMEOFFSET NOT NULL,
+        CreatedBy       NVARCHAR(256)  NULL,
+        UpdatedDateTime DATETIMEOFFSET NOT NULL,
+        UpdatedBy       NVARCHAR(256)  NULL,
+        CONSTRAINT FK_Orders_Reservation FOREIGN KEY (ReservationId) REFERENCES dbo.Reservation (Id),
+        CONSTRAINT FK_Orders_Restaurant FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurant (Id),
         CONSTRAINT CK_Orders_Status CHECK (Status IN (N'Placed', N'Served', N'Cancelled'))
     );
-    CREATE INDEX IX_Orders_ReservationId ON dbo.Orders(ReservationId);
-    CREATE INDEX IX_Orders_RestaurantId ON dbo.Orders(RestaurantId);
+    CREATE UNIQUE INDEX IX_Orders_OrderNo ON dbo.Orders (OrderNo);
 
-    /* Order items */
-    CREATE TABLE dbo.OrderItems
+    /* OrderItem (one dish in an order). Name, price and photo are copied at ordering time. */
+    CREATE TABLE dbo.OrderItem
     (
-        Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_OrderItems PRIMARY KEY,
-        OrderId BIGINT NOT NULL,
-        MenuItemId BIGINT NOT NULL,
-        ItemName NVARCHAR(100) NOT NULL,
-        UnitPrice DECIMAL(18,2) NOT NULL,
-        Quantity INT NOT NULL,
-        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_OrderItems_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
-        CreatedBy NVARCHAR(256) NULL,
-        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_OrderItems_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
-        UpdatedBy NVARCHAR(256) NULL,
-        CONSTRAINT FK_OrderItems_Orders FOREIGN KEY (OrderId) REFERENCES dbo.Orders(Id) ON DELETE CASCADE,
-        CONSTRAINT FK_OrderItems_MenuItems FOREIGN KEY (MenuItemId) REFERENCES dbo.MenuItems(Id),
-        CONSTRAINT CK_OrderItems_UnitPrice CHECK (UnitPrice > 0),
-        CONSTRAINT CK_OrderItems_Quantity CHECK (Quantity BETWEEN 1 AND 20),
-        CONSTRAINT UQ_OrderItems_OrderId_MenuItemId UNIQUE (OrderId, MenuItemId)
+        Id                 BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_OrderItem PRIMARY KEY,
+        OrderId            BIGINT         NOT NULL,
+        MenuItemId         BIGINT         NOT NULL,
+        ItemName           NVARCHAR(100)  NOT NULL,
+        UnitPrice_Amount   DECIMAL(18,2)  NOT NULL,
+        UnitPrice_Currency NVARCHAR(3)    NOT NULL,
+        Quantity           INT            NOT NULL,
+        ImageUrl           NVARCHAR(50)   NULL,
+        CreatedDateTime    DATETIMEOFFSET NOT NULL,
+        CreatedBy          NVARCHAR(256)  NULL,
+        UpdatedDateTime    DATETIMEOFFSET NOT NULL,
+        UpdatedBy          NVARCHAR(256)  NULL,
+        CONSTRAINT FK_OrderItem_Orders FOREIGN KEY (OrderId) REFERENCES dbo.Orders (Id),
+        CONSTRAINT FK_OrderItem_MenuItem FOREIGN KEY (MenuItemId) REFERENCES dbo.MenuItem (Id),
+        CONSTRAINT CK_OrderItem_UnitPrice CHECK (UnitPrice_Amount > 0),
+        CONSTRAINT CK_OrderItem_Quantity CHECK (Quantity BETWEEN 1 AND 20)
     );
-    CREATE INDEX IX_OrderItems_MenuItemId ON dbo.OrderItems(MenuItemId);
 
-    /* Payments: domain Payment references Orders directly (not Bills). */
-    CREATE TABLE dbo.Payments
+    /* Payment (one Cashfree attempt for one food order). Amount is Money: Amount_Amount and Amount_Currency. */
+    CREATE TABLE dbo.Payment
     (
-        Id BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Payments PRIMARY KEY,
-        OrderId BIGINT NOT NULL,
-        PublicId UNIQUEIDENTIFIER NOT NULL,
-        Amount DECIMAL(18,2) NOT NULL,
-        GatewayOrderId NVARCHAR(100) NOT NULL,
-        PaymentSessionId NVARCHAR(200) NOT NULL,
-        IdempotencyKey NVARCHAR(100) NOT NULL,
-        CustomerEmail NVARCHAR(254) NOT NULL,
-        RefundId NVARCHAR(100) NULL,
-        Status NVARCHAR(20) NOT NULL,
-        CreatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Payments_CreatedDateTime DEFAULT (SYSUTCDATETIME()),
-        CreatedBy NVARCHAR(256) NULL,
-        UpdatedDateTime DATETIMEOFFSET NOT NULL CONSTRAINT DF_Payments_UpdatedDateTime DEFAULT (SYSUTCDATETIME()),
-        UpdatedBy NVARCHAR(256) NULL,
-        CONSTRAINT FK_Payments_Orders FOREIGN KEY (OrderId) REFERENCES dbo.Orders(Id),
-        CONSTRAINT UQ_Payments_PublicId UNIQUE (PublicId),
-        CONSTRAINT UQ_Payments_GatewayOrderId UNIQUE (GatewayOrderId),
-        CONSTRAINT UQ_Payments_IdempotencyKey UNIQUE (IdempotencyKey),
-        CONSTRAINT CK_Payments_Amount CHECK (Amount > 0),
-        CONSTRAINT CK_Payments_Status CHECK (Status IN (N'Pending', N'Paid', N'Failed', N'Refunded'))
+        Id                BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Payment PRIMARY KEY,
+        OrderId           BIGINT           NOT NULL,
+        PublicId          UNIQUEIDENTIFIER NOT NULL,
+        Amount_Amount     DECIMAL(18,2)    NOT NULL,
+        Amount_Currency   NVARCHAR(3)      NOT NULL,
+        GatewayOrderId    NVARCHAR(100)    NOT NULL,
+        PaymentSessionId  NVARCHAR(200)    NOT NULL,
+        IdempotencyKey    NVARCHAR(64)     NOT NULL,
+        CustomerEmail     NVARCHAR(254)    NOT NULL,
+        RefundId          NVARCHAR(100)    NULL,
+        Status            NVARCHAR(20)     NOT NULL,
+        CreatedDateTime   DATETIMEOFFSET   NOT NULL,
+        CreatedBy         NVARCHAR(256)    NULL,
+        UpdatedDateTime   DATETIMEOFFSET   NOT NULL,
+        UpdatedBy         NVARCHAR(256)    NULL,
+        CONSTRAINT FK_Payment_Orders FOREIGN KEY (OrderId) REFERENCES dbo.Orders (Id),
+        CONSTRAINT CK_Payment_Amount CHECK (Amount_Amount > 0),
+        CONSTRAINT CK_Payment_Status CHECK (Status IN (N'Pending', N'Paid', N'Failed', N'Refunded'))
     );
-    CREATE INDEX IX_Payments_OrderId ON dbo.Payments(OrderId);
-
+    CREATE UNIQUE INDEX IX_Payment_GatewayOrderId ON dbo.Payment (GatewayOrderId);
+    CREATE UNIQUE INDEX IX_Payment_IdempotencyKey ON dbo.Payment (IdempotencyKey);
 
     COMMIT TRANSACTION;
 END TRY
@@ -269,15 +274,11 @@ BEGIN CATCH
 END CATCH;
 GO
 
-/* Verify created tables. */
+/* Verify the created tables. */
 SELECT TABLE_SCHEMA, TABLE_NAME
 FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_TYPE = 'BASE TABLE'
-  AND TABLE_NAME IN
-  (
-      N'Users', N'Customers', N'Restaurants', N'RestaurantTables',
-      N'MenuCategories', N'MenuItems', N'Reservations', N'Orders',
-      N'OrderItems', N'Payments'
-  )
+  AND TABLE_NAME IN (N'ApplicationUser', N'Restaurant', N'Location', N'Table', N'MenuCategory',
+                     N'MenuItem', N'Reservation', N'Orders', N'OrderItem', N'Payment')
 ORDER BY TABLE_NAME;
 GO
