@@ -1,5 +1,6 @@
 using DineBook.Domain.Abstractions;
 using DineBook.Domain.Validation;
+using DineBook.Domain.ValueObjects;
 using System;
 
 namespace DineBook.Domain.Entities
@@ -8,10 +9,11 @@ namespace DineBook.Domain.Entities
     // Added through Orders.AddOrderItem.
     public class OrderItem : Entity, IAuditableEntity
     {
-        public OrderItem(string itemName, decimal unitPrice, int quantity)
+        public OrderItem(string itemName, Money unitPrice, int quantity)
         {
             DomainValidation<string>.Ensure(itemName, "Item name").IsNotNullOrWhiteSpace();
-            DomainValidation<decimal>.Ensure(unitPrice, "Unit price").IsGreaterThan(0);
+            DomainValidation<Money>.Ensure(unitPrice, "Unit price").IsNotNull();
+            DomainValidation<decimal>.Ensure(unitPrice.Amount, "Unit price").IsGreaterThan(0);
             DomainValidation<int>.Ensure(quantity).IsGreaterThanOrEqualTo(1);
 
             ItemName = itemName.Trim();
@@ -25,7 +27,7 @@ namespace DineBook.Domain.Entities
 
         public string ItemName { get; private set; }
 
-        public decimal UnitPrice { get; private set; }
+        public Money UnitPrice { get; private set; }
 
         public int Quantity { get; private set; }
 
@@ -41,6 +43,6 @@ namespace DineBook.Domain.Entities
 
         public virtual MenuItem MenuItem { get; private set; }
 
-        public decimal LineTotal() => UnitPrice * Quantity;
+        public Money LineTotal() => UnitPrice.Multiply(Quantity);
     }
 }

@@ -1,5 +1,6 @@
 using DineBook.Domain.Abstractions;
 using DineBook.Domain.Validation;
+using DineBook.Domain.ValueObjects;
 using System;
 
 namespace DineBook.Domain.Entities
@@ -16,7 +17,7 @@ namespace DineBook.Domain.Entities
 
             Name = name.Trim();
             Description = (description ?? string.Empty).Trim();
-            Price = price;
+            Price = Money.Create(price);
             Category = string.Empty;
             ImageUrl = NormalizeImage(imageUrl);
             IsAvailable = true;
@@ -30,15 +31,19 @@ namespace DineBook.Domain.Entities
 
         public string Description { get; private set; }
 
+        // Filled in from the menu category when the item is added
         public string Category { get; private set; }
 
-        public decimal Price { get; private set; }
+        public Money Price { get; private set; }
 
         public string ImageUrl { get; private set; }
 
         public bool IsAvailable { get; private set; }
 
+        // Set by Remove. Removed items stay in past orders, but are not offered on the menu.
         public DateTimeOffset? DeletedAt { get; private set; }
+
+        public bool IsDeleted => DeletedAt is not null;
 
         public DateTimeOffset CreatedDateTime { get; set; }
 
@@ -55,13 +60,27 @@ namespace DineBook.Domain.Entities
         public void ChangePrice(decimal price)
         {
             EnsurePrice(price);
-
-            Price = price;
+            Price = Money.Create(price);
         }
 
         public void ChangeImage(string imageUrl) => ImageUrl = NormalizeImage(imageUrl);
 
-        public void SetAvailability(bool available) => IsAvailable = available;
+        public void SetAvailability(bool available)
+        {
+            DomainValidation<bool>.Ensure(IsDeleted).IsFalse("A removed menu item cannot be changed.");
+
+            IsAvailable = available;
+        }
+
+        // Soft delete: the item is hidden from the menu and can no longer be ordered
+        public void Remove()
+        {
+            if (IsDeleted)
+                return;
+
+            DeletedAt = DateTimeOffset.UtcNow;
+            IsAvailable = false;
+        }
 
         internal void SetCategoryName(string categoryName) => Category = categoryName;
 

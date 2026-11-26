@@ -45,17 +45,19 @@ namespace DineBook.Application.Services
                 .ToDictionaryAsync(m => m.Id, ct);
 
             var order = new Orders();
+
+            // The booking checks that it still accepts food and sets the order's restaurant and reservation.
+            // This must run before the items are added, because Orders.AddOrderItem checks each item
+            // against the order's restaurant.
+            reservation.AddFoodOrder(order, _reservations.LocalNow());
+
             foreach (var request in merged)
             {
                 if (!menu.TryGetValue(request.MenuItemId, out var item))
-                {
                     throw new DomainException("One or more selected menu items are unavailable.");
-                }
+
                 order.AddOrderItem(item, request.Quantity);
             }
-
-            // The booking checks that it still accepts food
-            reservation.AddFoodOrder(order, _reservations.LocalNow());
 
             _db.Orders.Add(order);
             await _db.SaveChangesAsync(ct);
@@ -68,28 +70,49 @@ namespace DineBook.Application.Services
             var reservation = await LoadBookingAsync(reservationCode, phone, ct);
 
             return await _db.Orders.AsNoTracking()
-                .Include(o => o.Items)
                 .Where(o => o.ReservationId == reservation.Id)
                 .Include(o => o.Items)
                 .OrderBy(o => o.CreatedDateTime)
                 .ToListAsync(ct);
         }
 
+        public async Task MarkServedAsync(long restaurantId, long orderId, CancellationToken ct = default)
+        {
+            var order = await LoadStaffOrderAsync(restaurantId, orderId, ct);
+
+            order.MarkServed();
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task CancelOrderAsync(long restaurantId, long orderId, CancellationToken ct = default)
+        {
+            var order = await LoadStaffOrderAsync(restaurantId, orderId, ct);
+
+            order.Cancel();
+            await _db.SaveChangesAsync(ct);
+        }
+
+        private async Task<Orders> LoadStaffOrderAsync(long restaurantId, long orderId, CancellationToken ct) =>
+            await _db.Orders.Include(o => o.Payments)
+                .FirstOrDefaultAsync(o => o.Id == orderId && o.RestaurantId == restaurantId, ct)
+            ?? throw new DomainException("Order not found.");
+
         private async Task<Reservation> LoadBookingAsync(string code, string phone, CancellationToken ct)
         {
-            var normalizedCode = (code ?? string.Empty).Trim();
+            var normalizedCode = (code ?? string.Empty).Trim().ToUpperInvariant();
             var normalizedPhone = ApplicationUser.NormalizePhone(phone);
 
             if (string.IsNullOrWhiteSpace(normalizedCode) || string.IsNullOrWhiteSpace(normalizedPhone))
                 throw new DomainException("We could not find a booking with those details.");
 
-            var reservation = await _reservations.FindByCodeAsync(code, ct);
+            // The customer is needed to check the phone number. FindByCodeAsync does not load it.
+            var reservation = await _db.Reservations.AsNoTracking()
+                .Include(r => r.Customer)
+                .FirstOrDefaultAsync(r => r.Code == normalizedCode, ct);
 
             // Same message for an unknown code and a wrong phone, so the code alone reveals nothing
             if (reservation?.Customer is null || reservation.Customer.Phone != normalizedPhone)
-            {
                 throw new DomainException("We could not find a booking with those details.");
-            }
 
             return reservation;
         }

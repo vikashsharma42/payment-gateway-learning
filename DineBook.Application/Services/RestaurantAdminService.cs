@@ -27,13 +27,17 @@ namespace DineBook.Application.Services
             if (await _db.Restaurants.AnyAsync(r => r.Name == name, ct))
                 throw new DomainException("A restaurant with this name already exists.");
 
-            // Address and time rules are checked by the domain objects below
+            // Name, address and time rules are checked by the domain objects
             var restaurant = new Restaurant(name, request.OpensAt, request.ClosesAt);
-            if (await _db.Restaurants.AnyAsync(r => r.Slug == restaurant.Slug, ct))
+
+            // The URL slug must be unique. If the name's slug is taken, use the next free number ("spice-garden-2").
+            var baseSlug = restaurant.Slug;
+            var slug = baseSlug;
+            for (var number = 2; await _db.Restaurants.AnyAsync(r => r.Slug == slug, ct); number++)
             {
-                throw new DomainException("A restaurant with this URL slug already exists. " +
-                    "The current Domain model does not support assigning a unique slug.");
+                slug = RestaurantSlug.WithSuffix(baseSlug, number);
             }
+            restaurant.UseSlug(slug);
 
             var address = CreateAddress(request.Street, request.City, request.State, request.Country, request.ZipCode);
             restaurant.AddLocation(new Location(request.LocationName, address, request.Phone));
@@ -59,15 +63,17 @@ namespace DineBook.Application.Services
         {
             var restaurant = await LoadRestaurantAsync(restaurantId, ct);
 
-            var location = restaurant.Locations
-              .FirstOrDefault(l => l.Id == locationId)
-              ?? throw new DomainException("Location not found.");
+            restaurant.SetLocationActive(locationId, active);
+            await _db.SaveChangesAsync(ct);
+        }
 
-            if (location.IsActive == active)
-                return;
+        public async Task UpdateDetailsAsync(long restaurantId, string phone, string description, CancellationToken ct = default)
+        {
+            var restaurant = await _db.Restaurants.FirstOrDefaultAsync(r => r.Id == restaurantId, ct)
+                ?? throw new DomainException("Restaurant not found.");
 
-            //TODO: The domain model currently does not support changing the status of a location. This is a limitation that needs to be addressed in the future.
-            throw new DomainException("Changing location status is not supported by the current Domain model.");
+            restaurant.UpdateDetails(phone, description);
+            await _db.SaveChangesAsync(ct);
         }
 
         public async Task UpdateChargesAsync(long restaurantId, decimal taxPercent, decimal systemAccessFee, CancellationToken ct = default)
@@ -83,8 +89,8 @@ namespace DineBook.Application.Services
         {
             var restaurant = await LoadRestaurantAsync(restaurantId, ct);
 
-            // The domain rejects duplicate labels, bad capacities and closed locations
-            var table = new Table(label, capacity, string.Empty);
+            // The domain checks the location, the label and the capacity
+            var table = new Table(label, capacity);
             restaurant.AddTable(locationId, table);
             await _db.SaveChangesAsync(ct);
 
@@ -115,8 +121,8 @@ namespace DineBook.Application.Services
         public async Task<IReadOnlyList<MenuItem>> GetMenuAsync(long restaurantId, CancellationToken ct = default)
         {
             return await _db.MenuItems.AsNoTracking()
-                .Where(m => m.RestaurantId == restaurantId)
-                .OrderBy(m => m.Category)
+                .Where(m => m.RestaurantId == restaurantId && m.DeletedAt == null)
+                .OrderBy(m => m.MenuCategory.Name)
                 .ThenBy(m => m.Name)
                 .ToListAsync(ct);
         }
@@ -138,6 +144,7 @@ namespace DineBook.Application.Services
                 menuCategory = new MenuCategory(categoryName);
                 restaurant.AddMenuCategory(menuCategory);
 
+                // Saved first so the category has its id
                 await _db.SaveChangesAsync(ct);
             }
 
@@ -160,10 +167,9 @@ namespace DineBook.Application.Services
         {
             var item = await FindMenuItemAsync(menuItemId, ct);
 
-            item.SetAvailability(false);
+            item.Remove();
             await _db.SaveChangesAsync(ct);
         }
-
 
         private static Address CreateAddress(string street, string city, string state, string country, string zipCode) =>
             Address.Create(street, city, state, country, zipCode);

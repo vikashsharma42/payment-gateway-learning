@@ -30,6 +30,12 @@ namespace DineBook.Application.Services
 
         public async Task<ApplicationUser> RegisterCustomerAsync(CustomerRegistrationRequest request, CancellationToken ct = default)
         {
+            // A customer registers with one active restaurant and can then book at any of its locations
+            var restaurantOpen = await _db.Restaurants.AnyAsync(
+                r => r.Id == request.RestaurantId && r.Status == RestaurantStatus.Active, ct);
+            if (!restaurantOpen)
+                throw new DomainException("Choose a restaurant to register with.");
+
             var email = ApplicationUser.NormalizeEmail(request.Email);
             await EnsureEmailFreeAsync(email, ct);
 
@@ -39,7 +45,14 @@ namespace DineBook.Application.Services
             if (await _db.Users.AnyAsync(u => u.Phone == phone, ct))
                 throw new DomainException("An account already exists for this phone number.");
 
-            var user = new ApplicationUser(email, _hasher.Hash(request.Password), request.FirstName, request.LastName, UserRole.Customer, phone);
+            var user = new ApplicationUser(
+                email,
+                _hasher.Hash(request.Password),
+                request.FirstName,
+                request.LastName,
+                UserRole.Customer,
+                phone,
+                request.RestaurantId);
 
             _db.Users.Add(user);
             await SaveAsync(ct);
@@ -56,16 +69,23 @@ namespace DineBook.Application.Services
             await EnsureEmailFreeAsync(email, ct);
 
             // Staff and managers must work at a restaurant. Admins are not tied to one.
-            var needsRestaurant = request.Role == UserRole.Staff || request.Role == UserRole.Manager;
-            if (needsRestaurant)
-            {
-                if (request.RestaurantId is null)
-                    throw new DomainException("Choose the restaurant for this staff member.");
-                if (!await _db.Restaurants.AnyAsync(r => r.Id == request.RestaurantId.Value, ct))
-                    throw new DomainException("Restaurant not found.");
-            }
+            long? restaurantId = request.Role == UserRole.Admin ? (long?)null : request.RestaurantId;
+            if (restaurantId is null && request.Role != UserRole.Admin)
+                throw new DomainException("Choose the restaurant for this staff member.");
 
-            var user = new ApplicationUser(email, _hasher.Hash(request.Password), request.FirstName, request.LastName, request.Role, phone: null);
+            if (restaurantId is not null && !await _db.Restaurants.AnyAsync(r => r.Id == restaurantId.Value, ct))
+                throw new DomainException("Restaurant not found.");
+
+            // Staff phone is optional, so it is not asked for here
+            var user = new ApplicationUser(
+                email,
+                _hasher.Hash(request.Password),
+                request.FirstName,
+                request.LastName,
+                request.Role,
+                phone: null,
+                restaurantId);
+
             _db.Users.Add(user);
             await SaveAsync(ct);
 

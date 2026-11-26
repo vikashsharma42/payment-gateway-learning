@@ -21,7 +21,7 @@ namespace DineBook.Application.Services
         public async Task<IReadOnlyList<MenuItem>> GetAvailableItemsAsync(long restaurantId, CancellationToken ct = default)
         {
             return await _db.MenuItems.AsNoTracking()
-                .Where(m => m.RestaurantId == restaurantId && m.IsAvailable)
+                .Where(m => m.RestaurantId == restaurantId && m.IsAvailable && m.DeletedAt == null)
                 .OrderBy(m => m.MenuCategory.Name)
                 .ThenBy(m => m.Name)
                 .ToListAsync(ct);

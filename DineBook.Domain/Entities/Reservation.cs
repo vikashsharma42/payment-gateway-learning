@@ -7,25 +7,35 @@ using System.Collections.Generic;
 namespace DineBook.Domain.Entities
 {
     // One table booking, identified by a short code. It holds a table for its duration and collects the food ordered for it.
+    // The guest's name, phone and email are read from the customer account, not copied here.
     public class Reservation : Entity, IAuditableEntity
     {
         public const int CodeLength = 8;
         public const int MinDurationMinutes = 30;
         public const int MaxSpecialRequestsLength = 200;
 
+        // The customer must be a saved Customer account. Restaurant.AddReservation checks it is registered with that restaurant.
         public Reservation(
             string code,
+            ApplicationUser customer,
             int guests,
             DateTime startsAt,
             int durationMinutes,
             string specialRequests)
         {
+            DomainValidation<ApplicationUser>.Ensure(customer, nameof(customer)).IsNotNull();
+            DomainValidation<bool>.Ensure(customer.Role == UserRole.Customer).IsTrue("Only customers can book a table.");
+            DomainValidation<bool>.Ensure(customer.IsActive).IsTrue("This account is inactive.");
+            DomainValidation<long>.Ensure(customer.Id, nameof(customer)).IsGreaterThan(0, "Save the customer before booking.");
+
             DomainValidation<string>.Ensure(code).HasLength(CodeLength, "Booking code must be 8 characters.");
             DomainValidation<int>.Ensure(guests).IsGreaterThanOrEqualTo(1, "At least one guest is required.");
             DomainValidation<int>.Ensure(durationMinutes).IsGreaterThanOrEqualTo(MinDurationMinutes, "A booking must last at least 30 minutes.");
             DomainValidation<string>.Ensure(specialRequests ?? string.Empty, nameof(specialRequests)).HasMaxLength(MaxSpecialRequestsLength, "Special requests can be at most 200 characters.");
 
             Code = code;
+            Customer = customer;
+            ApplicationUserId = customer.Id;
             Guests = guests;
             StartsAt = startsAt;
             DurationMinutes = durationMinutes;
@@ -63,6 +73,13 @@ namespace DineBook.Domain.Entities
 
         public DateTime EndsAt => StartsAt.AddMinutes(DurationMinutes);
 
+        // Guest details come from the customer account
+        public string CustomerName => Customer?.FullName;
+
+        public string CustomerPhone => Customer?.Phone;
+
+        public string CustomerEmail => Customer?.Email;
+
         public virtual Restaurant Restaurant { get; private set; }
 
         public virtual ApplicationUser Customer { get; private set; }
@@ -78,6 +95,8 @@ namespace DineBook.Domain.Entities
 
         public void MarkNoShow() => MoveFrom(ReservationStatus.Confirmed, ReservationStatus.NoShow, "Only confirmed reservations can be marked as no-show.");
 
+        public void Cancel() => MoveFrom(ReservationStatus.Confirmed, ReservationStatus.Cancelled, "Only confirmed reservations can be cancelled.");
+
         // Food can be ordered while the booking is still active (confirmed or seated, before it ends)
         public bool AcceptsFoodOrders(DateTime nowLocal) =>
             (Status == ReservationStatus.Confirmed || Status == ReservationStatus.Seated) && nowLocal < EndsAt;
@@ -91,13 +110,6 @@ namespace DineBook.Domain.Entities
             order.RestaurantId = RestaurantId;
             order.ReservationId = Id;
             _foodOrders.Add(order);
-        }
-
-        // Called by Customer.AddReservation. A new customer has Id 0 until saved; EF fixes the key from the navigation.
-        internal void AssignCustomer(ApplicationUser customer)
-        {
-            Customer = customer;
-            ApplicationUserId = customer.Id;
         }
 
         private void MoveFrom(ReservationStatus expected, ReservationStatus next, string message)

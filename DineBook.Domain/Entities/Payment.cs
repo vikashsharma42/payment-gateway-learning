@@ -1,7 +1,7 @@
-
 using DineBook.Domain.Abstractions;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Validation;
+using DineBook.Domain.ValueObjects;
 using System;
 
 namespace DineBook.Domain.Entities
@@ -23,12 +23,11 @@ namespace DineBook.Domain.Entities
         {
             DomainValidation<Orders>.Ensure(order).IsNotNull();
             DomainValidation<long>.Ensure(order.Id).IsGreaterThan(0);
-            DomainValidation<bool>.Ensure(order.Status != OrderStatus.Cancelled)
-                .IsTrue("A cancelled order cannot be paid.");
+            DomainValidation<bool>.Ensure(order.Status != OrderStatus.Cancelled).IsTrue("A cancelled order cannot be paid.");
             DomainValidation<bool>.Ensure(order.IsPaid).IsFalse("This order has already been paid.");
 
             var amount = order.Total();
-            DomainValidation<decimal>.Ensure(amount).IsGreaterThan(0);
+            DomainValidation<decimal>.Ensure(amount.Amount).IsGreaterThan(0);
             DomainValidation<string>.Ensure(gatewayOrderId).IsNotNullOrWhiteSpace();
             DomainValidation<string>.Ensure(paymentSessionId).IsNotNullOrWhiteSpace();
             DomainValidation<string>.Ensure(idempotencyKey).IsNotNullOrWhiteSpace();
@@ -48,7 +47,7 @@ namespace DineBook.Domain.Entities
 
         public Guid PublicId { get; private set; }
 
-        public decimal Amount { get; private set; }
+        public Money Amount { get; private set; }
 
         public string GatewayOrderId { get; private set; }
 
@@ -73,12 +72,13 @@ namespace DineBook.Domain.Entities
 
         public virtual Orders Order { get; private set; }
 
+        // Returns false when already paid. A failed attempt can still be confirmed paid, because the gateway is the source of truth.
         public bool MarkAsPaid()
         {
             if (Status == PaymentStatus.Paid)
                 return false;
 
-            DomainValidation<PaymentStatus>.Ensure(Status).IsEqualTo(PaymentStatus.Pending);
+            DomainValidation<PaymentStatus>.Ensure(Status).IsNotEqualTo(PaymentStatus.Refunded);
             Status = PaymentStatus.Paid;
             return true;
         }

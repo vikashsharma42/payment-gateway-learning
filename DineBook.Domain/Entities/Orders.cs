@@ -1,6 +1,7 @@
 using DineBook.Domain.Abstractions;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Validation;
+using DineBook.Domain.ValueObjects;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,7 +9,7 @@ using System.Linq;
 namespace DineBook.Domain.Entities
 {
     // Food ordered for one reservation (a restaurant order). One order can hold many items.
-    // Added through Reservation.AddFoodOrder.
+    // Added through Reservation.AddFoodOrder, which must run before any item is added.
     public class Orders : Entity, IAuditableEntity
     {
         public Orders()
@@ -40,23 +41,25 @@ namespace DineBook.Domain.Entities
         private readonly List<Payment> _payments = [];
         public IReadOnlyCollection<Payment> Payments => _payments.AsReadOnly();
 
-
-        public decimal Total() => _items.Sum(i => i.LineTotal());
+        public Money Total() => _items.Aggregate(Money.Zero(), (sum, item) => sum.Add(item.LineTotal()));
 
         // True once a payment for this order has succeeded. Needs Payments to be loaded.
         public bool IsPaid => _payments.Any(p => p.Status == PaymentStatus.Paid);
 
+        // The order must already belong to a booking (see Reservation.AddFoodOrder).
         // The dish must be available and on this order's restaurant menu. Each dish appears at most once,
         // with 1 to 20 units. The name and price are copied from the menu item.
         public void AddOrderItem(MenuItem menuItem, int quantity)
         {
             DomainValidation<MenuItem>.Ensure(menuItem, "Item").IsNotNull();
+            DomainValidation<long>.Ensure(RestaurantId, nameof(RestaurantId)).IsGreaterThan(0, "Attach the order to a booking first.");
 
             DomainValidation<long>.Ensure(menuItem.RestaurantId, nameof(menuItem)).IsEqualTo(RestaurantId);
             DomainValidation<bool>.Ensure(menuItem.IsAvailable).IsTrue($"{menuItem.Name} is not available right now.");
+            DomainValidation<bool>.Ensure(menuItem.IsDeleted).IsFalse($"{menuItem.Name} is no longer on the menu.");
             DomainValidation<bool>.Ensure(_items.Any(i => i.MenuItemId == menuItem.Id)).IsFalse("Each item can appear only once in an order.");
             DomainValidation<int>.Ensure(quantity).IsBetween(1, 20, $"Quantity for {menuItem.Name} must be between 1 and 20.");
-            DomainValidation<int>.Ensure(_items.Count).IsLessThanOrEqualTo(29, $"An order can have at most 30 different items.");
+            DomainValidation<int>.Ensure(_items.Count).IsLessThanOrEqualTo(29, "An order can have at most 30 different items.");
 
             var item = new OrderItem(menuItem.Name, menuItem.Price, quantity);
             item.MenuItemId = menuItem.Id;

@@ -29,6 +29,7 @@ namespace DineBook.Domain.Entities
         public string Phone { get; private set; }
 
         // Inactive locations are hidden from staff switching. Their tables stay for past bookings.
+        // Changed through Restaurant.SetLocationActive, which keeps at least one location open.
         public bool IsActive { get; private set; }
 
         public DateTimeOffset CreatedDateTime { get; set; }
@@ -43,5 +44,16 @@ namespace DineBook.Domain.Entities
 
         private readonly List<Table> _tables = [];
         public virtual IReadOnlyCollection<Table> Tables => _tables.AsReadOnly();
+
+        internal void Activate() => IsActive = true;
+
+        internal void Deactivate() => IsActive = false;
+
+        // Called by Restaurant.AddTable, which has already checked the table's rules
+        internal void AddTable(Table table)
+        {
+            DomainValidation<Table>.Ensure(table).IsNotNull();
+            _tables.Add(table);
+        }
     }
 }

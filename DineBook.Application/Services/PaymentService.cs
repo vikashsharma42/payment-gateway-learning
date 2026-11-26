@@ -130,7 +130,7 @@ namespace DineBook.Application.Services
                 return ToResult(pending);
 
             var session = await _gateway.CreateOrderAsync(
-                order.Total(),
+                order.Total().Amount,
                 $"cust_{Guid.NewGuid():N}",
                 customerEmail,
                 customerPhone,
@@ -164,7 +164,7 @@ namespace DineBook.Application.Services
 
             _logger.LogInformation(
                 "Payment {GatewayOrderId} created for order {OrderId} (amount {Amount})",
-                payment.GatewayOrderId, orderId, payment.Amount);
+                payment.GatewayOrderId, orderId, payment.Amount.Amount);
 
             return ToResult(payment);
         }
@@ -221,11 +221,11 @@ namespace DineBook.Application.Services
             }
 
             // The signature proves Cashfree sent it, not that the customer paid the right amount
-            if (paidAmount != payment.Amount)
+            if (paidAmount != payment.Amount.Amount)
             {
                 _logger.LogError(
                     "Amount mismatch for payment {GatewayOrderId}: expected {Expected}, webhook reported {Paid}",
-                    gatewayOrderId, payment.Amount, paidAmount);
+                    gatewayOrderId, payment.Amount.Amount, paidAmount);
                 return true; // signed, but never mark paid
             }
 
@@ -251,7 +251,7 @@ namespace DineBook.Application.Services
             _logger.LogInformation("Payment {GatewayOrderId} marked paid", gatewayOrderId);
 
             await SendEmailSafelyAsync(
-                new PaymentReceivedEmailModel(payment.CustomerEmail, payment.GatewayOrderId, payment.Amount), ct);
+                new PaymentReceivedEmailModel(payment.CustomerEmail, payment.GatewayOrderId, payment.Amount.Amount), ct);
 
             return true;
         }
@@ -279,7 +279,7 @@ namespace DineBook.Application.Services
             try
             {
                 result = await _gateway.CreateRefundAsync(
-                    payment.GatewayOrderId, refundId, payment.Amount, "Refund issued by merchant", ct);
+                    payment.GatewayOrderId, refundId, payment.Amount.Amount, "Refund issued by merchant", ct);
             }
             catch (InvalidOperationException)
             {
@@ -295,7 +295,7 @@ namespace DineBook.Application.Services
                     _logger.LogInformation("Payment {GatewayOrderId} refunded (refund {RefundId})", gatewayOrderId, refundId);
 
                     await SendEmailSafelyAsync(
-                        new RefundIssuedEmailModel(payment.CustomerEmail, payment.GatewayOrderId, payment.Amount), ct);
+                        new RefundIssuedEmailModel(payment.CustomerEmail, payment.GatewayOrderId, payment.Amount.Amount), ct);
                 }
 
                 return payment;
@@ -327,6 +327,6 @@ namespace DineBook.Application.Services
         }
 
         private static PaymentOrderResult ToResult(Payment payment) =>
-            new PaymentOrderResult(payment.GatewayOrderId, payment.PaymentSessionId, payment.Amount, "INR");
+            new PaymentOrderResult(payment.GatewayOrderId, payment.PaymentSessionId, payment.Amount.Amount, payment.Amount.Currency);
     }
 }

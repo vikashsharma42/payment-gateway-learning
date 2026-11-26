@@ -113,6 +113,9 @@ namespace DineBook.Application.Services
             var restaurant = await GetRestaurantAsync(request.RestaurantId, ct)
                 ?? throw new DomainException("Restaurant not found.");
 
+            var customer = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.CustomerId, ct)
+                ?? throw new DomainException("Account not found. Please sign in again.");
+
             ReservationRules.EnsureBookable(restaurant, policy, request.Guests, request.StartsAt, LocalNow());
 
             Reservation reservation = null;
@@ -141,15 +144,16 @@ namespace DineBook.Application.Services
                     policy.DurationMinutes)
                     ?? throw new DomainException("No table is free at that time for this party size.");
 
-
                 var newReservation = new Reservation(
                     await NewCodeAsync(ct),
+                    customer,
                     request.Guests,
                     request.StartsAt,
                     policy.DurationMinutes,
                     request.SpecialRequests);
 
-                restaurant.AddReservation(table.Id, reservation);
+                // The restaurant checks the table and that the customer is registered with it
+                restaurant.AddReservation(table.Id, newReservation);
 
                 _db.Reservations.Add(newReservation);
 
@@ -164,8 +168,8 @@ namespace DineBook.Application.Services
             // Sent only after the booking is saved
             await SendSafelyAsync(
                 new ReservationConfirmedEmailModel(
-                    request.CustomerEmail,
-                    request.CustomerName,
+                    reservation.CustomerEmail,
+                    reservation.CustomerName,
                     restaurant.Name,
                     reservation.Code,
                     reservation.StartsAt,
@@ -183,26 +187,48 @@ namespace DineBook.Application.Services
 
         public async Task<Reservation> CancelAsync(string code, string phone, CancellationToken ct = default)
         {
-            var normalized = (code ?? string.Empty).Trim().ToUpperInvariant();
-            var reservation = await _db.Reservations.FirstOrDefaultAsync(r => r.Code == normalized, ct)
-                ?? throw new DomainException("We could not find a booking with that code.");
+            var normalizedCode = (code ?? string.Empty).Trim().ToUpperInvariant();
+            var normalizedPhone = ApplicationUser.NormalizePhone(phone);
 
-            //reservation.Cancel(phone);
-            //await _db.SaveChangesAsync(ct);
+            var reservation = await _db.Reservations.Include(r => r.Customer)
+                .FirstOrDefaultAsync(r => r.Code == normalizedCode, ct)
+                ?? throw new DomainException("We could not find a booking with those details.");
 
-            //var restaurantName = await _db.Restaurants.AsNoTracking()
-            //    .Where(r => r.Id == reservation.RestaurantId)
-            //    .Select(r => r.Name)
-            //    .FirstOrDefaultAsync(ct);
+            // Same message for an unknown code and a wrong phone
+            if (reservation.Customer?.Phone != normalizedPhone)
+                throw new DomainException("We could not find a booking with those details.");
 
-            //await SendSafelyAsync(new ReservationCancelledEmailModel(
-            //    reservation.CustomerEmail,
-            //    reservation.CustomerName,
-            //    restaurantName ?? "your restaurant",
-            //    reservation.Code,
-            //    reservation.StartsAt), ct);
+            reservation.Cancel();
+            await _db.SaveChangesAsync(ct);
 
             return reservation;
+        }
+
+        public Task SeatAsync(long restaurantId, long reservationId, CancellationToken ct = default) =>
+            ChangeStatusAsync(restaurantId, reservationId, r =>
+            {
+                r.Seat();
+                r.Table.Occupy();
+            }, ct);
+
+        public Task CompleteAsync(long restaurantId, long reservationId, CancellationToken ct = default) =>
+            ChangeStatusAsync(restaurantId, reservationId, r =>
+            {
+                r.Complete();
+                r.Table.Release();
+            }, ct);
+
+        public Task MarkNoShowAsync(long restaurantId, long reservationId, CancellationToken ct = default) =>
+            ChangeStatusAsync(restaurantId, reservationId, r => r.MarkNoShow(), ct);
+
+        private async Task ChangeStatusAsync(long restaurantId, long reservationId, Action<Reservation> change, CancellationToken ct)
+        {
+            var reservation = await _db.Reservations.Include(r => r.Table)
+                .FirstOrDefaultAsync(r => r.Id == reservationId && r.RestaurantId == restaurantId, ct)
+                ?? throw new DomainException("Booking not found.");
+
+            change(reservation);
+            await _db.SaveChangesAsync(ct);
         }
 
         private Task<List<Reservation>> LoadBlockingAsync(

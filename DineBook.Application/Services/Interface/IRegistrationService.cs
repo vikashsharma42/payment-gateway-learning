@@ -13,7 +13,7 @@ namespace DineBook.Application.Services.Interface
     public interface IRegistrationService
     {
         /// <summary>
-        /// Creates a Customer account, links it to a guest record (matched by phone), and signs the user in.
+        /// Creates a Customer account registered with one restaurant, and signs the user in.
         /// </summary>
         Task<ApplicationUser> RegisterCustomerAsync(CustomerRegistrationRequest request, CancellationToken ct = default);
 
@@ -26,12 +26,14 @@ namespace DineBook.Application.Services.Interface
         Task<bool> IsEmailAvailableAsync(string email, CancellationToken ct = default);
     }
 
+    /// <summary>RestaurantId is the restaurant the customer registers with. They can then book at any of its locations.</summary>
     public sealed record CustomerRegistrationRequest(
         string FirstName,
         string LastName,
         string Email,
         string Phone,
-        string Password);
+        string Password,
+        long RestaurantId);
 
     public sealed record StaffUserRequest(
         string FirstName,

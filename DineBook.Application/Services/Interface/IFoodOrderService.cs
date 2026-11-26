@@ -17,6 +17,12 @@ namespace DineBook.Application.Services.Interface
             CancellationToken ct = default);
 
         Task<IReadOnlyList<Orders>> GetOrdersAsync(string reservationCode, string phone, CancellationToken ct = default);
+
+        /// <summary>Staff: the order has been delivered to the table.</summary>
+        Task MarkServedAsync(long restaurantId, long orderId, CancellationToken ct = default);
+
+        /// <summary>Staff: cancels a placed, unpaid order.</summary>
+        Task CancelOrderAsync(long restaurantId, long orderId, CancellationToken ct = default);
     }
 
     public sealed record OrderItemRequest(long MenuItemId, int Quantity);

@@ -19,6 +19,9 @@ namespace DineBook.Application.Services.Interface
         /// <summary>Closes or reopens a location for staff. The last open location cannot be closed.</summary>
         Task SetLocationActiveAsync(long restaurantId, long locationId, bool active, CancellationToken ct = default);
 
+        /// <summary>Contact phone and description shown to customers.</summary>
+        Task UpdateDetailsAsync(long restaurantId, string phone, string description, CancellationToken ct = default);
+
         /// <summary>Sets the GST percent and system access fee that the bills of this restaurant use.</summary>
         Task UpdateChargesAsync(long restaurantId, decimal taxPercent, decimal systemAccessFee, CancellationToken ct = default);
 
