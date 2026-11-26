@@ -59,24 +59,7 @@
                 <span asp-validation-for="StartsAt" class="text-danger small"></span>
             </fieldset>
 
-            <div class="mb-3">
-                <label asp-for="CustomerName" class="form-label"></label>
-                <input asp-for="CustomerName" class="form-control" autocomplete="name" />
-                <span asp-validation-for="CustomerName" class="text-danger small"></span>
-            </div>
-
-            <div class="row g-3 mb-3">
-                <div class="col-sm-6">
-                    <label asp-for="CustomerPhone" class="form-label"></label>
-                    <input asp-for="CustomerPhone" type="tel" class="form-control" autocomplete="tel" inputmode="tel" />
-                    <span asp-validation-for="CustomerPhone" class="text-danger small"></span>
-                </div>
-                <div class="col-sm-6">
-                    <label asp-for="CustomerEmail" class="form-label"></label>
-                    <input asp-for="CustomerEmail" type="email" class="form-control" autocomplete="email" />
-                    <span asp-validation-for="CustomerEmail" class="text-danger small"></span>
-                </div>
-            </div>
+            <p class="mb-4">Booking in the name of <strong>@Model.BookingName</strong>. Your phone number and email come from your account.</p>
 
             <div class="mb-4">
                 <label asp-for="SpecialRequests" class="form-label"></label>

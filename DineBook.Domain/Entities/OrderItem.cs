@@ -9,7 +9,13 @@ namespace DineBook.Domain.Entities
     // Added through Orders.AddOrderItem.
     public class OrderItem : Entity, IAuditableEntity
     {
-        public OrderItem(string itemName, Money unitPrice, int quantity)
+        // Used by EF Core when loading. Validation runs only in the public constructor.
+        private OrderItem()
+        {
+        }
+
+        // imageUrl is copied from the menu item, so the order history keeps the photo if the menu changes
+        public OrderItem(string itemName, Money unitPrice, int quantity, string imageUrl = null)
         {
             DomainValidation<string>.Ensure(itemName, "Item name").IsNotNullOrWhiteSpace();
             DomainValidation<Money>.Ensure(unitPrice, "Unit price").IsNotNull();
@@ -19,6 +25,7 @@ namespace DineBook.Domain.Entities
             ItemName = itemName.Trim();
             UnitPrice = unitPrice;
             Quantity = quantity;
+            ImageUrl = NormalizeImage(imageUrl);
         }
 
         public long OrderId { get; internal set; }
@@ -30,6 +37,8 @@ namespace DineBook.Domain.Entities
         public Money UnitPrice { get; private set; }
 
         public int Quantity { get; private set; }
+
+        public string ImageUrl { get; private set; }
 
         public DateTimeOffset CreatedDateTime { get; set; }
 
@@ -44,5 +53,13 @@ namespace DineBook.Domain.Entities
         public virtual MenuItem MenuItem { get; private set; }
 
         public Money LineTotal() => UnitPrice.Multiply(Quantity);
+
+        private static string NormalizeImage(string imageUrl)
+        {
+            var value = (imageUrl ?? string.Empty).Trim();
+            DomainValidation<string>.Ensure(value, nameof(imageUrl)).HasMaxLength(50);
+
+            return value.Length == 0 ? null : value;
+        }
     }
 }

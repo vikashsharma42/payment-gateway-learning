@@ -1,5 +1,6 @@
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
+using DineBook.Domain.Exceptions;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -128,18 +129,33 @@ namespace DineBook.Web.Pages.Admin.Restaurants
                 return await ReloadAsync(ct);
             }
 
-            var location = await _admin.AddLocationAsync(Id, new AddLocationRequest(
-                NewLocationName, NewLocationStreet, NewLocationCity, NewLocationState,
-                NewLocationCountry, NewLocationZipCode, NewLocationPhone), ct);
+            try
+            {
+                var location = await _admin.AddLocationAsync(Id, new AddLocationRequest(
+                    NewLocationName, NewLocationStreet, NewLocationCity, NewLocationState,
+                    NewLocationCountry, NewLocationZipCode, NewLocationPhone), ct);
 
-            ToastSuccess($"{location.Name} added. Add its tables next.");
-            return RedirectToPage(new { id = Id, locationId = location.Id });
+                ToastSuccess($"{location.Name} added. Add its tables next.");
+                return RedirectToPage(new { id = Id, locationId = location.Id });
+            }
+            catch (DomainException ex)
+            {
+                ToastError(ex.Message);
+                return await ReloadAsync(ct);
+            }
         }
 
         public async Task<IActionResult> OnPostSetLocationActiveAsync(long targetLocationId, bool active, CancellationToken ct)
         {
-            await _admin.SetLocationActiveAsync(Id, targetLocationId, active, ct);
-            ToastSuccess(active ? "Location reopened." : "Location closed for staff and new bookings.");
+            try
+            {
+                await _admin.SetLocationActiveAsync(Id, targetLocationId, active, ct);
+                ToastSuccess(active ? "Location reopened." : "Location closed for staff and new bookings.");
+            }
+            catch (DomainException ex)
+            {
+                ToastError(ex.Message);
+            }
 
             return RedirectToPage(new { id = Id, locationId = targetLocationId });
         }
@@ -156,8 +172,15 @@ namespace DineBook.Web.Pages.Admin.Restaurants
                 return await ReloadAsync(ct);
             }
 
-            await _admin.AddTableAsync(Id, LocationId, TableLabel.Trim(), TableCapacity, ct);
-            ToastSuccess($"Table {TableLabel.Trim()} added.");
+            try
+            {
+                await _admin.AddTableAsync(Id, LocationId, TableLabel.Trim(), TableCapacity, ct);
+                ToastSuccess($"Table {TableLabel.Trim()} added.");
+            }
+            catch (DomainException ex)
+            {
+                ToastError(ex.Message);
+            }
 
             return RedirectToPage(new { id = Id, locationId = LocationId });
         }
@@ -173,8 +196,15 @@ namespace DineBook.Web.Pages.Admin.Restaurants
                 return await ReloadAsync(ct);
             }
 
-            await _admin.AddMenuItemAsync(Id, ItemName, ItemDescription, ItemCategory, ItemPrice, ct);
-            ToastSuccess($"{ItemName.Trim()} added to the menu.");
+            try
+            {
+                await _admin.AddMenuItemAsync(Id, ItemName, ItemDescription, ItemCategory, ItemPrice, ct);
+                ToastSuccess($"{ItemName.Trim()} added to the menu.");
+            }
+            catch (DomainException ex)
+            {
+                ToastError(ex.Message);
+            }
 
             return RedirectToPage(new { id = Id, locationId = LocationId });
         }
@@ -185,16 +215,30 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             RemoveTableFormErrors();
             RemoveLocationFormErrors();
 
-            await _admin.UpdateChargesAsync(Id, TaxPercent, SystemAccessFee, ct);
-            ToastSuccess("Charges saved. New bills at this restaurant use these rates.");
+            try
+            {
+                await _admin.UpdateChargesAsync(Id, TaxPercent, SystemAccessFee, ct);
+                ToastSuccess("Charges saved. New bills at this restaurant use these rates.");
+            }
+            catch (DomainException ex)
+            {
+                ToastError(ex.Message);
+            }
 
             return RedirectToPage(new { id = Id, locationId = LocationId });
         }
 
         public async Task<IActionResult> OnPostToggleItemAsync(long itemId, bool available, CancellationToken ct)
         {
-            await _admin.SetMenuItemAvailabilityAsync(itemId, available, ct);
-            ToastSuccess(available ? "Item is available again." : "Item hidden from customers.");
+            try
+            {
+                await _admin.SetMenuItemAvailabilityAsync(itemId, available, ct);
+                ToastSuccess(available ? "Item is available again." : "Item hidden from customers.");
+            }
+            catch (DomainException ex)
+            {
+                ToastError(ex.Message);
+            }
 
             return RedirectToPage(new { id = Id, locationId = LocationId });
         }
@@ -243,8 +287,7 @@ namespace DineBook.Web.Pages.Admin.Restaurants
 
             SelectedTables = SelectedLocation is null
                 ? Array.Empty<Table>()
-                : Restaurant.Tables.Where(t => t.LocationId == SelectedLocation.Id)
-                    .OrderBy(t => t.Label).ToList();
+                : Restaurant.TablesAt(SelectedLocation.Id).OrderBy(t => t.Label).ToList();
 
             Menu = await _admin.GetMenuAsync(Id, ct);
             return true;

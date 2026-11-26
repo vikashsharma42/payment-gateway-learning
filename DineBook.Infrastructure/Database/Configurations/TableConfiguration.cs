@@ -9,6 +9,8 @@ namespace DineBook.Infrastructure.Database.Configurations
         public void Configure(EntityTypeBuilder<Table> builder)
         {
             builder.ToTable(nameof(Table));
+            builder.Property(x => x.Label).HasMaxLength(20).IsRequired();
+            builder.Property(x => x.Location).HasMaxLength(100).IsRequired();
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
 
             builder.Ignore(x => x.IsActive);
@@ -18,12 +20,11 @@ namespace DineBook.Infrastructure.Database.Configurations
                 .HasForeignKey(x => x.RestaurantId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            // A table is at one location. Deleting a location is blocked while it has tables.
             builder.HasOne<Location>()
-                .WithMany()
+                .WithMany(l => l.Tables)
                 .HasForeignKey(x => x.LocationId)
                 .OnDelete(DeleteBehavior.Restrict);
-
-            builder.HasQueryFilter(x => !x.IsDeleted);
 
             // Removed tables are soft-deleted: hidden everywhere, but kept for past bookings
             builder.HasQueryFilter(x => !x.IsDeleted);

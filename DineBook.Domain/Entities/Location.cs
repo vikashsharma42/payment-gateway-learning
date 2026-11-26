@@ -8,11 +8,18 @@ namespace DineBook.Domain.Entities
 {
     public class Location : Entity, IAuditableEntity
     {
+        public const int MaxPhoneLength = 15;
+
+        // Used by EF Core when loading. Validation runs only in the public constructor.
+        private Location()
+        {
+        }
+
         public Location(string name, Address address, string phone)
         {
             DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace("Location name is required.").HasMaxLength(100);
             DomainValidation<Address>.Ensure(address).IsNotNull();
-            DomainValidation<string>.Ensure(phone ?? string.Empty, nameof(phone)).HasMaxLength(15);
+            DomainValidation<string>.Ensure(phone ?? string.Empty, nameof(phone)).HasMaxLength(MaxPhoneLength);
 
             Name = name.Trim();
             Address = address;

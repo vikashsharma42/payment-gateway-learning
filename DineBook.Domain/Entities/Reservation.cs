@@ -14,6 +14,11 @@ namespace DineBook.Domain.Entities
         public const int MinDurationMinutes = 30;
         public const int MaxSpecialRequestsLength = 200;
 
+        // Used by EF Core when loading. Validation runs only in the public constructor.
+        private Reservation()
+        {
+        }
+
         // The customer must be a saved Customer account. Restaurant.AddReservation checks it is registered with that restaurant.
         public Reservation(
             string code,

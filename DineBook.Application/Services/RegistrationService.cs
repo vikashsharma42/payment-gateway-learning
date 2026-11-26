@@ -69,7 +69,7 @@ namespace DineBook.Application.Services
             await EnsureEmailFreeAsync(email, ct);
 
             // Staff and managers must work at a restaurant. Admins are not tied to one.
-            long? restaurantId = request.Role == UserRole.Admin ? (long?)null : request.RestaurantId;
+            var restaurantId = request.Role == UserRole.Admin ? (long?)null : request.RestaurantId;
             if (restaurantId is null && request.Role != UserRole.Admin)
                 throw new DomainException("Choose the restaurant for this staff member.");
 

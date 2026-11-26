@@ -9,16 +9,28 @@ namespace DineBook.Infrastructure.Database.Configurations
         public void Configure(EntityTypeBuilder<Restaurant> builder)
         {
             builder.ToTable(nameof(Restaurant));
+            builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            builder.Property(x => x.Slug).HasMaxLength(60).IsRequired();
+            builder.Property(x => x.Phone).HasMaxLength(Restaurant.MaxPhoneLength);
+            builder.Property(x => x.Description).HasMaxLength(Restaurant.MaxDescriptionLength);
+            builder.Property(x => x.TaxType).HasMaxLength(20).IsRequired();
+            builder.Property(x => x.TaxPercent).HasPrecision(5, 2);
+            builder.Property(x => x.SystemAccessFee).HasPrecision(18, 2);
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
 
-            // The relations themselves are defined on the dependent side (RestaurantLocation, RestaurantTable, MenuCategory, MenuItem, Reservation, Orders)
+            // Restaurant web address is unique
+            builder.HasIndex(x => x.Slug).IsUnique();
+
+            // The relations themselves are defined on the dependent side (Location, Table, MenuCategory, MenuItem, Reservation, Orders)
             builder.Navigation(nameof(Restaurant.Locations)).UsePropertyAccessMode(PropertyAccessMode.Field);
             builder.Navigation(nameof(Restaurant.Tables)).UsePropertyAccessMode(PropertyAccessMode.Field);
             builder.Navigation(nameof(Restaurant.MenuItems)).UsePropertyAccessMode(PropertyAccessMode.Field);
             builder.Navigation(nameof(Restaurant.MenuCategories)).UsePropertyAccessMode(PropertyAccessMode.Field);
+            builder.Navigation(nameof(Restaurant.Reservations)).UsePropertyAccessMode(PropertyAccessMode.Field);
 
-            // IsActive is computed from Status
+            // Computed from Status and the location list, not stored
             builder.Ignore(x => x.IsActive);
+            builder.Ignore(x => x.ActiveLocations);
         }
     }
 }

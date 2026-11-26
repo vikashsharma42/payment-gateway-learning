@@ -1,11 +1,13 @@
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
+using DineBook.Domain.Exceptions;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,7 +31,7 @@ namespace DineBook.Web.Pages.Admin.Users
         public IReadOnlyList<Restaurant> Restaurants { get; private set; } = new List<Restaurant>();
 
         public IEnumerable<SelectListItem> RestaurantOptions =>
-            Restaurants.Select(r => new SelectListItem(r.Name, r.Id));
+            Restaurants.Select(r => new SelectListItem(r.Name, r.Id.ToString(CultureInfo.InvariantCulture)));
 
         public string RestaurantNameFor(ApplicationUser user) =>
             user.RestaurantId is null
@@ -99,12 +101,22 @@ namespace DineBook.Web.Pages.Admin.Users
                 return Page();
             }
 
-            await _registration.CreateStaffUserAsync(new StaffUserRequest(
-                Input.FirstName, Input.LastName, Input.Email, Input.Password, Input.Role, Input.RestaurantId), ct);
+            try
+            {
+                await _registration.CreateStaffUserAsync(new StaffUserRequest(
+                    Input.FirstName, Input.LastName, Input.Email, Input.Password, Input.Role, Input.RestaurantId), ct);
 
-            ToastSuccess($"{Input.FirstName} {Input.LastName} was added as {Input.Role}.");
-            return RedirectToPage();
-
+                ToastSuccess($"{Input.FirstName} {Input.LastName} was added as {Input.Role}.");
+                return RedirectToPage();
+            }
+            catch (DomainException ex)
+            {
+                // Shown inside the popup, which is opened again with the error
+                ModelState.AddModelError(string.Empty, ex.Message);
+                await LoadAsync(ct);
+                ShowCreateModal = true;
+                return Page();
+            }
         }
 
         private async Task LoadAsync(CancellationToken ct)

@@ -1,32 +1,27 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Threading.Tasks;
 using DineBook.Application.Services.Interface;
-using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Admin
 {
+    // Shared sign-out for every signed-in user (header button and admin page)
     public class LogoutModel : PageModel
     {
-        private readonly IAccountService _accounts;
+        private readonly IWebAuthenticationService _authentication;
 
-        public LogoutModel(IAccountService accounts)
+        public LogoutModel(IWebAuthenticationService authentication)
         {
-            _accounts = accounts;
+            _authentication = authentication;
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            // Only a signed-in user has sessions to end. The cookies are cleared either way.
-            if (User.Identity?.IsAuthenticated == true)
-            {
-                var refreshToken = Request.Cookies[AuthCookies.RefreshName] ?? string.Empty;
-                await _accounts.LogoutAsync(User.FindFirstValue(JwtRegisteredClaimNames.Jti), refreshToken);
-            }
+            await _authentication.LogoutAsync();
 
-            AuthCookies.Clear(Response);
+            // The chosen staff location belongs to the session that is ending
+            Response.Cookies.Delete(DineBook.Web.Pages.Staff.IndexModel.LocationCookie);
+
             return RedirectToPage("/Index");
         }
     }

@@ -201,6 +201,21 @@ namespace DineBook.Application.Services
             reservation.Cancel();
             await _db.SaveChangesAsync(ct);
 
+            var restaurantName = await _db.Restaurants.AsNoTracking()
+                .Where(r => r.Id == reservation.RestaurantId)
+                .Select(r => r.Name)
+                .FirstOrDefaultAsync(ct);
+
+            // Sent only after the cancellation is saved
+            await SendSafelyAsync(
+                new ReservationCancelledEmailModel(
+                    reservation.CustomerEmail,
+                    reservation.CustomerName,
+                    restaurantName ?? "your restaurant",
+                    reservation.Code,
+                    reservation.StartsAt),
+                ct);
+
             return reservation;
         }
 
@@ -223,7 +238,8 @@ namespace DineBook.Application.Services
 
         private async Task ChangeStatusAsync(long restaurantId, long reservationId, Action<Reservation> change, CancellationToken ct)
         {
-            var reservation = await _db.Reservations.Include(r => r.Table)
+            // Tables removed since the booking are still needed to seat, release or close it
+            var reservation = await _db.Reservations.IgnoreQueryFilters().Include(r => r.Table)
                 .FirstOrDefaultAsync(r => r.Id == reservationId && r.RestaurantId == restaurantId, ct)
                 ?? throw new DomainException("Booking not found.");
 

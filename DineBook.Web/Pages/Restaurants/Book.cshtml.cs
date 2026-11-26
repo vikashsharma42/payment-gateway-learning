@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using DineBook.Application.Services.Interface;
@@ -12,6 +14,8 @@ using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Restaurants
 {
+    // Booking belongs to a customer account. Signed-out visitors are sent to sign in first.
+    [Authorize]
     [EnableRateLimiting("checkout")]
     public class BookModel : AppPageModel
     {
@@ -38,24 +42,6 @@ namespace DineBook.Web.Pages.Restaurants
         public DateTime StartsAt { get; set; }
 
         [BindProperty]
-        [Required(ErrorMessage = "Name is required.")]
-        [StringLength(100)]
-        [Display(Name = "Name")]
-        public string CustomerName { get; set; } = string.Empty;
-
-        [BindProperty]
-        [Required(ErrorMessage = "Phone is required.")]
-        [RegularExpression(@"^\+?[0-9 ]{10,15}$", ErrorMessage = "Enter a valid phone number.")]
-        [Display(Name = "Phone")]
-        public string CustomerPhone { get; set; } = string.Empty;
-
-        [BindProperty]
-        [Required(ErrorMessage = "Email is required.")]
-        [EmailAddress]
-        [Display(Name = "Email")]
-        public string CustomerEmail { get; set; } = string.Empty;
-
-        [BindProperty]
         [StringLength(200)]
         [Display(Name = "Special requests (optional)")]
         public string SpecialRequests { get; set; } = string.Empty;
@@ -65,6 +51,9 @@ namespace DineBook.Web.Pages.Restaurants
         public IReadOnlyList<DateTime> Slots { get; private set; } = Array.Empty<DateTime>();
 
         public DateOnly Today => DateOnly.FromDateTime(_reservations.LocalNow());
+
+        // The booking is made in this account's name
+        public string BookingName => User.FindFirstValue(ClaimTypes.Name) ?? string.Empty;
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
@@ -96,11 +85,9 @@ namespace DineBook.Web.Pages.Restaurants
             {
                 var reservation = await _reservations.BookAsync(new BookingRequest(
                     Id,
+                    UserId,
                     StartsAt,
                     Guests,
-                    CustomerName.Trim(),
-                    CustomerPhone.Trim(),
-                    CustomerEmail.Trim(),
                     (SpecialRequests ?? string.Empty).Trim()),
                     ct);
 

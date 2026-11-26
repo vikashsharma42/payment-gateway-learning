@@ -1,4 +1,5 @@
 using DineBook.Domain.Entities;
+using DineBook.Domain.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -10,6 +11,10 @@ namespace DineBook.Infrastructure.Database.Configurations
         {
             builder.ToTable(nameof(Orders));
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            builder.Property(x => x.OrderNo).HasMaxLength(OrderNumberHelper.MaxLength).IsRequired();
+
+            // Order numbers are unique across all orders
+            builder.HasIndex(x => x.OrderNo).IsUnique();
 
             // Many orders belong to one restaurant. Restrict: restaurants with orders are never deleted.
             builder.HasOne(x => x.Restaurant)
@@ -25,6 +30,8 @@ namespace DineBook.Infrastructure.Database.Configurations
 
             builder.Navigation(nameof(Orders.Items)).UsePropertyAccessMode(PropertyAccessMode.Field);
             builder.Navigation(nameof(Orders.Payments)).UsePropertyAccessMode(PropertyAccessMode.Field);
+
+            builder.Ignore(x => x.IsPaid);
         }
     }
 }

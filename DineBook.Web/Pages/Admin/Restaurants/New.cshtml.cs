@@ -1,4 +1,5 @@
 using DineBook.Application.Services.Interface;
+using DineBook.Domain.Exceptions;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using System;
@@ -71,11 +72,10 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             if (!ModelState.IsValid)
                 return Page();
 
-<<<<<<< Updated upstream
             try
             {
                 var restaurant = await _admin.CreateRestaurantAsync(new CreateRestaurantRequest(
-                    Name, Street, City, State, Pincode, OpensAt, ClosesAt), ct);
+                    Name, OpensAt, ClosesAt, LocationName, Street, City, State, Country, ZipCode, Phone: null), ct);
 
                 ToastSuccess("Restaurant created. Now add its tables and menu.");
                 return RedirectToPage("/Admin/Restaurants/Manage", new { id = restaurant.Id });
@@ -85,14 +85,6 @@ namespace DineBook.Web.Pages.Admin.Restaurants
                 ToastError(ex.Message);
                 return Page();
             }
-=======
-            var restaurant = await _admin.CreateRestaurantAsync(new CreateRestaurantRequest(
-                Name, OpensAt, ClosesAt, LocationName, Street, City, State, Country, ZipCode, Phone: null), ct);
-
-            ToastSuccess("Restaurant created. Now add its tables and menu.");
-            return RedirectToPage("/Admin/Restaurants/Manage", new { id = restaurant.Id });
-
->>>>>>> Stashed changes
         }
     }
 }

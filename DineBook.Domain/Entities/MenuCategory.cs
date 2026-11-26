@@ -8,6 +8,11 @@ namespace DineBook.Domain.Entities
     // A section of one restaurant's menu, such as "Starters". Added through Restaurant.AddMenuCategory.
     public class MenuCategory : Entity, IAuditableEntity
     {
+        // Used by EF Core when loading. Validation runs only in the public constructor.
+        private MenuCategory()
+        {
+        }
+
         public MenuCategory(string name)
         {
             DomainValidation<string>.Ensure(name, "Category").IsNotNullOrWhiteSpace().HasMaxLength(50);

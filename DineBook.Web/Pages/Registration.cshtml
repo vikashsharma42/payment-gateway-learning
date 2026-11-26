@@ -31,9 +31,18 @@
             </div>
 
             <div class="mb-3">
+                <label asp-for="Input.RestaurantId" class="form-label"></label>
+                <select asp-for="Input.RestaurantId" asp-items="Model.RestaurantOptions" class="form-select">
+                    <option value="">Choose a restaurant</option>
+                </select>
+                <div class="form-text">You can book at any location of the restaurant you register with.</div>
+                <span asp-validation-for="Input.RestaurantId" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
                 <label asp-for="Input.Phone" class="form-label"></label>
                 <input asp-for="Input.Phone" type="tel" class="form-control" autocomplete="tel" />
-                <div class="form-text">Used to match your bookings and to sign in to orders.</div>
+                <div class="form-text">Used to confirm bookings and food orders.</div>
                 <span asp-validation-for="Input.Phone" class="text-danger small"></span>
             </div>
 
@@ -41,7 +50,7 @@
                 <div class="col-sm-6">
                     <label asp-for="Input.Password" class="form-label"></label>
                     <input asp-for="Input.Password" class="form-control" autocomplete="new-password" />
-                    <div class="form-text">At least 09 characters.</div>
+                    <div class="form-text">At least 12 characters.</div>
                     <span asp-validation-for="Input.Password" class="text-danger small"></span>
                 </div>
                 <div class="col-sm-6">

@@ -18,6 +18,11 @@ namespace DineBook.Domain.Entities
         public const int MaxPhoneLength = 15;
         public const int MaxDescriptionLength = 500;
 
+        // Used by EF Core when loading. Validation runs only in the public constructor.
+        private Restaurant()
+        {
+        }
+
         // A restaurant starts with no locations. Add at least one with AddLocation before it takes bookings.
         public Restaurant(string name, TimeOnly opensAt, TimeOnly closesAt)
         {
@@ -68,6 +73,9 @@ namespace DineBook.Domain.Entities
 
         private readonly List<Location> _locations = [];
         public virtual IReadOnlyCollection<Location> Locations => _locations.AsReadOnly();
+
+        // Locations that are open for staff and new bookings
+        public IEnumerable<Location> ActiveLocations => _locations.Where(l => l.IsActive);
 
         private readonly List<Table> _tables = [];
         public virtual IReadOnlyCollection<Table> Tables => _tables.AsReadOnly();
@@ -154,6 +162,10 @@ namespace DineBook.Domain.Entities
             menuCategory.RestaurantId = Id;
             _menuCategories.Add(menuCategory);
         }
+
+        // Tables at one location, including the ones that are out of service (the staff page shows their status)
+        public IReadOnlyList<Table> TablesAt(long locationId) =>
+            _tables.Where(t => t.LocationId == locationId).ToList();
 
         // Adds a table to one of this restaurant's locations. Labels are unique per location.
         public void AddTable(long locationId, Table table)

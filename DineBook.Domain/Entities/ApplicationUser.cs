@@ -15,6 +15,11 @@ namespace DineBook.Domain.Entities
 
         // restaurantId: required for Customer, Staff and Manager (a customer registers with one restaurant,
         // and can book at any of its locations). Must be null for Admin.
+        // Used by EF Core when loading. Validation runs only in the public constructor.
+        private ApplicationUser()
+        {
+        }
+
         public ApplicationUser(
             string email,
             string passwordHash,

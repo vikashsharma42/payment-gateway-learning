@@ -9,6 +9,8 @@ namespace DineBook.Infrastructure.Database.Configurations
         public void Configure(EntityTypeBuilder<Location> builder)
         {
             builder.ToTable(nameof(Location));
+            builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            builder.Property(x => x.Phone).HasMaxLength(Location.MaxPhoneLength);
 
             builder.OwnsOne(x => x.Address, a => ValueObjectMappings.MapAddress(a));
 

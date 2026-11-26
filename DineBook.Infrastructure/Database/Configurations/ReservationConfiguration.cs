@@ -9,14 +9,18 @@ namespace DineBook.Infrastructure.Database.Configurations
         public void Configure(EntityTypeBuilder<Reservation> builder)
         {
             builder.ToTable(nameof(Reservation));
+            builder.Property(x => x.Code).HasMaxLength(Reservation.CodeLength).IsRequired();
             builder.HasIndex(x => x.Code).IsUnique();
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            builder.Property(x => x.SpecialRequests).HasMaxLength(Reservation.MaxSpecialRequestsLength);
 
+            // Many bookings belong to one restaurant
             builder.HasOne(x => x.Restaurant)
-                .WithMany()
+                .WithMany(r => r.Reservations)
                 .HasForeignKey(x => x.RestaurantId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            // The guest is a customer account. Name, phone and email are read from it.
             builder.HasOne(x => x.Customer)
                .WithMany()
                .HasForeignKey(x => x.ApplicationUserId)
@@ -31,7 +35,11 @@ namespace DineBook.Infrastructure.Database.Configurations
 
             builder.HasIndex(x => new { x.RestaurantId, x.StartsAt });
 
+            // Computed from other columns, not stored
             builder.Ignore(x => x.EndsAt);
+            builder.Ignore(x => x.CustomerName);
+            builder.Ignore(x => x.CustomerPhone);
+            builder.Ignore(x => x.CustomerEmail);
         }
     }
 }

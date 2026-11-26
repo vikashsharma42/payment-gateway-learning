@@ -9,11 +9,15 @@ namespace DineBook.Infrastructure.Database.Configurations
         public void Configure(EntityTypeBuilder<OrderItem> builder)
         {
             builder.ToTable(nameof(OrderItem));
-            builder.Property(x => x.UnitPrice).HasPrecision(10, 2);
+            builder.Property(x => x.ItemName).HasMaxLength(100).IsRequired();
+            builder.Property(x => x.ImageUrl).HasMaxLength(50);
+
+            // UnitPrice is a Money value object, stored as UnitPrice_Amount and UnitPrice_Currency
+            builder.OwnsOne(x => x.UnitPrice, a => ValueObjectMappings.MapMoney(a));
 
             // An item belongs to one order. Deleting the order removes its items.
             builder.HasOne(x => x.Order)
-                .WithMany(nameof(Orders.Items))
+                .WithMany(o => o.Items)
                 .HasForeignKey(x => x.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
 
@@ -22,6 +26,7 @@ namespace DineBook.Infrastructure.Database.Configurations
                 .WithMany()
                 .HasForeignKey(x => x.MenuItemId)
                 .OnDelete(DeleteBehavior.Restrict);
+
         }
     }
 }

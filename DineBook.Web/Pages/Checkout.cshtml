@@ -18,7 +18,7 @@
         <div class="card shadow-sm summary-sticky">
             <div class="card-body">
                 <h2 class="h5">Your bill</h2>
-                <p class="text-muted small mb-3">@Model.RestaurantName · booking <code>@Model.ReservationCode</code></p>
+                <p class="text-muted small mb-3">@Model.RestaurantName · booking <code>@Model.ReservationCode</code> · order <code>@Model.Order.OrderNo</code></p>
 
                 <table class="table table-sm align-middle mb-0">
                     <thead>
@@ -37,8 +37,8 @@
                                 <td class="small text-muted">@line.MenuItem?.Category</td>
                                 <td>@line.ItemName</td>
                                 <td class="text-end">@line.Quantity</td>
-                                <td class="text-end">@Money.Inr(line.UnitPrice)</td>
-                                <td class="text-end">@Money.Inr(line.LineTotal())</td>
+                                <td class="text-end">@Money.Inr(line.UnitPrice.Amount)</td>
+                                <td class="text-end">@Money.Inr(line.LineTotal().Amount)</td>
                             </tr>
                         }
                     </tbody>
@@ -46,7 +46,7 @@
 
                 <div class="d-flex justify-content-between align-items-center border-top mt-3 pt-3">
                     <span>Total</span>
-                    <strong class="price">@Money.Inr(Model.Order.Total())</strong>
+                    <strong class="price">@Money.Inr(Model.Order.Total().Amount)</strong>
                 </div>
 
                 <ul class="trust-list">

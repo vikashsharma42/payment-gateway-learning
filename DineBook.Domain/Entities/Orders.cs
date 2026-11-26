@@ -1,5 +1,6 @@
 using DineBook.Domain.Abstractions;
 using DineBook.Domain.Enums;
+using DineBook.Domain.Helpers;
 using DineBook.Domain.Validation;
 using DineBook.Domain.ValueObjects;
 using System;
@@ -15,6 +16,7 @@ namespace DineBook.Domain.Entities
         public Orders()
         {
             Status = OrderStatus.Placed;
+            OrderNo = OrderNumberHelper.Generate(DateTime.UtcNow);
         }
 
         public long ReservationId { get; internal set; }
@@ -22,6 +24,9 @@ namespace DineBook.Domain.Entities
         public long RestaurantId { get; internal set; }
 
         public OrderStatus Status { get; private set; }
+
+        // Number shown to the guest and staff, for example ORD-20261126-K7Q2MX. Set when the order is created.
+        public string OrderNo { get; private set; }
 
         public DateTimeOffset CreatedDateTime { get; set; }
 
@@ -61,7 +66,7 @@ namespace DineBook.Domain.Entities
             DomainValidation<int>.Ensure(quantity).IsBetween(1, 20, $"Quantity for {menuItem.Name} must be between 1 and 20.");
             DomainValidation<int>.Ensure(_items.Count).IsLessThanOrEqualTo(29, "An order can have at most 30 different items.");
 
-            var item = new OrderItem(menuItem.Name, menuItem.Price, quantity);
+            var item = new OrderItem(menuItem.Name, menuItem.Price, quantity, menuItem.ImageUrl);
             item.MenuItemId = menuItem.Id;
             item.OrderId = Id;
             _items.Add(item);

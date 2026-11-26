@@ -14,8 +14,6 @@
 <h1 class="h2 mb-1">@Model.Restaurant.Name</h1>
 <p class="text-muted mb-4">Open @Model.Restaurant.OpensAt.ToString("HH:mm") to @Model.Restaurant.ClosesAt.ToString("HH:mm") · @Model.Restaurant.Locations.Count location(s)</p>
 
-<<<<<<< Updated upstream
-=======
 <section class="card shadow-sm mb-4" aria-labelledby="charges-heading">
     <div class="card-body">
         <h2 id="charges-heading" class="h5">Bill charges</h2>
@@ -97,7 +95,6 @@
     </div>
 </section>
 
->>>>>>> Stashed changes
 <div class="row g-4">
     <section class="col-lg-5" aria-labelledby="tables-heading">
         <div class="card shadow-sm">
@@ -170,7 +167,7 @@
                                     <tr>
                                         <td>@item.Name</td>
                                         <td>@item.Category</td>
-                                        <td class="text-end">@Money.Inr(item.Price)</td>
+                                        <td class="text-end">@Money.Inr(item.Price.Amount)</td>
                                         <td>
                                             @if (item.IsAvailable)
                                             {

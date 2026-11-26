@@ -9,6 +9,13 @@ namespace DineBook.Infrastructure.Database.Configurations
         public void Configure(EntityTypeBuilder<MenuItem> builder)
         {
             builder.ToTable(nameof(MenuItem));
+            builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
+            builder.Property(x => x.Description).HasMaxLength(300);
+            builder.Property(x => x.Category).HasMaxLength(50);
+            builder.Property(x => x.ImageUrl).HasMaxLength(50);
+
+            // Price is a Money value object, stored as Price_Amount and Price_Currency
+            builder.OwnsOne(x => x.Price, a => ValueObjectMappings.MapMoney(a));
 
             // Many dishes belong to one category. A category is never deleted while it has dishes.
             builder.HasOne(x => x.MenuCategory)
@@ -21,6 +28,8 @@ namespace DineBook.Infrastructure.Database.Configurations
                 .WithMany(r => r.MenuItems)
                 .HasForeignKey(x => x.RestaurantId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Ignore(x => x.IsDeleted);
 
             builder.HasIndex(x => new { x.RestaurantId, x.IsAvailable });
         }

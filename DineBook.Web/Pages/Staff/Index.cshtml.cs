@@ -1,10 +1,11 @@
 using DineBook.Application.Services.Interface;
-using Microsoft.AspNetCore.Http;
 using DineBook.Domain.Exceptions;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
+using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -43,24 +44,32 @@ namespace DineBook.Web.Pages.Staff
 
         public async Task<IActionResult> OnPostSwitchAsync(CancellationToken ct)
         {
-            var workspace = await _staffLocations.GetWorkspaceAsync(UserId, LocationId, ct);
-            if (workspace is null)
-                throw new DomainException("You are not assigned to a restaurant.");
-
-            // Only an open location of this user's restaurant can be chosen
-            if (workspace.Current.Id != LocationId)
-                throw new DomainException("That location is not available.");
-
-            Response.Cookies.Append(LocationCookie, LocationId.ToString(), new CookieOptions
+            try
             {
-                HttpOnly = true,
-                Secure = true,
-                SameSite = SameSiteMode.Strict,
-                IsEssential = true,
-                Expires = DateTimeOffset.UtcNow.AddDays(30)
-            });
+                var workspace = await _staffLocations.GetWorkspaceAsync(UserId, LocationId, ct);
+                if (workspace is null)
+                    throw new DomainException("You are not assigned to a restaurant.");
 
-            ToastSuccess($"Now working at {workspace.Current.Name}.");
+                // Only an open location of this user's restaurant can be chosen
+                if (workspace.Current.Id != LocationId)
+                    throw new DomainException("That location is not available.");
+
+                Response.Cookies.Append(LocationCookie, LocationId.ToString(CultureInfo.InvariantCulture), new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    IsEssential = true,
+                    Expires = DateTimeOffset.UtcNow.AddDays(30)
+                });
+
+                ToastSuccess($"Now working at {workspace.Current.Name}.");
+            }
+            catch (DomainException ex)
+            {
+                ToastError(ex.Message);
+            }
+
             return RedirectToPage();
         }
 

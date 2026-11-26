@@ -37,8 +37,16 @@ namespace DineBook.Web
 
         public void ConfigureServices(IServiceCollection services)
         {
-            // Razor Pages
-            services.AddRazorPages();
+            // Razor Pages. Everything under /Admin needs the admin role, except sign-in and sign-out.
+            services.AddRazorPages(options =>
+            {
+                options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
+                options.Conventions.AllowAnonymousToPage("/Admin/Login");
+                options.Conventions.AllowAnonymousToPage("/Admin/Logout");
+            });
+
+            // Response caching is used by the error pages in production
+            services.AddResponseCaching();
 
             // Cookie Authentication for Razor Pages
             services
@@ -46,6 +54,7 @@ namespace DineBook.Web
                 .AddCookie(options =>
                 {
                     options.LoginPath = "/Login";
+                    options.AccessDeniedPath = "/Login?Denied=true";
 
                     options.Cookie.Name = "DineBook.Auth";
                     options.Cookie.HttpOnly = true;
@@ -58,9 +67,6 @@ namespace DineBook.Web
                     options.ExpireTimeSpan = TimeSpan.FromDays(7);
                     options.SlidingExpiration = true;
                 });
-
-            // First admin configuration
-            services.AddAdminAccountOptions(_configuration);
 
             // Authorization
             services.AddAuthorization(options =>
@@ -164,7 +170,7 @@ namespace DineBook.Web
         {
             await using var scope = services.CreateAsyncScope();
 
-            // Seed first admin
+            // Seed first admin (from user-secrets) when no admin exists yet
             await scope.ServiceProvider.GetRequiredService<AdminAccountSeeder>().SeedAsync();
 
             // Seed sample restaurants in development
