@@ -1,4 +1,4 @@
-@page
+@page "/{slug}/Reservations/{code}"
 @model DetailsModel
 @{
     ViewData["Title"] = "Your booking";
@@ -158,5 +158,5 @@
 }
 
 <div class="d-flex gap-2 mt-4">
-    <a asp-page="/Index" class="btn btn-outline-secondary">Back to restaurants</a>
+    <a asp-page="/Restaurants/Book" asp-route-slug="@Model.Restaurant.Slug" class="btn btn-outline-secondary">Back to @Model.Restaurant.Name</a>
 </div>

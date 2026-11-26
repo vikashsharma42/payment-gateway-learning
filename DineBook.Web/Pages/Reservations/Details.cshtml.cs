@@ -34,6 +34,10 @@ namespace DineBook.Web.Pages.Reservations
             _payments = payments;
         }
 
+        // The restaurant's web address. A booking opens only under its own restaurant.
+        [BindProperty(SupportsGet = true)]
+        public string Slug { get; set; } = string.Empty;
+
         [BindProperty(SupportsGet = true)]
         public string Code { get; set; } = string.Empty;
 
@@ -67,9 +71,6 @@ namespace DineBook.Web.Pages.Reservations
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
-            if (string.IsNullOrWhiteSpace(Code))
-                return RedirectToPage("/Index");
-
             if (!await LoadAsync(ct))
                 return NotFound();
 
@@ -78,6 +79,9 @@ namespace DineBook.Web.Pages.Reservations
 
         public async Task<IActionResult> OnPostCancelAsync(CancellationToken ct)
         {
+            if (!await BelongsToSlugAsync(ct))
+                return NotFound();
+
             try
             {
                 await _reservations.CancelAsync(Code, Phone, ct);
@@ -88,12 +92,15 @@ namespace DineBook.Web.Pages.Reservations
                 ToastError(ex.Message);
             }
 
-            return RedirectToPage(new { code = Code });
+            return RedirectToPage(new { slug = Slug, code = Code });
         }
 
         // Reads one quantity per menu item from the form (named qty_{id}) and places them as one order
         public async Task<IActionResult> OnPostOrderAsync(CancellationToken ct)
         {
+            if (!await BelongsToSlugAsync(ct))
+                return NotFound();
+
             var reservation = await _reservations.FindByCodeAsync(Code, ct);
             if (reservation is null)
                 return NotFound();
@@ -118,12 +125,15 @@ namespace DineBook.Web.Pages.Reservations
                 ToastError(ex.Message);
             }
 
-            return RedirectToPage(new { code = Code });
+            return RedirectToPage(new { slug = Slug, code = Code });
         }
 
         // Step 1: the guest proves the booking with the phone number, then picks which order to pay
         public async Task<IActionResult> OnPostPayAsync(CancellationToken ct)
         {
+            if (!await BelongsToSlugAsync(ct))
+                return NotFound();
+
             try
             {
                 var orders = await _payments.GetPayableOrdersAsync(Code, PayPhone, ct);
@@ -138,29 +148,43 @@ namespace DineBook.Web.Pages.Reservations
             catch (DomainException ex)
             {
                 ToastError(ex.Message);
-                return RedirectToPage(new { code = Code });
+                return RedirectToPage(new { slug = Slug, code = Code });
             }
         }
 
         // Step 2: the guest chose one order. Its amount is read from the order on the checkout page.
         public async Task<IActionResult> OnPostPayOrderAsync(long orderId, CancellationToken ct)
         {
+            if (!await BelongsToSlugAsync(ct))
+                return NotFound();
+
             try
             {
                 var orders = await _payments.GetPayableOrdersAsync(Code, PayPhone, ct);
                 if (!orders.Any(o => o.Id == orderId && !o.IsPaid))
                 {
                     ToastError("That order cannot be paid.");
-                    return RedirectToPage(new { code = Code });
+                    return RedirectToPage(new { slug = Slug, code = Code });
                 }
 
-                return RedirectToPage("/Checkout", new { id = orderId });
+                return RedirectToPage("/Checkout", new { slug = Slug, id = orderId });
             }
             catch (DomainException ex)
             {
                 ToastError(ex.Message);
-                return RedirectToPage(new { code = Code });
+                return RedirectToPage(new { slug = Slug, code = Code });
             }
+        }
+
+        // True when the booking exists and belongs to the restaurant named in the web address
+        private async Task<bool> BelongsToSlugAsync(CancellationToken ct)
+        {
+            var restaurant = await _reservations.GetRestaurantBySlugAsync(Slug, ct);
+            if (restaurant is null)
+                return false;
+
+            var reservation = await _reservations.FindByCodeAsync(Code, ct);
+            return reservation is not null && reservation.RestaurantId == restaurant.Id;
         }
 
         private async Task<bool> LoadAsync(CancellationToken ct)
@@ -170,6 +194,8 @@ namespace DineBook.Web.Pages.Reservations
                 return false;
 
             Restaurant = await _reservations.GetRestaurantAsync(Reservation.RestaurantId, ct);
+            if (Restaurant is null || !string.Equals(Restaurant.Slug, Slug, StringComparison.OrdinalIgnoreCase))
+                return false;
 
             CanOrderFood = Reservation.AcceptsFoodOrders(_reservations.LocalNow());
             if (CanOrderFood)

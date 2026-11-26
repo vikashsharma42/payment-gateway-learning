@@ -1,7 +1,9 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using DineBook.Application.Services.Interface;
+using DineBook.Infrastructure.Database;
 using PaymentRecord = DineBook.Domain.Entities.Payment;
 using DineBook.Domain.Enums;
 using DineBook.Web.Infrastructure;
@@ -11,10 +13,12 @@ namespace DineBook.Web.Pages.Payment
     public class ResultModel : AppPageModel
     {
         private readonly IPaymentService _payments;
+        private readonly ApplicationDbContext _db;
 
-        public ResultModel(IPaymentService payments)
+        public ResultModel(IPaymentService payments, ApplicationDbContext db)
         {
             _payments = payments;
+            _db = db;
         }
 
         // Cashfree sends the order id as "order_id" in the query string
@@ -24,15 +28,29 @@ namespace DineBook.Web.Pages.Payment
         // The folder name Payment is also a namespace, so the entity needs an alias here
         public PaymentRecord CurrentOrder { get; private set; }
 
+        // The booking this payment belongs to, for the "back to your booking" link
+        public string ReservationCode { get; private set; } = string.Empty;
+
+        public string RestaurantSlug { get; private set; } = string.Empty;
+
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
             if (string.IsNullOrWhiteSpace(OrderId))
-                return RedirectToPage("/Index");
+                return NotFound();
 
             // Confirms with Cashfree and updates the stored status
             CurrentOrder = await _payments.GetOrderStatusAsync(OrderId, ct);
             if (CurrentOrder is null)
                 return NotFound();
+
+            var order = await _db.Orders
+                .AsNoTracking()
+                .Include(o => o.Reservation)
+                .Include(o => o.Restaurant)
+                .FirstOrDefaultAsync(o => o.Id == CurrentOrder.OrderId, ct);
+
+            ReservationCode = order?.Reservation?.Code ?? string.Empty;
+            RestaurantSlug = order?.Restaurant?.Slug ?? string.Empty;
 
             switch (CurrentOrder.Status)
             {

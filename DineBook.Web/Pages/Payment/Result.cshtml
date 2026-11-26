@@ -34,5 +34,8 @@
     {
         <a asp-page="/Payment/Result" asp-route-order_id="@Model.OrderId" class="btn btn-outline-primary">Check again</a>
     }
-    <a asp-page="/Index" class="btn btn-outline-secondary">Back to restaurants</a>
+    @if (!string.IsNullOrEmpty(Model.RestaurantSlug))
+    {
+        <a asp-page="/Reservations/Details" asp-route-slug="@Model.RestaurantSlug" asp-route-code="@Model.ReservationCode" class="btn btn-outline-secondary">Back to your booking</a>
+    }
 </div>

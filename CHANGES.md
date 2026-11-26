@@ -1,70 +1,47 @@
-# Changes: restaurant locations
+# Changes
 
-## Restaurant locations (latest)
-Run `DineBook.Infrastructure/Database/Scripts/004_restaurant_locations.sql` before starting the app.
+## Restaurant dashboard by slug (latest)
+
+Restaurants are reached only by their slug. The old restaurant list at `/` is gone.
+
+- `/` is not found. Use `/{slug}`, for example `/spice-garden`.
+- `/{slug}` is the restaurant dashboard, open to everyone. It shows:
+  - the open locations, with a switcher (`/{slug}?location=ID`). The first open location is shown by default;
+  - the menu of available dishes, grouped by category;
+  - the booking form, for signed-in accounts only. Signed-out visitors see a "Sign in to book" button that returns them to the dashboard after sign-in.
+- Booking (`POST /{slug}`) needs a signed-in account. A signed-out request is challenged and redirected to `/Login?ReturnUrl=/{slug}`.
+- `/{slug}/Reservations/{code}` and `/{slug}/Checkout/{id}` open only under the slug of their own restaurant. Any other slug gives "not found".
+- Sign-in and registration stay at `/Login` and `/Registration`, not under a slug. Registration asks for the restaurant and then opens its dashboard.
+- Signed-in customers who sign in without a return address stay on `/Login` with a hint to open a restaurant's link.
+- After payment, `/Payment/Result` links back to the booking.
+- Reserved slugs now also include `staff` and `restaurants`, so a restaurant named "Staff" gets `staff-restaurant`.
+
+Known gaps are listed in [README.md](README.md) section 8.
+
+## Restaurant locations
 
 - A restaurant can have several locations (branches). Each location has a name, street, city, state, country, zip code and optional phone. The address is no longer on `Restaurant`.
 - Tables belong to a location. Table labels are unique per location.
 - Staff and managers belong to one restaurant (`ApplicationUser.RestaurantId`). Admins and customers do not.
-- After sign-in, staff go to `/Staff`. They see the restaurant's open locations, pick one in the switcher, and see that location's address and tables. The choice is stored in the `DineBook.Location` cookie and checked against the user's restaurant on every request, so a location from another restaurant is refused.
-- Admin: `/Admin/Restaurants/New` creates the restaurant and its first location. `/Admin/Restaurants/{id}` has a Locations section (add a location, close or reopen one) and shows tables for the chosen location. The last open location cannot be closed.
+- After sign-in, staff go to `/Staff`. They pick one of the restaurant's open locations in the switcher, and see that location's tables. The choice is stored in the `DineBook.Location` cookie and checked against the user's restaurant on every request.
+- Admin: `/Admin/Restaurants/New` creates the restaurant and its first location. `/Admin/Restaurants/{id}` has a Locations section (add, close or reopen) and shows tables for the chosen location. The last open location cannot be closed.
 - Admin: `/Admin/Users` asks for a restaurant when creating Staff or Manager accounts.
+- Not yet location-aware: bookings, the menu and bills are per restaurant. A booking takes any free table across the restaurant's locations.
 
-Not yet location-aware: bookings, the menu and bills are still per restaurant. A customer booking chooses the restaurant, and the system picks any free table across its locations.
+## Restaurant web addresses
 
-# Changes: booking, payment, order history and dish photos
+- Each restaurant has a unique slug in `Restaurant.Slug`, created from the name by `RestaurantSlug.FromName` (see README section 2 for the rules).
+- The database column is in `DineBook.Infrastructure/Database/DB-Schema/ddd-domain-migration.sql`. Existing databases need the column added by hand (see README section 4).
 
-## Restaurant web addresses (latest)
-Run `DineBook.Infrastructure/Database/Scripts/003_restaurant_slugs.sql` first. It adds `Restaurant.Slug` and fills it in from the names. If it stops at the unique index, two slugs are the same: fix those rows and run it again.
+## Dish photos and order history
 
-- Each restaurant has a slug, for example `/spice-garden/`. A new restaurant gets one from its name. A second restaurant with a similar name gets `-2`, `-3`, and so on. Names that match a page name (login, bookings, admin...) get `-restaurant`.
-- Pages under the restaurant: booking `/{slug}/`, reservation `/{slug}/Reservations/{code}`, checkout `/{slug}/Checkout/{orderId}`, my bookings `/{slug}/Bookings`, orders `/{slug}/Orders`, sign-in `/{slug}/Login`, registration `/{slug}/Registration`, sign-out `/{slug}/Logout`, payment return `/{slug}/Payment/Result`.
-- Not changed: `/` (restaurant list), `/Admin/...` (admin pages, signed in at `/Admin/Login`), and `/Payment/Webhook`, which Cashfree calls server to server.
-- A booking or order opens only under the slug of its own restaurant. Any other slug gives "not found".
-- My bookings and Order history still list every booking of the account. The slug only sets which restaurant's address the page is under.
-- Old addresses such as `/Bookings`, `/Login` and `/Restaurants/Book/5` no longer exist.
+- `MenuItem.ImageUrl` and `OrderItem.ImageUrl`. A new order copies the photo, so past orders keep it when the menu changes.
+- The seeder adds placeholder photos (picsum.photos) for sample dishes in Development.
+- Dish photos are placeholders. There is no admin screen for photos yet.
+- Not in this version: the separate "My bookings" and "Order history" pages described in earlier notes. A booking is reached from the dashboard or its code.
 
-## Before running
-1. Run the database script once on the database used by DineBook.Web:
-   `DineBook.Infrastructure/Database/Scripts/001_dish_images.sql`
-   It adds `ImageUrl` to `MenuItem` and `OrderItem`, fills in the sample dish photos, and copies them into existing order items. It is safe to run more than once. EF migrations are not used.
-2. Run `dotnet build` and fix any compile errors. This code was written without a compile step in the environment where it was made.
+## Error handling
 
-## Fixes
-- Registration: the account was saved and then the request crashed (`NotImplementedException`). Registration now completes, and the new account is signed in with the same cookie as Login.
-- Registration password: the form now requires at least 12 characters (it said 12 but allowed 9).
-- Sign out: the header and admin Sign out button both use `/Logout`, which ends the site cookie `DineBook.Auth`. Before, the header's sign out only cleared JWT cookies, so the site cookie stayed and the user stayed signed in.
-- Checkout: a bill can only be opened by the signed-in account that owns its booking. Anyone else gets "not found".
-
-## Booking and payment
-- Each booking has its own food orders and payments.
-- `/Bookings` lists every booking made with the signed-in account.
-- The booking form is prefilled from the signed-in account.
-- Booking is for signed-in accounts only. There is no guest booking and no phone-number lookup. Someone else's booking gives "not found".
-- Checkout uses the booking's email and phone. Nobody types them again.
-- The booking details page has the food, a pay button per food order, add food and cancel. The owner does not enter the phone number.
-- Schema (`DineBook.Database/ddd-domain-migration.sql`): `Reservations.ApplicationUserId` is required and the per-phone `Customers` table is removed. Existing databases still use `002_accounts_own_bookings.sql`.
-
-## Order history and photos
-- `/Orders` shows food orders grouped by booking, with a photo for each dish.
-- `MenuItem.ImageUrl` and `OrderItem.ImageUrl`. A new order copies the photo, so the history stays correct when the menu changes.
-- The seeder adds placeholder photos (picsum.photos) for sample dishes, and fills them into existing databases in development.
-
-## Payment webhook
-- New endpoint `POST /Payment/Webhook` (`Pages/Payment/Webhook.cshtml.cs`). It reads the raw body, passes it to `PaymentService.HandleWebhookAsync`, and returns 200 for valid events, 401 for a bad signature, 400 for malformed signed bodies, and 413 for bodies over 64 KB.
-- Register `https://<public-host>/Payment/Webhook` in the Cashfree dashboard.
-
-## Phone input
-- Phone fields show the India flag and a +91 prefix (`wwwroot/img/flag-in.svg`). The value entered is still the 10-digit number.
-
-## Known gaps
-- Dish photos are placeholders. Set real URLs in `MenuItem.ImageUrl`. There is no admin screen for photos yet.
-- The API project (`DineBook.API`) is not in this version.
-- `/Admin/Login` does not issue JWT cookies. The JWT code is kept for the API.
-
-## Global error handling
-- `DomainExceptionMiddleware` (Web/Infrastructure) turns `DomainException` into a toast and a redirect, and gives webhook responses their status codes. It runs inside `UseExceptionHandler`, so it is global and covers every page, not only Razor Pages.
-- `GlobalExceptionHandler` logs unhandled errors once, then the error page is shown.
-- Page-level try/catch blocks were removed from Book, Details, Checkout, Registration, Webhook and the admin pages.
-- Kept on purpose (business logic, not UI): idempotency race in `PaymentService.CreateOrderAsync`, gateway fallback in `GetOrderStatusAsync`, email fail-safe (`SendEmailSafely`) so a failed email never undoes a booking or payment, refund resume in `RefundAsync`, and cookie parsing in `BookingAccess`.
-- Trade-off: on a failed registration or admin form, the message comes back as a toast, and the typed form values are not kept.
+- `DomainException` becomes a toast and a redirect, so the user sees the rule that failed.
+- Unhandled errors are logged once and shown on the error page (`/Error/{statusCode}` outside Development).
+- Known gaps: on a failed registration or admin form, typed values are not kept.

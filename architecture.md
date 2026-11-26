@@ -67,6 +67,14 @@ Domain has no framework or database references.
 - Emails never log the recipient address. Email errors are logged with the subject only.
 - Cashfree secrets and the Brevo API key live in user-secrets, not in appsettings.
 
+## Public pages
+
+- Restaurants are addressed by `Restaurant.Slug` (unique, see `RestaurantSlug`). There is no public restaurant list; `/` is not found.
+- `/{slug}` (Pages/Restaurants/Book): the dashboard. Anonymous visitors can read it. `OnPostAsync` (booking) returns `Challenge()` for a signed-out visitor, which goes to `/Login?ReturnUrl=/{slug}`.
+- `/{slug}/Reservations/{code}` and `/{slug}/Checkout/{id}`: both load the booking or order and return "not found" unless its restaurant has this slug. The booking POST handlers check the slug first.
+- `/Login`, `/Registration`, `/Payment/Result`, `/Payment/Webhook` and `/Admin/...` are not under a slug.
+- Service call for the slug: `IReservationService.GetRestaurantBySlugAsync`.
+
 ## Admin
 
 - Routes: `/Admin/Login`, `/Admin` (restaurant list), `/Admin/Restaurants/New`, `/Admin/Restaurants/{id}` (tables and menu).

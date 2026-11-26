@@ -105,7 +105,12 @@ namespace DineBook.Web.Pages
                 await _authentication.LoginAsync(Input.Email, Input.Password, ct);
 
                 ToastSuccess("Welcome to DineBook! Your account is ready.");
-                return RedirectToPage("/Index");
+
+                // Straight to the restaurant the customer registered with
+                var restaurant = await _reservations.GetRestaurantAsync(Input.RestaurantId.Value, ct);
+                return restaurant is null
+                    ? RedirectToPage("/Login")
+                    : RedirectToPage("/Restaurants/Book", new { slug = restaurant.Slug });
             }
             catch (DomainException ex)
             {

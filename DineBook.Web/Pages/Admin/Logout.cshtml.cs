@@ -22,7 +22,7 @@ namespace DineBook.Web.Pages.Admin
             // The chosen staff location belongs to the session that is ending
             Response.Cookies.Delete(DineBook.Web.Pages.Staff.IndexModel.LocationCookie);
 
-            return RedirectToPage("/Index");
+            return RedirectToPage("/Login");
         }
     }
 }

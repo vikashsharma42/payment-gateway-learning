@@ -46,6 +46,10 @@ namespace DineBook.Web.Pages
             _logger = logger;
         }
 
+        // The restaurant's web address. An order is paid only under its own restaurant.
+        [BindProperty(SupportsGet = true)]
+        public string Slug { get; set; } = string.Empty;
+
         [BindProperty]
         [Required(ErrorMessage = "Email is required.")]
         [EmailAddress]
@@ -123,7 +127,7 @@ namespace DineBook.Web.Pages
 
                 // Post/Redirect/Get: a refresh shows this session instead of creating another payment
                 TempData[PendingKey] = JsonSerializer.Serialize(pending);
-                return RedirectToPage(new { id });
+                return RedirectToPage(new { slug = Slug, id });
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -160,7 +164,7 @@ namespace DineBook.Web.Pages
                 .Include(o => o.Reservation)
                 .FirstOrDefaultAsync(o => o.Id == id, ct);
 
-            if (Order is null)
+            if (Order is null || !string.Equals(Order.Restaurant?.Slug, Slug, StringComparison.OrdinalIgnoreCase))
                 return false;
 
             ReservationCode = Order.Reservation?.Code ?? string.Empty;
@@ -173,8 +177,8 @@ namespace DineBook.Web.Pages
         {
             ToastSuccess("This order has already been paid or cancelled.");
             return string.IsNullOrEmpty(ReservationCode)
-                ? RedirectToPage("/Index")
-                : RedirectToPage("/Reservations/Details", new { code = ReservationCode });
+                ? RedirectToPage("/Restaurants/Book", new { slug = Slug })
+                : RedirectToPage("/Reservations/Details", new { slug = Slug, code = ReservationCode });
         }
     }
 

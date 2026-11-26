@@ -1,73 +1,137 @@
-@page "{id:long}"
+@page "/{slug}"
 @model BookModel
 @{
-    ViewData["Title"] = $"Book at {Model.Restaurant.Name}";
+    ViewData["Title"] = Model.Restaurant.Name;
 }
 
-<nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0">
-        <li class="breadcrumb-item"><a asp-page="/Index">Restaurants</a></li>
-        <li class="breadcrumb-item active" aria-current="page">@Model.Restaurant.Name</li>
-    </ol>
-</nav>
-
-<h1 class="h2 mb-4">Book a table at @Model.Restaurant.Name</h1>
-
-<form method="get" class="card card-body shadow-sm mb-4">
-    <div class="row g-3 align-items-end">
-        <div class="col-sm-5">
-            <label class="form-label" for="Date">Date</label>
-            <input id="Date" name="Date" type="date" class="form-control"
-                   value="@Model.Date?.ToString("yyyy-MM-dd")" min="@Model.Today.ToString("yyyy-MM-dd")" />
-        </div>
-        <div class="col-sm-4">
-            <label class="form-label" for="Guests">Guests</label>
-            <input id="Guests" name="Guests" type="number" min="1" max="10" class="form-control" value="@Model.Guests" />
-        </div>
-        <div class="col-sm-3">
-            <button class="btn btn-outline-primary w-100" type="submit">Show times</button>
-        </div>
-    </div>
-</form>
-
-@if (Model.Date is not null)
-{
-    if (Model.Slots.Count == 0)
+<header class="mb-4">
+    <h1 class="h2 mb-1">@Model.Restaurant.Name</h1>
+    @if (Model.SelectedLocation is not null)
     {
-        <div class="alert alert-warning" role="status">
-            No tables are free for @Model.Guests guests on this day. Try another date or party size.
+        <p class="text-muted mb-0">@Model.SelectedLocation.Name · @Model.SelectedLocation.Address.City</p>
+    }
+    else
+    {
+        <p class="text-muted mb-0">No location is open right now.</p>
+    }
+</header>
+
+<section class="mb-4" aria-labelledby="locations-heading">
+    <h2 id="locations-heading" class="h5">Locations</h2>
+    <div class="d-flex flex-wrap gap-2">
+        @foreach (var location in Model.Restaurant.ActiveLocations)
+        {
+            var isSelected = location.Id == Model.SelectedLocation?.Id;
+            <a class="btn btn-sm @(isSelected ? "btn-brand" : "btn-outline-primary")"
+               aria-current="@(isSelected ? "page" : null)"
+               asp-page="/Restaurants/Book" asp-route-slug="@Model.Restaurant.Slug" asp-route-location="@location.Id">
+                @location.Name
+            </a>
+        }
+    </div>
+</section>
+
+<section class="mb-4" aria-labelledby="menu-heading">
+    <h2 id="menu-heading" class="h5">Menu</h2>
+
+    @if (Model.Menu.Count == 0)
+    {
+        <p class="text-muted">No dishes are on the menu right now.</p>
+    }
+    else
+    {
+        @foreach (var category in Model.Menu.GroupBy(m => string.IsNullOrWhiteSpace(m.Category) ? "Other" : m.Category))
+        {
+            <h3 class="h6 mt-3 mb-2">@category.Key</h3>
+            <ul class="list-unstyled mb-0">
+                @foreach (var item in category)
+                {
+                    <li class="d-flex justify-content-between gap-3 py-2 border-bottom">
+                        <span>
+                            @item.Name
+                            @if (!string.IsNullOrWhiteSpace(item.Description))
+                            {
+                                <br /><small class="text-muted">@item.Description</small>
+                            }
+                        </span>
+                        <span class="text-nowrap">@DineBook.Web.Helpers.Money.Inr(item.Price.Amount)</span>
+                    </li>
+                }
+            </ul>
+        }
+    }
+</section>
+
+<section aria-labelledby="booking-heading">
+    <h2 id="booking-heading" class="h5">Book a table</h2>
+
+    @if (!Model.IsSignedIn)
+    {
+        <div class="card card-body shadow-sm">
+            <p class="mb-3">Sign in to book a table at @Model.Restaurant.Name.</p>
+            <a class="btn btn-brand" asp-page="/Login" asp-route-ReturnUrl="@Url.Page("/Restaurants/Book", new { slug = Model.Restaurant.Slug })">Sign in to book</a>
         </div>
     }
     else
     {
-        <form method="post" data-submit-once class="card card-body shadow-sm">
-            <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
-
-            <input type="hidden" name="Date" value="@Model.Date.Value.ToString("yyyy-MM-dd")" />
-            <input type="hidden" name="Guests" value="@Model.Guests" />
-
-            <fieldset class="mb-4">
-                <legend class="h6">Choose a time</legend>
-                <div class="d-flex flex-wrap gap-2">
-                    @foreach (var slot in Model.Slots)
-                    {
-                        <input type="radio" class="btn-check" name="StartsAt" id="slot-@slot.ToString("HHmm")"
-                               value="@slot.ToString("s")" autocomplete="off" required />
-                        <label class="btn btn-outline-primary" for="slot-@slot.ToString("HHmm")">@slot.ToString("HH:mm")</label>
-                    }
+        <form method="get" class="card card-body shadow-sm mb-4">
+            <input type="hidden" name="location" value="@Model.SelectedLocation?.Id" />
+            <div class="row g-3 align-items-end">
+                <div class="col-sm-5">
+                    <label class="form-label" for="Date">Date</label>
+                    <input id="Date" name="Date" type="date" class="form-control"
+                           value="@Model.Date?.ToString("yyyy-MM-dd")" min="@Model.Today.ToString("yyyy-MM-dd")" />
                 </div>
-                <span asp-validation-for="StartsAt" class="text-danger small"></span>
-            </fieldset>
-
-            <p class="mb-4">Booking in the name of <strong>@Model.BookingName</strong>. Your phone number and email come from your account.</p>
-
-            <div class="mb-4">
-                <label asp-for="SpecialRequests" class="form-label"></label>
-                <textarea asp-for="SpecialRequests" class="form-control" rows="2" maxlength="200"></textarea>
-                <span asp-validation-for="SpecialRequests" class="text-danger small"></span>
+                <div class="col-sm-4">
+                    <label class="form-label" for="Guests">Guests</label>
+                    <input id="Guests" name="Guests" type="number" min="1" max="10" class="form-control" value="@Model.Guests" />
+                </div>
+                <div class="col-sm-3">
+                    <button class="btn btn-outline-primary w-100" type="submit">Show times</button>
+                </div>
             </div>
-
-            <button type="submit" class="btn btn-brand btn-lg w-100">Confirm booking</button>
         </form>
+
+        @if (Model.Date is not null)
+        {
+            if (Model.Slots.Count == 0)
+            {
+                <div class="alert alert-warning" role="status">
+                    No tables are free for @Model.Guests guests on this day. Try another date or party size.
+                </div>
+            }
+            else
+            {
+                <form method="post" data-submit-once class="card card-body shadow-sm">
+                    <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+                    <input type="hidden" name="Date" value="@Model.Date.Value.ToString("yyyy-MM-dd")" />
+                    <input type="hidden" name="Guests" value="@Model.Guests" />
+
+                    <fieldset class="mb-4">
+                        <legend class="h6">Choose a time</legend>
+                        <div class="d-flex flex-wrap gap-2">
+                            @foreach (var slot in Model.Slots)
+                            {
+                                <input type="radio" class="btn-check" name="StartsAt" id="slot-@slot.ToString("HHmm")"
+                                       value="@slot.ToString("s")" autocomplete="off" required />
+                                <label class="btn btn-outline-primary" for="slot-@slot.ToString("HHmm")">@slot.ToString("HH:mm")</label>
+                            }
+                        </div>
+                        <span asp-validation-for="StartsAt" class="text-danger small"></span>
+                    </fieldset>
+
+                    <p class="mb-4">Booking in the name of <strong>@Model.BookingName</strong>. Your phone number and email come from your account.</p>
+
+                    <div class="mb-4">
+                        <label asp-for="SpecialRequests" class="form-label"></label>
+                        <textarea asp-for="SpecialRequests" class="form-control" rows="2" maxlength="200"></textarea>
+                        <span asp-validation-for="SpecialRequests" class="text-danger small"></span>
+                    </div>
+
+                    <button type="submit" class="btn btn-brand btn-lg w-100">Confirm booking</button>
+                </form>
+            }
+        }
     }
-}
+</section>

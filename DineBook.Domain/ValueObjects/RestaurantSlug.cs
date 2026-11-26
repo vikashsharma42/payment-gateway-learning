@@ -15,7 +15,7 @@ namespace DineBook.Domain.ValueObjects
         private static readonly string[] Reserved =
         {
             "admin", "api", "bookings", "checkout", "css", "error", "img", "index", "js", "lib",
-            "login", "logout", "orders", "payment", "registration", "reservations"
+            "login", "logout", "orders", "payment", "registration", "reservations", "restaurants", "staff"
         };
 
         private static readonly Regex Valid = new Regex("^[a-z0-9]+(-[a-z0-9]+)*$", RegexOptions.Compiled);
