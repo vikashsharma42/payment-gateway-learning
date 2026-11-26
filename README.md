@@ -24,10 +24,12 @@ Restaurants are reached by their **slug** (the web address of a restaurant, for 
 |-----|-----------------|--------------|
 | `/` | Everyone | Not found. There is no restaurant list. A restaurant is reached only by its slug. |
 | `/{slug}` | Everyone | Restaurant dashboard: locations (switch with `?location=ID`), the menu grouped by category, and the booking form. |
-| `POST /{slug}` | Signed-in accounts | Books a table. A signed-out visitor is sent to `/Login?ReturnUrl=/{slug}` first. |
+| `POST /{slug}/{location}/book` | Signed-in accounts | Books a table. A signed-out visitor is sent to `/{slug}/Login` first. |
 | `/{slug}/Reservations/{code}` | Everyone who has the code (cancel and order need the phone number) | Booking details, food orders, payment, cancel. A code under another restaurant's slug is "not found". |
 | `/{slug}/Checkout/{id}` | Everyone who has the order id | Pays one food order. An order under another restaurant's slug is "not found". |
-| `/Login`, `/Registration` | Everyone | Sign in, create an account (customers choose a restaurant). |
+| `/{slug}/Login`, `/{slug}/Registration` | Everyone | Sign in and create an account at that restaurant. There is no restaurant list or select. A signed-in user is sent on to the restaurant (or their dashboard). |
+| `/{slug}/Orders` | Signed-in customer | The customer's food orders at that restaurant. |
+| `/Login` | Administrators | Administrator sign-in (no restaurant). |
 | `/Payment/Result`, `/Payment/Webhook` | Cashfree | Payment return page, and the server-to-server webhook. |
 | `/Admin/...` | Admin | Restaurants, locations, tables, menu, users. Sign in at `/Admin/Login`. |
 | `/Staff` | Staff and managers | Tables and bookings for the chosen location. |

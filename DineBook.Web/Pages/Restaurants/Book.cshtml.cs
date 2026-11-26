@@ -81,7 +81,7 @@ namespace DineBook.Web.Pages.Restaurants
         {
             // Booking is for signed-in accounts. Anyone else is sent to sign in, then back to this page.
             if (!IsSignedIn)
-                return Challenge();
+                return RedirectToPage("/Restaurants/Login", new { slug = Slug, ReturnUrl = Request.Path.ToString() });
 
             if (!await LoadAsync(ct))
                 return NotFound();

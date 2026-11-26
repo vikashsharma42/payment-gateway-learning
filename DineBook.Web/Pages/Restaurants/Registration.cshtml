@@ -1,10 +1,13 @@
-@page
-@model RegistrationModel
+@page "/{slug}/Registration"
+@model DineBook.Web.Pages.Restaurants.RegistrationModel
 @{
-    ViewData["Title"] = "Create account";
+    ViewData["Title"] = "Create account · " + Model.Restaurant.Name;
 }
 
-<h1 class="h2 mb-4">Create your account</h1>
+<div class="page-hero mb-4">
+    <h1 class="h2 mb-1">Create your account</h1>
+    <p class="text-muted mb-0">@Model.Restaurant.Name. You can book at any location of this restaurant.</p>
+</div>
 
 <div class="card shadow-sm" style="max-width: 40rem;">
     <div class="card-body p-4">
@@ -26,17 +29,8 @@
 
             <div class="mb-3">
                 <label asp-for="Input.Email" class="form-label"></label>
-                <input asp-for="Input.Email" type="email" class="form-control" autocomplete="email" data-check-url="@Url.Page("/Registration", "IsEmailAvailable")" data-check-scope="#Input_RestaurantId" />
+                <input asp-for="Input.Email" type="email" class="form-control" autocomplete="email" data-check-url="@Url.Page("/Restaurants/Registration", "IsEmailAvailable", new { slug = Model.Restaurant.Slug })" />
                 <span asp-validation-for="Input.Email" class="text-danger small"></span>
-            </div>
-
-            <div class="mb-3">
-                <label asp-for="Input.RestaurantId" class="form-label"></label>
-                <select asp-for="Input.RestaurantId" asp-items="Model.RestaurantOptions" class="form-select">
-                    <option value="">Choose a restaurant</option>
-                </select>
-                <div class="form-text">You can book at any location of the restaurant you register with.</div>
-                <span asp-validation-for="Input.RestaurantId" class="text-danger small"></span>
             </div>
 
             <div class="mb-3">
@@ -65,7 +59,7 @@
     </div>
 </div>
 
-<p class="mt-3 mb-0">Already have an account? <a asp-page="/Login">Sign in</a></p>
+<p class="mt-3 mb-0">Already have an account? <a asp-page="/Restaurants/Login" asp-route-slug="@Model.Restaurant.Slug">Sign in</a></p>
 
 @section Scripts {
     <script src="~/js/email-availability.js" asp-append-version="true" defer></script>

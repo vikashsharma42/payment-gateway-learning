@@ -70,9 +70,9 @@ Domain has no framework or database references.
 ## Public pages
 
 - Restaurants are addressed by `Restaurant.Slug` (unique, see `RestaurantSlug`). There is no public restaurant list; `/` is not found.
-- `/{slug}` (Pages/Restaurants/Book): the dashboard. Anonymous visitors can read it. `OnPostAsync` (booking) returns `Challenge()` for a signed-out visitor, which goes to `/Login?ReturnUrl=/{slug}`.
+- `/{slug}` (Pages/Restaurants/Book): the dashboard. Anonymous visitors can read it. `OnPostAsync` (booking) redirects a signed-out visitor to `/{slug}/Login?ReturnUrl=...`.
 - `/{slug}/Reservations/{code}` and `/{slug}/Checkout/{id}`: both load the booking or order and return "not found" unless its restaurant has this slug. The booking POST handlers check the slug first.
-- `/Login`, `/Registration`, `/Payment/Result`, `/Payment/Webhook` and `/Admin/...` are not under a slug.
+- `/{slug}/Login`, `/{slug}/Registration` and `/{slug}/Orders` (Pages/Restaurants). `/Login` (administrators only), `/Payment/Result`, `/Payment/Webhook` and `/Admin/...` are not under a slug.
 - Service call for the slug: `IReservationService.GetRestaurantBySlugAsync`.
 
 ## Admin

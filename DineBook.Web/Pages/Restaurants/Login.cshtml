@@ -1,0 +1,14 @@
+@page "/{slug}/Login"
+@model DineBook.Web.Pages.LoginModel
+@{
+    ViewData["Title"] = "Sign in · " + Model.Restaurant.Name;
+}
+
+<div class="page-hero mb-4">
+    <h1 class="h2 mb-1">Sign in</h1>
+    <p class="text-muted mb-0">@Model.Restaurant.Name</p>
+</div>
+
+<partial name="_SignInForm" model="Model" />
+
+<p class="mt-3 mb-0">New here? <a asp-page="/Restaurants/Registration" asp-route-slug="@Model.Restaurant.Slug">Create an account</a></p>

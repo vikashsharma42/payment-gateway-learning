@@ -1,18 +1,16 @@
 using DineBook.Application.Services.Interface;
+using DineBook.Domain.Entities;
 using DineBook.Domain.Exceptions;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.RateLimiting;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Globalization;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DineBook.Web.Pages
+namespace DineBook.Web.Pages.Restaurants
 {
+    // /{slug}/Registration: customers register with the restaurant whose address they opened.
     // Same per-IP limit as sign-in and checkout, so sign-ups cannot be spammed
     [EnableRateLimiting("checkout")]
     public class RegistrationModel : AppPageModel
@@ -31,11 +29,14 @@ namespace DineBook.Web.Pages
             _authentication = authentication;
         }
 
+        // Restaurant web address from the URL
+        [FromRoute]
+        public string Slug { get; set; } = string.Empty;
+
+        public Restaurant Restaurant { get; private set; }
+
         [BindProperty]
         public InputModel Input { get; set; }
-
-        // Restaurants a customer can register with
-        public IEnumerable<SelectListItem> RestaurantOptions { get; private set; } = Enumerable.Empty<SelectListItem>();
 
         public class InputModel
         {
@@ -60,10 +61,6 @@ namespace DineBook.Web.Pages
             [Display(Name = "Phone")]
             public string Phone { get; set; }
 
-            [Required(ErrorMessage = "Choose the restaurant you want to book with.")]
-            [Display(Name = "Restaurant")]
-            public long? RestaurantId { get; set; }
-
             [Required(ErrorMessage = "Password is required.")]
             [StringLength(128, MinimumLength = 12, ErrorMessage = "Password must be at least 12 characters.")]
             [DataType(DataType.Password)]
@@ -77,56 +74,57 @@ namespace DineBook.Web.Pages
             public string ConfirmPassword { get; set; }
         }
 
-        public async Task OnGetAsync(CancellationToken ct)
+        public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
-            await LoadRestaurantsAsync(ct);
+            if (!await LoadRestaurantAsync(ct))
+                return NotFound();
+
+            // Already signed in: nothing to register, so go to the restaurant
+            if (User.Identity?.IsAuthenticated == true)
+                return RedirectToPage("/Restaurants/Index", new { slug = Restaurant.Slug });
+
+            return Page();
         }
 
         // Live check while typing. GET, so it does not use up the sign-up rate limit.
-        public async Task<JsonResult> OnGetIsEmailAvailable(string email, long? restaurantId, CancellationToken ct)
+        public async Task<JsonResult> OnGetIsEmailAvailable(string email, CancellationToken ct)
         {
-            return new JsonResult(new { available = await _registration.IsEmailAvailableAsync(email, restaurantId, ct) });
+            if (!await LoadRestaurantAsync(ct))
+                return new JsonResult(new { available = false });
+
+            return new JsonResult(new { available = await _registration.IsEmailAvailableAsync(email, Restaurant.Id, ct) });
         }
 
         public async Task<IActionResult> OnPostAsync(CancellationToken ct)
         {
+            if (!await LoadRestaurantAsync(ct))
+                return NotFound();
+
             if (!ModelState.IsValid)
-            {
-                await LoadRestaurantsAsync(ct);
                 return Page();
-            }
 
             try
             {
                 await _registration.RegisterCustomerAsync(new CustomerRegistrationRequest(
-                    Input.FirstName, Input.LastName, Input.Email, Input.Phone, Input.Password, Input.RestaurantId.Value), ct);
+                    Input.FirstName, Input.LastName, Input.Email, Input.Phone, Input.Password, Restaurant.Id), ct);
 
                 // Signed in straight away, through the same sign-in as the login page
-                await _authentication.LoginAsync(Input.Email, Input.Password, Input.RestaurantId, ct);
+                await _authentication.LoginAsync(Input.Email, Input.Password, Restaurant.Id, ct);
 
                 ToastSuccess("Welcome to DineBook! Your account is ready.");
-
-                // Straight to the restaurant the customer registered with
-                var restaurant = await _reservations.GetRestaurantAsync(Input.RestaurantId.Value, ct);
-                return restaurant is null
-                    ? RedirectToPage("/Login")
-                    : RedirectToPage("/Restaurants/Index", new { slug = restaurant.Slug });
+                return RedirectToPage("/Restaurants/Index", new { slug = Restaurant.Slug });
             }
             catch (DomainException ex)
             {
                 ModelState.AddModelError(string.Empty, ex.Message);
-                await LoadRestaurantsAsync(ct);
                 return Page();
             }
         }
 
-        private async Task LoadRestaurantsAsync(CancellationToken ct)
+        private async Task<bool> LoadRestaurantAsync(CancellationToken ct)
         {
-            var restaurants = await _reservations.GetRestaurantsAsync(ct);
-            RestaurantOptions = restaurants
-                .Where(r => r.IsActive)
-                .Select(r => new SelectListItem(r.Name, r.Id.ToString(CultureInfo.CurrentCulture)))
-                .ToList();
+            Restaurant = await _reservations.GetRestaurantBySlugAsync(Slug, ct);
+            return Restaurant is not null && Restaurant.IsActive;
         }
     }
 }

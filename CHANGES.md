@@ -11,8 +11,11 @@ Restaurants are reached only by their slug. The old restaurant list at `/` is go
   - the booking form, for signed-in accounts only. Signed-out visitors see a "Sign in to book" button that returns them to the dashboard after sign-in.
 - Booking (`POST /{slug}`) needs a signed-in account. A signed-out request is challenged and redirected to `/Login?ReturnUrl=/{slug}`.
 - `/{slug}/Reservations/{code}` and `/{slug}/Checkout/{id}` open only under the slug of their own restaurant. Any other slug gives "not found".
-- Sign-in and registration stay at `/Login` and `/Registration`, not under a slug. Registration asks for the restaurant and then opens its dashboard.
-- Signed-in customers who sign in without a return address stay on `/Login` with a hint to open a restaurant's link.
+- Sign-in and registration are under the restaurant's slug: `/{slug}/Login` and `/{slug}/Registration`. The restaurant comes from the address, so there is no restaurant select.
+- `/Login` is for administrators only.
+- A signed-in user who opens a sign-in page is sent on: customers to the restaurant, staff and managers to their dashboard, administrators to theirs.
+- The customer's food orders are at `/{slug}/Orders` (only that restaurant's orders). The old `/Customer/Orders` page is removed.
+- The site header (and its navigation and sign-out link) is removed from the shared layout.
 - After payment, `/Payment/Result` links back to the booking.
 - Reserved slugs now also include `staff` and `restaurants`, so a restaurant named "Staff" gets `staff-restaurant`.
 

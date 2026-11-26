@@ -77,6 +77,19 @@ namespace DineBook.Application.Services
                 .ToListAsync(ct);
         }
 
+        public async Task<IReadOnlyList<Orders>> GetRestaurantOrdersAsync(long customerId, long restaurantId, CancellationToken ct = default)
+        {
+            return await _db.Orders.AsNoTracking()
+                .Include(o => o.Restaurant)
+                .Include(o => o.Reservation)
+                .Include(o => o.Items)
+                .Where(o => o.Reservation.ApplicationUserId == customerId && o.RestaurantId == restaurantId)
+                .OrderByDescending(o => o.CreatedDateTime)
+                .Take(MaxRows)
+                .AsSplitQuery()
+                .ToListAsync(ct);
+        }
+
         public async Task<IReadOnlyList<Payment>> GetPaymentsAsync(long customerId, CancellationToken ct = default)
         {
             return await _db.Payments.AsNoTracking()

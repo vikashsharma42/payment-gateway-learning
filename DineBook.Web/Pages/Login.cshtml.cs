@@ -1,20 +1,21 @@
-
+using DineBook.Application.Security;
 using DineBook.Application.Services.Interface;
+using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.AspNetCore.RateLimiting;
 using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Globalization;
-using System.Linq;
+using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace DineBook.Web.Pages
 {
+    // Two sign-in pages share this model:
+    //   /{slug}/Login  customers, staff and managers of that restaurant
+    //   /Login         administrators (no restaurant)
     [EnableRateLimiting("checkout")]
     public class LoginModel : AppPageModel
     {
@@ -26,6 +27,10 @@ namespace DineBook.Web.Pages
             _authentication = authentication;
             _reservations = reservations;
         }
+
+        // Restaurant web address from the URL. Empty on /Login.
+        [FromRoute]
+        public string Slug { get; set; }
 
         [BindProperty]
         [Required(ErrorMessage = "Enter your email.")]
@@ -39,42 +44,26 @@ namespace DineBook.Web.Pages
         [Display(Name = "Password")]
         public string Password { get; set; }
 
-        // Customers and staff sign in within their restaurant. Administrators leave it empty.
-        [BindProperty]
-        [Display(Name = "Restaurant")]
-        public long? RestaurantId { get; set; }
-
-        // Restaurant web address (?slug=...), used to pre-select the restaurant, e.g. from the booking page
-        [BindProperty(SupportsGet = true, Name = "slug")]
-        public string Slug { get; set; }
-
         [BindProperty(SupportsGet = true)]
         public string ReturnUrl { get; set; }
 
         [BindProperty(SupportsGet = true)]
         public bool Denied { get; set; }
 
-        public string Error { get; private set; }
+        // The restaurant named in the URL. Null on /Login.
+        public Restaurant Restaurant { get; private set; }
 
-        public IEnumerable<SelectListItem> RestaurantOptions { get; private set; } = Enumerable.Empty<SelectListItem>();
+        public string Error { get; private set; }
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
-            if (User.Identity?.IsAuthenticated == true)
+            if (!await LoadRestaurantAsync(ct))
+                return NotFound();
+
+            if (User.Identity?.IsAuthenticated == true
+                && Enum.TryParse<UserRole>(User.FindFirstValue(ClaimTypes.Role), out var role))
             {
-                var roleClaim = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-
-                // Customers have no home page, so a signed-in customer simply sees this page
-                if (Enum.TryParse<UserRole>(roleClaim, out var role) && role != UserRole.Customer)
-                    return LandingPageFor(role);
-            }
-
-            await LoadRestaurantsAsync(ct);
-
-            if (!string.IsNullOrWhiteSpace(Slug))
-            {
-                var restaurant = await _reservations.GetRestaurantBySlugAsync(Slug, ct);
-                RestaurantId = restaurant?.Id;
+                return await AfterSignInAsync(role, UserClaimsFactory.RestaurantIdOf(User), ct) ?? Page();
             }
 
             return Page();
@@ -82,46 +71,57 @@ namespace DineBook.Web.Pages
 
         public async Task<IActionResult> OnPostAsync(CancellationToken ct)
         {
-            if (!ModelState.IsValid)
-            {
-                await LoadRestaurantsAsync(ct);
-                return Page();
-            }
+            if (!await LoadRestaurantAsync(ct))
+                return NotFound();
 
-            var user = await _authentication.LoginAsync(Email, Password, RestaurantId, ct);
+            if (!ModelState.IsValid)
+                return Page();
+
+            // Administrators are looked up platform-wide (no restaurant). Everyone else must use their restaurant's address.
+            var user = await _authentication.LoginAsync(Email, Password, Restaurant?.Id, ct);
 
             if (user is null)
             {
-                await LoadRestaurantsAsync(ct);
-                Error = "That email or password is not correct for the chosen restaurant.";
+                Error = Restaurant is null
+                    ? "That email or password is not correct for an administrator account."
+                    : "That email or password is not correct for this restaurant.";
                 return Page();
             }
 
+            return await AfterSignInAsync(user.Role, user.RestaurantId, ct) ?? Page();
+        }
+
+        // Where a signed-in user goes next. Null means there is nowhere to go, so the sign-in page stays.
+        private async Task<IActionResult> AfterSignInAsync(UserRole role, long? restaurantId, CancellationToken ct)
+        {
             if (!string.IsNullOrEmpty(ReturnUrl) && Url.IsLocalUrl(ReturnUrl))
                 return LocalRedirect(ReturnUrl);
 
-            // Customers book from their restaurant's own link (/{slug}), so they stay on this page with a hint
-            if (user.Role == UserRole.Customer)
-                ToastSuccess("You are signed in. Open a restaurant's link to book a table.");
+            switch (role)
+            {
+                case UserRole.Admin:
+                    return RedirectToPage("/Admin/Dashboard");
+                case UserRole.Staff:
+                case UserRole.Manager:
+                    return RedirectToPage("/Staff/Dashboard");
+            }
 
-            return LandingPageFor(user.Role);
+            // Customers go to the restaurant whose address they used, or else to their own restaurant
+            var target = Restaurant
+                ?? (restaurantId is { } id ? await _reservations.GetRestaurantAsync(id, ct) : null);
+
+            return target is null
+                ? null
+                : RedirectToPage("/Restaurants/Index", new { slug = target.Slug });
         }
 
-        // Admins go to the admin list, restaurant staff to their location page, customers back to this page
-        private RedirectToPageResult LandingPageFor(UserRole role) => role switch
+        private async Task<bool> LoadRestaurantAsync(CancellationToken ct)
         {
-            UserRole.Admin => RedirectToPage("/Admin/Dashboard"),
-            UserRole.Staff or UserRole.Manager => RedirectToPage("/Staff/Dashboard"),
-            _ => RedirectToPage("/Login")
-        };
+            if (string.IsNullOrWhiteSpace(Slug))
+                return true;
 
-        private async Task LoadRestaurantsAsync(CancellationToken ct)
-        {
-            var restaurants = await _reservations.GetRestaurantsAsync(ct);
-            RestaurantOptions = restaurants
-                .Where(r => r.IsActive)
-                .Select(r => new SelectListItem(r.Name, r.Id.ToString(CultureInfo.InvariantCulture)))
-                .ToList();
+            Restaurant = await _reservations.GetRestaurantBySlugAsync(Slug, ct);
+            return Restaurant is not null && Restaurant.IsActive;
         }
     }
 }

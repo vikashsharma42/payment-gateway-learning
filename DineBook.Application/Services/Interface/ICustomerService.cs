@@ -21,6 +21,9 @@ namespace DineBook.Application.Services.Interface
         /// <summary>Food orders, newest first. Restaurant, reservation and items are loaded.</summary>
         Task<IReadOnlyList<Orders>> GetOrdersAsync(long customerId, CancellationToken ct = default);
 
+        /// <summary>Food orders at one restaurant, newest first. Restaurant, reservation and items are loaded.</summary>
+        Task<IReadOnlyList<Orders>> GetRestaurantOrdersAsync(long customerId, long restaurantId, CancellationToken ct = default);
+
         /// <summary>Payments and refunds for the customer's orders, newest first. Order and restaurant are loaded.</summary>
         Task<IReadOnlyList<Payment>> GetPaymentsAsync(long customerId, CancellationToken ct = default);
     }

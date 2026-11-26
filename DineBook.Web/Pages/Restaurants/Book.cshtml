@@ -15,7 +15,7 @@
     {
         <div class="card card-body shadow-sm">
             <p class="mb-3">Sign in to book a table at @Model.Restaurant.Name.</p>
-            <a class="btn btn-brand" asp-page="/Login" asp-route-slug="@Model.Restaurant.Slug" asp-route-ReturnUrl="@returnUrl">Sign in to book</a>
+            <a class="btn btn-brand" asp-page="/Restaurants/Login" asp-route-slug="@Model.Restaurant.Slug" asp-route-ReturnUrl="@returnUrl">Sign in to book</a>
         </div>
     }
     else
