@@ -8,7 +8,7 @@ using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Restaurants
 {
-    // /restaurants/{slug} opens the restaurant's default location, or its first open location
+    // /{slug} opens the restaurant's default location, or its first open location
     public class IndexModel : AppPageModel
     {
         private readonly IReservationService _reservations;

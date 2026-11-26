@@ -9,6 +9,11 @@ namespace DineBook.Domain.Entities
     // Added through Restaurant.AddMenuItem.
     public class MenuItem : Entity, IAuditableEntity
     {
+        // Required by EF Core
+        private MenuItem()
+        {
+        }
+
         public MenuItem(string name, string description, decimal price, string imageUrl = null)
         {
             DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace().HasMaxLength(100);

@@ -14,7 +14,7 @@ using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Restaurants
 {
-    // /restaurants/{slug}/{locationSlug}/book: booking for signed-in accounts.
+    // /{slug}/{locationSlug}/book: booking for signed-in accounts.
     // Visitors who are signed out are sent to sign in, then back to this page.
     [EnableRateLimiting("checkout")]
     public class BookModel : AppPageModel

@@ -9,7 +9,7 @@ using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Restaurants
 {
-    // /restaurants/{slug}/{locationSlug}: details of one open location of a restaurant
+    // /{slug}/{locationSlug}: details of one open location of a restaurant
     public class LocationModel : AppPageModel
     {
         private readonly IReservationService _reservations;

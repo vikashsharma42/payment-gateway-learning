@@ -1,49 +1,31 @@
-using DineBook.Application.Services.Interface;
-using DineBook.Domain.Entities;
-using DineBook.Domain.Exceptions;
-using DineBook.Web.Infrastructure;
-using Microsoft.AspNetCore.Mvc;
-using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using DineBook.Application.Services.Interface;
+using DineBook.Domain.Entities;
+using DineBook.Web.Infrastructure;
 
-namespace DineBook.Web.Pages.Admin.Restaurants
+namespace DineBook.Web.Pages
 {
-    // All restaurants: open one to manage it, or activate and deactivate it
+    // "/" lists restaurants that have at least one open location. Browsing needs no sign-in.
     public class IndexModel : AppPageModel
     {
         private readonly IReservationService _reservations;
-        private readonly IRestaurantAdminService _admin;
 
-        public IndexModel(IReservationService reservations, IRestaurantAdminService admin)
+        public IndexModel(IReservationService reservations)
         {
             _reservations = reservations;
-            _admin = admin;
         }
 
-        public IReadOnlyList<Restaurant> Restaurants { get; private set; } = Array.Empty<Restaurant>();
+        public IReadOnlyList<Restaurant> Restaurants { get; private set; } = new List<Restaurant>();
 
         public async Task OnGetAsync(CancellationToken ct)
         {
-            Restaurants = await _reservations.GetRestaurantsAsync(ct);
-        }
-
-        public async Task<IActionResult> OnPostSetActiveAsync(long restaurantId, bool active, CancellationToken ct)
-        {
-            try
-            {
-                await _admin.SetRestaurantActiveAsync(restaurantId, active, ct);
-                ToastSuccess(active
-                    ? "Restaurant activated. Customers can book again."
-                    : "Restaurant deactivated. Customers cannot book there.");
-            }
-            catch (DomainException ex)
-            {
-                ToastError(ex.Message);
-            }
-
-            return RedirectToPage();
+            Restaurants = (await _reservations.GetRestaurantsAsync(ct))
+                .Where(r => r.IsActive && r.ActiveLocations.Any())
+                .OrderBy(r => r.Name)
+                .ToList();
         }
     }
 }

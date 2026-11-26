@@ -8,6 +8,11 @@ namespace DineBook.Domain.Entities
 {
     public class Location : Entity, IAuditableEntity
     {
+        private Location()
+        {
+            // EF Core constructor
+        }
+
         public Location(string name, Address address, string phone)
         {
             DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace("Location name is required.").HasMaxLength(100);

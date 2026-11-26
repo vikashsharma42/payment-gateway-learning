@@ -9,6 +9,11 @@ namespace DineBook.Domain.Entities
     // Added through Orders.AddOrderItem.
     public class OrderItem : Entity, IAuditableEntity
     {
+        // Required by EF Core
+        private OrderItem()
+        {
+        }
+
         public OrderItem(string itemName, Money unitPrice, int quantity, string imageUrl = null)
         {
             DomainValidation<string>.Ensure(itemName, "Item name").IsNotNullOrWhiteSpace();

@@ -10,6 +10,11 @@ namespace DineBook.Domain.Entities
     // The guest's name, phone and email are read from the customer account, not copied here.
     public class Reservation : Entity, IAuditableEntity
     {
+        // Required by EF Core
+        private Reservation()
+        {
+        }
+
         // The customer must be a saved Customer account. Restaurant.AddReservation checks it is registered with that restaurant.
         public Reservation(
             string code,

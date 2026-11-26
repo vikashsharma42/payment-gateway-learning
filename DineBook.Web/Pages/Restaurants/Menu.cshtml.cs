@@ -10,7 +10,7 @@ using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Restaurants
 {
-    // /restaurants/{slug}/{locationSlug}/menu: the dishes available at the restaurant
+    // /{slug}/{locationSlug}/menu: the dishes available at the restaurant
     public class MenuModel : AppPageModel
     {
         private readonly IReservationService _reservations;
