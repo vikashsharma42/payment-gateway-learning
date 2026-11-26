@@ -1,0 +1,42 @@
+@page
+@model ReservationsModel
+@{
+    ViewData["Title"] = "My bookings";
+}
+
+<h1 class="h2 mb-4">My bookings</h1>
+
+@if (Model.Bookings.Count == 0)
+{
+    <p class="text-muted">You have not made any bookings yet.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle table-hover bg-white shadow-sm">
+            <thead>
+                <tr>
+                    <th scope="col">Restaurant</th>
+                    <th scope="col">When</th>
+                    <th scope="col">Guests</th>
+                    <th scope="col">Status</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var booking in Model.Bookings)
+                {
+                    <tr>
+                        <td>@booking.Restaurant.Name</td>
+                        <td>@booking.StartsAt.ToString("ddd, dd MMM yyyy") @booking.StartsAt.ToString("HH:mm")</td>
+                        <td>@booking.Guests</td>
+                        <td><span class="badge text-bg-light border">@booking.Status</span></td>
+                        <td class="text-end">
+                            <a class="btn btn-sm btn-outline-primary" asp-page="/Reservations/Details" asp-route-slug="@booking.Restaurant.Slug" asp-route-code="@booking.Code">Open</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

@@ -70,7 +70,23 @@ namespace DineBook.Application.Services
             .AsSplitQuery()
             .FirstOrDefaultAsync(r => r.Slug == slug, ct);
 
-        public async Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(long restaurantId, DateOnly date, int guests, CancellationToken ct = default)
+        // A location can only be booked while it is open
+        private static void EnsureLocationOpen(Restaurant restaurant, long? locationId)
+        {
+            if (locationId is null)
+                return;
+
+            if (!restaurant.ActiveLocations.Any(l => l.Id == locationId.Value))
+                throw new DomainException("This location is not open for bookings.");
+        }
+
+        // Tables of the chosen location, or every table of the restaurant when no location is chosen
+        private static IEnumerable<Table> TablesFor(Restaurant restaurant, long? locationId) =>
+            locationId is null
+                ? restaurant.Tables
+                : restaurant.Tables.Where(t => t.LocationId == locationId.Value);
+
+        public async Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(long restaurantId, DateOnly date, int guests, long? locationId = null, CancellationToken ct = default)
         {
             var policy = _options.ToPolicy();
             if (guests < 1 || guests > policy.MaxGuests)
@@ -78,6 +94,9 @@ namespace DineBook.Application.Services
 
             var restaurant = await GetRestaurantAsync(restaurantId, ct)
                 ?? throw new DomainException("Restaurant not found.");
+
+            EnsureLocationOpen(restaurant, locationId);
+            var tables = TablesFor(restaurant, locationId);
 
             var now = LocalNow();
             var slots = new List<DateTime>();
@@ -100,7 +119,7 @@ namespace DineBook.Application.Services
                 if (start < now.AddMinutes(policy.MinNoticeMinutes))
                     continue;
 
-                if (ReservationRules.PickTable(restaurant.Tables, existing, guests, start, policy.DurationMinutes) is not null)
+                if (ReservationRules.PickTable(tables, existing, guests, start, policy.DurationMinutes) is not null)
                     slots.Add(start);
             }
 
@@ -117,6 +136,8 @@ namespace DineBook.Application.Services
                 ?? throw new DomainException("Account not found. Please sign in again.");
 
             ReservationRules.EnsureBookable(restaurant, policy, request.Guests, request.StartsAt, LocalNow());
+            EnsureLocationOpen(restaurant, request.LocationId);
+            var tables = TablesFor(restaurant, request.LocationId);
 
             Reservation reservation = null;
 
@@ -137,7 +158,7 @@ namespace DineBook.Application.Services
                     ct);
 
                 var table = ReservationRules.PickTable(
-                    restaurant.Tables,
+                    tables,
                     existing,
                     request.Guests,
                     request.StartsAt,

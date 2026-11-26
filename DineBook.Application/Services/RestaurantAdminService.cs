@@ -48,6 +48,19 @@ namespace DineBook.Application.Services
             return restaurant;
         }
 
+        public async Task SetRestaurantActiveAsync(long restaurantId, bool active, CancellationToken ct = default)
+        {
+            var restaurant = await _db.Restaurants.FirstOrDefaultAsync(r => r.Id == restaurantId, ct)
+                ?? throw new DomainException("Restaurant not found.");
+
+            if (active)
+                restaurant.Activate();
+            else
+                restaurant.Deactivate();
+
+            await _db.SaveChangesAsync(ct);
+        }
+
         public async Task<Location> AddLocationAsync(long restaurantId, AddLocationRequest request, CancellationToken ct = default)
         {
             var restaurant = await LoadRestaurantAsync(restaurantId, ct);
@@ -105,6 +118,51 @@ namespace DineBook.Application.Services
 
             table.Rename(label);
 
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task SetDefaultLocationAsync(long restaurantId, long locationId, CancellationToken ct = default)
+        {
+            var restaurant = await LoadRestaurantAsync(restaurantId, ct);
+
+            restaurant.SetDefaultLocation(locationId);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task ChangeLocationSlugAsync(long restaurantId, long locationId, string slug, CancellationToken ct = default)
+        {
+            var restaurant = await LoadRestaurantAsync(restaurantId, ct);
+
+            restaurant.ChangeLocationSlug(locationId, slug);
+            try
+            {
+                await _db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException)
+            {
+                throw new DomainException("That web address is already used by another location of this restaurant.");
+            }
+        }
+
+        public async Task ChangeTableCapacityAsync(long restaurantId, long tableId, int capacity, CancellationToken ct = default)
+        {
+            var table = await _db.Tables
+                .FirstOrDefaultAsync(t => t.Id == tableId && t.RestaurantId == restaurantId, ct)
+                ?? throw new DomainException("Table not found.");
+
+            table.ChangeCapacity(capacity);
+            await _db.SaveChangesAsync(ct);
+        }
+
+        public async Task UpdateMenuItemAsync(long restaurantId, long menuItemId, string name, string description, decimal price, string imageUrl, CancellationToken ct = default)
+        {
+            var item = await _db.MenuItems
+                .FirstOrDefaultAsync(m => m.Id == menuItemId && m.RestaurantId == restaurantId && m.DeletedAt == null, ct)
+                ?? throw new DomainException("Menu item not found.");
+
+            item.UpdateDetails(name, description);
+            item.ChangePrice(price);
+            item.ChangeImage(imageUrl);
             await _db.SaveChangesAsync(ct);
         }
 

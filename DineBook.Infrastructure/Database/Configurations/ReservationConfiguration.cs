@@ -9,10 +9,7 @@ namespace DineBook.Infrastructure.Database.Configurations
         public void Configure(EntityTypeBuilder<Reservation> builder)
         {
             builder.ToTable(nameof(Reservation));
-            builder.Property(x => x.Code).HasMaxLength(Reservation.CodeLength).IsRequired();
-            builder.HasIndex(x => x.Code).IsUnique();
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
-            builder.Property(x => x.SpecialRequests).HasMaxLength(Reservation.MaxSpecialRequestsLength);
 
             // Many bookings belong to one restaurant
             builder.HasOne(x => x.Restaurant)

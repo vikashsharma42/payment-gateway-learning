@@ -59,11 +59,11 @@ namespace DineBook.Web.Pages.Admin.Restaurants
         [BindProperty]
         [Required(ErrorMessage = "Zip code is required.")]
         [StringLength(20)]
-        public string NewLocationZipCode { get; set; } = string.Empty;
+        public string NewLocationZipCode { get; set; }
 
         [BindProperty]
-        [StringLength(Location.MaxPhoneLength)]
-        public string NewLocationPhone { get; set; } = string.Empty;
+        [StringLength(100)]
+        public string NewLocationPhone { get; set; }
 
         // Add-table form
         [BindProperty]

@@ -1,0 +1,273 @@
+/* Visual polish for the whole site. Loaded after site.css, so it can refine its rules. */
+
+body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Cards lift slightly on hover, with a soft edge */
+.card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card.shadow-sm:hover {
+    box-shadow: 0 10px 28px rgba(154, 52, 18, 0.12) !important;
+}
+
+/* Buttons */
+.btn {
+    border-radius: 10px;
+    font-weight: 600;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-brand {
+    background: linear-gradient(120deg, var(--brand), var(--brand-2));
+    border: none;
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(154, 52, 18, 0.25);
+}
+
+.btn-brand:hover,
+.btn-brand:focus-visible {
+    color: #fff;
+    box-shadow: 0 10px 22px rgba(154, 52, 18, 0.35);
+    transform: translateY(-1px);
+}
+
+/* Page heading block */
+.page-hero {
+    background: radial-gradient(circle at top right, rgba(194, 65, 12, 0.15), transparent 60%), #fff;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 1.75rem;
+}
+
+/* Location switcher: pill links */
+.location-pills .btn {
+    border-radius: 999px;
+    padding-inline: 1rem;
+}
+
+/* Menu rows */
+.dish {
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    border-radius: 10px;
+    padding-inline: 0.5rem;
+}
+
+.dish:hover {
+    background: #fff7ed;
+    transform: translateX(3px);
+}
+
+.dish-price {
+    font-weight: 700;
+    color: var(--brand-dark);
+    white-space: nowrap;
+}
+
+/* Dish photo, or a branded letter tile when the dish has no photo */
+.dish-img {
+    width: 64px;
+    height: 64px;
+    flex: 0 0 64px;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.12);
+}
+
+.dish-fallback {
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #fed7aa, #fde68a);
+    color: var(--brand-dark);
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+/* Category headings get a soft underline */
+.menu-category {
+    display: inline-block;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--brand-dark);
+    border-bottom: 3px solid #fed7aa;
+    padding-bottom: 0.15rem;
+}
+
+/* Bubble celebration after an order or payment */
+.bubble-layer {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 1080;
+}
+
+.bubble {
+    position: absolute;
+    bottom: -80px;
+    border-radius: 50%;
+    opacity: 0.85;
+    box-shadow:
+        inset -4px -6px 10px rgba(255, 255, 255, 0.55),
+        inset 3px 3px 8px rgba(255, 255, 255, 0.35),
+        0 0 14px rgba(255, 255, 255, 0.35);
+    animation-name: bubble-rise;
+    animation-timing-function: ease-in;
+    animation-fill-mode: forwards;
+}
+
+.bubble::after {
+    content: "";
+    position: absolute;
+    top: 18%;
+    left: 22%;
+    width: 28%;
+    height: 18%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.7);
+    transform: rotate(-30deg);
+}
+
+@keyframes bubble-rise {
+    0% {
+        transform: translate3d(0, 0, 0) scale(0.6);
+        opacity: 0;
+    }
+    15% {
+        opacity: 0.9;
+    }
+    50% {
+        transform: translate3d(var(--drift, 20px), -55vh, 0) scale(1);
+    }
+    100% {
+        transform: translate3d(calc(var(--drift, 20px) * -1), -115vh, 0) scale(1.05);
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .bubble-layer {
+        display: none;
+    }
+
+    .card,
+    .btn,
+    .dish {
+        transition: none;
+    }
+}
+
+/* Gentle entrance for page content */
+main > * {
+    animation: fade-up 0.4s ease both;
+}
+
+@keyframes fade-up {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Footer */
+.site-footer {
+    background: #fff;
+    border-top: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 0.9rem;
+    padding: 1rem 0;
+}
+
+/* Phone: keep a 16px side gutter and avoid horizontal scroll */
+@media (max-width: 576px) {
+    .container {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    .dish-img {
+        width: 52px;
+        height: 52px;
+        flex-basis: 52px;
+    }
+
+    .page-hero {
+        padding: 1.25rem;
+    }
+}
+
+/* Warm theme. Bootstrap's blue "primary" is replaced by the brand colour (terracotta). */
+:root {
+    --bs-primary: #9a3412;
+    --bs-primary-rgb: 154, 52, 18;
+    --bs-focus-ring-color: rgba(154, 52, 18, 0.25);
+}
+
+.btn-primary,
+.btn-outline-primary {
+    --bs-btn-border-color: var(--brand);
+    --bs-btn-hover-border-color: var(--brand-dark);
+    --bs-btn-focus-shadow-rgb: 154, 52, 18;
+}
+
+.btn-primary {
+    --bs-btn-bg: var(--brand);
+    --bs-btn-hover-bg: var(--brand-dark);
+    --bs-btn-active-bg: var(--brand-dark);
+    --bs-btn-disabled-bg: var(--brand);
+}
+
+.btn-outline-primary {
+    --bs-btn-color: var(--brand);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--brand);
+    --bs-btn-active-color: #fff;
+    --bs-btn-active-bg: var(--brand-dark);
+    --bs-btn-disabled-color: var(--brand);
+}
+
+.btn-check:checked + .btn-outline-primary,
+.btn-check:active + .btn-outline-primary {
+    background-color: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+}
+
+.text-bg-primary {
+    background-color: var(--brand) !important;
+    color: #fff !important;
+}
+
+.text-primary {
+    color: var(--brand) !important;
+}
+
+.nav-tabs .nav-link.active {
+    color: var(--brand-dark);
+    border-bottom-color: var(--brand);
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--brand);
+}
+
+/* Role navigation in the header wraps on small screens */
+.site-header nav {
+    flex-wrap: wrap;
+}

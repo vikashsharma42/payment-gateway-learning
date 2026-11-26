@@ -1,0 +1,10 @@
+@page "/restaurants/{slug}"
+@model IndexModel
+@{
+    ViewData["Title"] = Model.Restaurant?.Name ?? "Restaurant";
+}
+
+<div class="page-hero">
+    <h1 class="h2 mb-1">@Model.Restaurant.Name</h1>
+    <p class="text-muted mb-0">No location is open right now. Please check back later.</p>
+</div>

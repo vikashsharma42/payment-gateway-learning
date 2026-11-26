@@ -7,10 +7,15 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="h2 mb-0">Users</h1>
     <div class="d-flex gap-2">
-        <a asp-page="/Admin/Index" class="btn btn-outline-secondary">Restaurants</a>
+        <a asp-page="/Admin/Restaurants/Index" class="btn btn-outline-secondary">Restaurants</a>
         <button type="button" class="btn btn-brand" data-bs-toggle="modal" data-bs-target="#createUserModal">Add user</button>
     </div>
 </div>
+
+<form method="get" class="d-flex gap-2 mb-3" role="search">
+    <input name="Search" value="@Model.Search" class="form-control" placeholder="Search by name, email or phone" aria-label="Search users" />
+    <button class="btn btn-outline-primary" type="submit">Search</button>
+</form>
 
 @if (Model.Users.Count == 0)
 {
@@ -82,7 +87,7 @@ else
                     <div class="mb-3">
                         <label asp-for="Input.Email" class="form-label"></label>
                         <input asp-for="Input.Email" type="email" class="form-control" autocomplete="off"
-                               data-check-url="@Url.Page("/Admin/Users/Index", "IsEmailAvailable")" />
+                               data-check-url="@Url.Page("/Admin/Users/Index", "IsEmailAvailable")" data-check-scope="#Input_RestaurantId" />
                         <span asp-validation-for="Input.Email" class="text-danger small"></span>
                     </div>
 

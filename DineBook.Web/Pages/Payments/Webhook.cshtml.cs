@@ -10,7 +10,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace DineBook.Web.Pages.Payment
+namespace DineBook.Web.Pages.Payments
 {
     // Cashfree calls this server to server when a payment succeeds. Anonymous, and no form token.
     [IgnoreAntiforgeryToken]

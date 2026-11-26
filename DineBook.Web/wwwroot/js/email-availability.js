@@ -1,6 +1,7 @@
 (function () {
     // Marks an email input as taken when an account already uses it.
-    // Inputs opt in with data-check-url="<handler url>". The server still checks on submit.
+    // Inputs opt in with data-check-url="<handler url>". Optional data-check-scope="<selector of the
+    // restaurant select>" limits the check to that restaurant. The server still checks on submit.
     function clearFeedback(input) {
         input.classList.remove('is-invalid');
         var old = input.parentElement.querySelector('[data-email-feedback]');
@@ -16,12 +17,18 @@
         input.insertAdjacentElement('afterend', fb);
     }
 
+    // Adds the chosen restaurant to the check. An empty value means an administrator account.
+    function restaurantParam(input) {
+        var select = input.dataset.checkScope ? document.querySelector(input.dataset.checkScope) : null;
+        return select ? '&restaurantId=' + encodeURIComponent(select.value) : '';
+    }
+
     function check(input) {
         var value = input.value.trim();
         clearFeedback(input);
         if (!value || input.validity.typeMismatch) return;
 
-        fetch(input.dataset.checkUrl + '&email=' + encodeURIComponent(value), {
+        fetch(input.dataset.checkUrl + '&email=' + encodeURIComponent(value) + restaurantParam(input), {
             credentials: 'same-origin',
             headers: { 'Accept': 'application/json' }
         })
@@ -37,5 +44,9 @@
     document.querySelectorAll('input[data-check-url]').forEach(function (input) {
         input.addEventListener('blur', function () { check(input); });
         input.addEventListener('input', function () { clearFeedback(input); });
+
+        // Changing the restaurant changes which accounts count as taken, so check again
+        var scope = input.dataset.checkScope ? document.querySelector(input.dataset.checkScope) : null;
+        if (scope) scope.addEventListener('change', function () { check(input); });
     });
 })();

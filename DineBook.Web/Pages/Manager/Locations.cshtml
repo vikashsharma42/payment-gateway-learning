@@ -1,0 +1,108 @@
+@page
+@model LocationsModel
+@{
+    ViewData["Title"] = "Manager · Locations";
+}
+
+<h1 class="h2 mb-4">Locations</h1>
+
+@if (Model.Workspace is null)
+{
+    <div class="card p-4 text-center text-muted">You are not assigned to a restaurant yet.</div>
+}
+else
+{
+    <div class="table-responsive mb-4">
+        <table class="table align-middle bg-white shadow-sm">
+            <thead>
+                <tr>
+                    <th scope="col">Location</th>
+                    <th scope="col">Web address</th>
+                    <th scope="col">Status</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var location in Model.Workspace.Restaurant.Locations.OrderBy(l => l.Name))
+                {
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">@location.Name @(location.IsDefault ? "(default)" : "")</div>
+                            <div class="small text-muted">@location.Address.City, @location.Address.State</div>
+                        </td>
+                        <td>
+                            <form method="post" asp-page-handler="Slug" class="d-flex gap-2" data-submit-once>
+                                <input type="hidden" name="locationId" value="@location.Id" />
+                                <input name="slug" class="form-control form-control-sm" value="@location.Slug" maxlength="60" aria-label="Web address for @location.Name" required />
+                                <button class="btn btn-sm btn-outline-primary">Save</button>
+                            </form>
+                        </td>
+                        <td><span class="badge text-bg-light border">@(location.IsActive ? "Open" : "Closed")</span></td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1">
+                                @if (!location.IsDefault && location.IsActive)
+                                {
+                                    <form method="post" asp-page-handler="Default" data-submit-once>
+                                        <input type="hidden" name="locationId" value="@location.Id" />
+                                        <button class="btn btn-sm btn-outline-secondary">Make default</button>
+                                    </form>
+                                }
+                                <form method="post" asp-page-handler="Toggle" data-submit-once>
+                                    <input type="hidden" name="locationId" value="@location.Id" />
+                                    <input type="hidden" name="active" value="@(!location.IsActive ? "true" : "false")" />
+                                    <button class="btn btn-sm @(location.IsActive ? "btn-outline-danger" : "btn-outline-success")">@(location.IsActive ? "Close" : "Reopen")</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card shadow-sm" style="max-width: 40rem;">
+        <div class="card-body p-4">
+            <h2 class="h5">Add a location</h2>
+            <form method="post" asp-page-handler="Add" data-submit-once>
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <label asp-for="NewLocation.Name" class="form-label"></label>
+                        <input asp-for="NewLocation.Name" class="form-control" />
+                        <span asp-validation-for="NewLocation.Name" class="text-danger small"></span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="NewLocation.Phone" class="form-label"></label>
+                        <input asp-for="NewLocation.Phone" type="tel" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="NewLocation.Street" class="form-label"></label>
+                        <input asp-for="NewLocation.Street" class="form-control" />
+                        <span asp-validation-for="NewLocation.Street" class="text-danger small"></span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="NewLocation.City" class="form-label"></label>
+                        <input asp-for="NewLocation.City" class="form-control" />
+                        <span asp-validation-for="NewLocation.City" class="text-danger small"></span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="NewLocation.State" class="form-label"></label>
+                        <input asp-for="NewLocation.State" class="form-control" />
+                        <span asp-validation-for="NewLocation.State" class="text-danger small"></span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="NewLocation.Country" class="form-label"></label>
+                        <input asp-for="NewLocation.Country" class="form-control" />
+                        <span asp-validation-for="NewLocation.Country" class="text-danger small"></span>
+                    </div>
+                    <div class="col-sm-6">
+                        <label asp-for="NewLocation.ZipCode" class="form-label"></label>
+                        <input asp-for="NewLocation.ZipCode" class="form-control" />
+                        <span asp-validation-for="NewLocation.ZipCode" class="text-danger small"></span>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-brand mt-4">Add location</button>
+            </form>
+        </div>
+    </div>
+}

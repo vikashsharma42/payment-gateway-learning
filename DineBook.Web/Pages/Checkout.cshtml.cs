@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
@@ -18,6 +19,8 @@ using System.Threading.Tasks;
 
 namespace DineBook.Web.Pages
 {
+    // Paying a bill needs the signed-in account that owns the booking (checked in LoadOrderAsync)
+    [Authorize]
     [EnableRateLimiting("checkout")]
     public class CheckoutModel : AppPageModel
     {
@@ -90,6 +93,7 @@ namespace DineBook.Web.Pages
 
             Pending = ReadPending(id);
             IdempotencyKey = Guid.NewGuid().ToString("N");
+            await PrefillFromAccountAsync(ct);
             return Page();
         }
 
@@ -164,7 +168,11 @@ namespace DineBook.Web.Pages
                 .Include(o => o.Reservation)
                 .FirstOrDefaultAsync(o => o.Id == id, ct);
 
-            if (Order is null || !string.Equals(Order.Restaurant?.Slug, Slug, StringComparison.OrdinalIgnoreCase))
+            // The order must belong to this restaurant's address and to the signed-in owner of the booking.
+            // Anything else reads as "not found", so other people's bills are not revealed.
+            if (Order is null
+                || !string.Equals(Order.Restaurant?.Slug, Slug, StringComparison.OrdinalIgnoreCase)
+                || Order.Reservation?.ApplicationUserId != UserId)
                 return false;
 
             ReservationCode = Order.Reservation?.Code ?? string.Empty;
@@ -172,12 +180,30 @@ namespace DineBook.Web.Pages
             return true;
         }
 
+        // Fills the form from the account, so the customer does not retype details that already match the booking.
+        // CreateOrderAsync still checks that the typed email and phone match the account.
+        private async Task PrefillFromAccountAsync(CancellationToken ct)
+        {
+            if (!string.IsNullOrEmpty(Email) && !string.IsNullOrEmpty(Phone))
+                return;
+
+            var account = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == UserId, ct);
+            if (account is null)
+                return;
+
+            if (string.IsNullOrEmpty(Email))
+                Email = account.Email;
+
+            if (string.IsNullOrEmpty(Phone))
+                Phone = account.Phone;
+        }
+
         // A paid or cancelled order needs no checkout: show the booking instead
         private RedirectToPageResult RedirectToSettled()
         {
             ToastSuccess("This order has already been paid or cancelled.");
             return string.IsNullOrEmpty(ReservationCode)
-                ? RedirectToPage("/Restaurants/Book", new { slug = Slug })
+                ? RedirectToPage("/Restaurants/Index", new { slug = Slug })
                 : RedirectToPage("/Reservations/Details", new { slug = Slug, code = ReservationCode });
         }
     }

@@ -10,11 +10,6 @@ namespace DineBook.Infrastructure.Database.Configurations
         {
             builder.ToTable(nameof(Payment));
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
-            builder.Property(x => x.GatewayOrderId).HasMaxLength(100).IsRequired();
-            builder.Property(x => x.PaymentSessionId).HasMaxLength(200).IsRequired();
-            builder.Property(x => x.IdempotencyKey).HasMaxLength(64).IsRequired();
-            builder.Property(x => x.CustomerEmail).HasMaxLength(254).IsRequired();
-            builder.Property(x => x.RefundId).HasMaxLength(100);
 
             // Amount is a Money value object, stored as Amount_Amount and Amount_Currency
             builder.OwnsOne(x => x.Amount, a => ValueObjectMappings.MapMoney(a));

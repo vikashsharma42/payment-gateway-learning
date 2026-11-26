@@ -81,8 +81,20 @@
                         }
                         <tr>
                             <td>
-                                @item.Name
-                                <div class="small text-muted">@item.Description</div>
+                                <div class="d-flex align-items-center gap-3">
+                                    @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                                    {
+                                        <img class="dish-img" src="@item.ImageUrl" alt="" loading="lazy" style="width:48px;height:48px;flex-basis:48px;" />
+                                    }
+                                    else
+                                    {
+                                        <div class="dish-img dish-fallback" aria-hidden="true" style="width:48px;height:48px;flex-basis:48px;">@item.Name.Substring(0, 1).ToUpperInvariant()</div>
+                                    }
+                                    <div>
+                                        <div class="fw-semibold">@item.Name</div>
+                                        <div class="small text-muted">@item.Description</div>
+                                    </div>
+                                </div>
                             </td>
                             <td class="text-end">@Money.Inr(item.Price.Amount)</td>
                             <td style="width: 6rem;">
@@ -148,7 +160,7 @@
                         </tbody>
                     </table>
                     <div class="d-flex justify-content-between align-items-center">
-                        <strong>Total @Money.Inr(order.Total().Amount)</strong>
+                        <strong>Total @Money.Inr(order.BillFor(Model.Restaurant).Total.Amount)</strong>
                         <button type="submit" name="orderId" value="@order.Id" class="btn btn-brand">Pay this order</button>
                     </div>
                 </div>
@@ -158,5 +170,5 @@
 }
 
 <div class="d-flex gap-2 mt-4">
-    <a asp-page="/Restaurants/Book" asp-route-slug="@Model.Restaurant.Slug" class="btn btn-outline-secondary">Back to @Model.Restaurant.Name</a>
+    <a asp-page="/Restaurants/Index" asp-route-slug="@Model.Restaurant.Slug" class="btn btn-outline-secondary">Back to @Model.Restaurant.Name</a>
 </div>

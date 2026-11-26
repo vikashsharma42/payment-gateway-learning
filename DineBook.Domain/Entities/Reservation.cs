@@ -10,15 +10,6 @@ namespace DineBook.Domain.Entities
     // The guest's name, phone and email are read from the customer account, not copied here.
     public class Reservation : Entity, IAuditableEntity
     {
-        public const int CodeLength = 8;
-        public const int MinDurationMinutes = 30;
-        public const int MaxSpecialRequestsLength = 200;
-
-        // Used by EF Core when loading. Validation runs only in the public constructor.
-        private Reservation()
-        {
-        }
-
         // The customer must be a saved Customer account. Restaurant.AddReservation checks it is registered with that restaurant.
         public Reservation(
             string code,
@@ -33,10 +24,10 @@ namespace DineBook.Domain.Entities
             DomainValidation<bool>.Ensure(customer.IsActive).IsTrue("This account is inactive.");
             DomainValidation<long>.Ensure(customer.Id, nameof(customer)).IsGreaterThan(0, "Save the customer before booking.");
 
-            DomainValidation<string>.Ensure(code).HasLength(CodeLength, "Booking code must be 8 characters.");
+            DomainValidation<string>.Ensure(code).HasLength(8, "Booking code must be 8 characters.");
             DomainValidation<int>.Ensure(guests).IsGreaterThanOrEqualTo(1, "At least one guest is required.");
-            DomainValidation<int>.Ensure(durationMinutes).IsGreaterThanOrEqualTo(MinDurationMinutes, "A booking must last at least 30 minutes.");
-            DomainValidation<string>.Ensure(specialRequests ?? string.Empty, nameof(specialRequests)).HasMaxLength(MaxSpecialRequestsLength, "Special requests can be at most 200 characters.");
+            DomainValidation<int>.Ensure(durationMinutes).IsGreaterThanOrEqualTo(30, "A booking must last at least 30 minutes.");
+            DomainValidation<string>.Ensure(specialRequests ?? string.Empty, nameof(specialRequests)).HasMaxLength(200, "Special requests can be at most 200 characters.");
 
             Code = code;
             Customer = customer;

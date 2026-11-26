@@ -9,8 +9,6 @@ namespace DineBook.Infrastructure.Database.Configurations
         public void Configure(EntityTypeBuilder<Table> builder)
         {
             builder.ToTable(nameof(Table));
-            builder.Property(x => x.Label).HasMaxLength(20).IsRequired();
-            builder.Property(x => x.Location).HasMaxLength(100).IsRequired();
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
 
             builder.Ignore(x => x.IsActive);

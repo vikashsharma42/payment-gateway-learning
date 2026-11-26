@@ -9,17 +9,6 @@ namespace DineBook.Domain.Entities
     // A person who can sign in. The password is never stored: only the hash produced by the application layer.
     public class ApplicationUser : Entity, IAuditableEntity
     {
-        public const int MaxEmailLength = 254;
-        public const int MaxNameLength = 100;
-        public const int MaxPhoneLength = 15;
-
-        // restaurantId: required for Customer, Staff and Manager (a customer registers with one restaurant,
-        // and can book at any of its locations). Must be null for Admin.
-        // Used by EF Core when loading. Validation runs only in the public constructor.
-        private ApplicationUser()
-        {
-        }
-
         public ApplicationUser(
             string email,
             string passwordHash,
@@ -29,17 +18,17 @@ namespace DineBook.Domain.Entities
             string phone,
             long? restaurantId)
         {
-            DomainValidation<string>.Ensure(email).IsNotNullOrWhiteSpace().HasMaxLength(MaxEmailLength).IsEmail("A valid email is required.");
+            DomainValidation<string>.Ensure(email).IsNotNullOrWhiteSpace().HasMaxLength(325).IsEmail("A valid email is required.");
             DomainValidation<string>.Ensure(passwordHash).IsNotNullOrWhiteSpace();
-            DomainValidation<string>.Ensure(firstName).IsNotNullOrWhiteSpace().HasMaxLength(MaxNameLength);
-            DomainValidation<string>.Ensure(lastName).IsNotNullOrWhiteSpace().HasMaxLength(MaxNameLength);
+            DomainValidation<string>.Ensure(firstName).IsNotNullOrWhiteSpace().HasMaxLength(100);
+            DomainValidation<string>.Ensure(lastName).IsNotNullOrWhiteSpace().HasMaxLength(100);
             DomainValidation<UserRole>.Ensure(role).IsDefinedEnum();
 
             var normalizedPhone = NormalizePhone(phone);
             if (role == UserRole.Customer)
-                DomainValidation<string>.Ensure(normalizedPhone, nameof(phone)).IsNotNullOrWhiteSpace("A phone number is required for customers.").HasMaxLength(MaxPhoneLength);
+                DomainValidation<string>.Ensure(normalizedPhone, nameof(phone)).IsNotNullOrWhiteSpace("A phone number is required for customers.").HasMaxLength(15);
             else
-                DomainValidation<string>.Ensure(normalizedPhone, nameof(phone)).HasMaxLength(MaxPhoneLength);
+                DomainValidation<string>.Ensure(normalizedPhone, nameof(phone)).HasMaxLength(15);
 
             if (role == UserRole.Admin)
                 DomainValidation<bool>.Ensure(restaurantId is null).IsTrue("Admins are not tied to a restaurant.");
@@ -91,9 +80,35 @@ namespace DineBook.Domain.Entities
             PasswordHash = passwordHash.Trim();
         }
 
+        // Customers, staff and managers belong to one restaurant. SuperAdmins belong to none.
+        public bool BelongsTo(long restaurantId) => RestaurantId == restaurantId;
+
         public void Activate() => IsActive = true;
 
         public void Deactivate() => IsActive = false;
+
+        // Same rules as the constructor: customers must keep a phone number
+        public void UpdateProfile(string firstName, string lastName, string phone)
+        {
+            DomainValidation<string>.Ensure(firstName).IsNotNullOrWhiteSpace().HasMaxLength(100);
+            DomainValidation<string>.Ensure(lastName).IsNotNullOrWhiteSpace().HasMaxLength(100);
+
+            var normalizedPhone = NormalizePhone(phone);
+            if (Role == UserRole.Customer)
+                DomainValidation<string>.Ensure(normalizedPhone, nameof(phone)).IsNotNullOrWhiteSpace("A phone number is required for customers.").HasMaxLength(15);
+            else
+                DomainValidation<string>.Ensure(normalizedPhone, nameof(phone)).HasMaxLength(15);
+
+            FirstName = firstName.Trim();
+            LastName = lastName.Trim();
+            Phone = normalizedPhone.Length == 0 ? null : normalizedPhone;
+        }
+
+        public void ChangeEmail(string email)
+        {
+            DomainValidation<string>.Ensure(email).IsNotNullOrWhiteSpace().HasMaxLength(325).IsEmail("A valid email is required.");
+            Email = NormalizeEmail(email);
+        }
 
         // Stored trimmed and lower-case, so one account per address
         public static string NormalizeEmail(string email) =>

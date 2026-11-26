@@ -25,6 +25,10 @@ namespace DineBook.Web.Pages.Admin.Users
             _reservations = reservations;
         }
 
+        // Search by email, name or phone (?Search=...)
+        [BindProperty(SupportsGet = true)]
+        public string Search { get; set; } = string.Empty;
+
         public IReadOnlyList<ApplicationUser> Users { get; private set; }
 
         // Restaurants to choose from, and their names for the list
@@ -87,9 +91,9 @@ namespace DineBook.Web.Pages.Admin.Users
         }
 
         // Live check while typing in the popup (GET, same as the sign-up page)
-        public async Task<JsonResult> OnGetIsEmailAvailable(string email, CancellationToken ct)
+        public async Task<JsonResult> OnGetIsEmailAvailable(string email, long? restaurantId, CancellationToken ct)
         {
-            return new JsonResult(new { available = await _registration.IsEmailAvailableAsync(email, ct) });
+            return new JsonResult(new { available = await _registration.IsEmailAvailableAsync(email, restaurantId, ct) });
         }
 
         public async Task<IActionResult> OnPostCreateAsync(CancellationToken ct)
@@ -121,7 +125,7 @@ namespace DineBook.Web.Pages.Admin.Users
 
         private async Task LoadAsync(CancellationToken ct)
         {
-            Users = await _registration.GetUsersAsync(ct);
+            Users = await _registration.GetUsersAsync(Search, ct);
             Restaurants = await _reservations.GetRestaurantsAsync(ct);
         }
     }

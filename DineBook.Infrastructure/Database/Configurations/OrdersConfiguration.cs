@@ -1,5 +1,4 @@
 using DineBook.Domain.Entities;
-using DineBook.Domain.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,7 +10,6 @@ namespace DineBook.Infrastructure.Database.Configurations
         {
             builder.ToTable(nameof(Orders));
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
-            builder.Property(x => x.OrderNo).HasMaxLength(OrderNumberHelper.MaxLength).IsRequired();
 
             // Order numbers are unique across all orders
             builder.HasIndex(x => x.OrderNo).IsUnique();

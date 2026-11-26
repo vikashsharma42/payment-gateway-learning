@@ -9,12 +9,6 @@ namespace DineBook.Domain.Entities
     // Added through Orders.AddOrderItem.
     public class OrderItem : Entity, IAuditableEntity
     {
-        // Used by EF Core when loading. Validation runs only in the public constructor.
-        private OrderItem()
-        {
-        }
-
-        // imageUrl is copied from the menu item, so the order history keeps the photo if the menu changes
         public OrderItem(string itemName, Money unitPrice, int quantity, string imageUrl = null)
         {
             DomainValidation<string>.Ensure(itemName, "Item name").IsNotNullOrWhiteSpace();
@@ -57,7 +51,7 @@ namespace DineBook.Domain.Entities
         private static string NormalizeImage(string imageUrl)
         {
             var value = (imageUrl ?? string.Empty).Trim();
-            DomainValidation<string>.Ensure(value, nameof(imageUrl)).HasMaxLength(50);
+            DomainValidation<string>.Ensure(value, nameof(imageUrl)).HasMaxLength(100);
 
             return value.Length == 0 ? null : value;
         }

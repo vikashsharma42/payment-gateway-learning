@@ -90,8 +90,10 @@ BEGIN TRY
             OR (Role <> N'Admin' AND RestaurantId IS NOT NULL)
         )
     );
-    CREATE UNIQUE INDEX IX_ApplicationUser_Email ON dbo.ApplicationUser (Email);
-    CREATE UNIQUE INDEX IX_ApplicationUser_Phone ON dbo.ApplicationUser (Phone) WHERE Phone IS NOT NULL;
+    /* One account per email and per phone within a restaurant, so one address can book at two restaurants.
+       Admins (RestaurantId IS NULL) stay unique platform-wide, because NULLs are equal in a unique index. */
+    CREATE UNIQUE INDEX IX_ApplicationUser_Restaurant_Email ON dbo.ApplicationUser (RestaurantId, Email);
+    CREATE UNIQUE INDEX IX_ApplicationUser_Restaurant_Phone ON dbo.ApplicationUser (RestaurantId, Phone) WHERE Phone IS NOT NULL;
 
     /* Location (branch of a restaurant). Address is owned: columns Street, City, State, Country, ZipCode. */
     CREATE TABLE dbo.Location
@@ -99,6 +101,8 @@ BEGIN TRY
         Id              BIGINT IDENTITY(1,1) NOT NULL CONSTRAINT PK_Location PRIMARY KEY,
         RestaurantId    BIGINT         NOT NULL,
         Name            NVARCHAR(100)  NOT NULL,
+        Slug            NVARCHAR(60)   NOT NULL,
+        IsDefault       BIT            NOT NULL CONSTRAINT DF_Location_IsDefault DEFAULT (0),
         Phone           NVARCHAR(15)   NULL,
         IsActive        BIT            NOT NULL,
         Street          NVARCHAR(200)  NOT NULL,
@@ -110,7 +114,8 @@ BEGIN TRY
         CreatedBy       NVARCHAR(256)  NULL,
         UpdatedDateTime DATETIMEOFFSET NOT NULL,
         UpdatedBy       NVARCHAR(256)  NULL,
-        CONSTRAINT FK_Location_Restaurant FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurant (Id)
+        CONSTRAINT FK_Location_Restaurant FOREIGN KEY (RestaurantId) REFERENCES dbo.Restaurant (Id),
+        CONSTRAINT UQ_Location_Restaurant_Slug UNIQUE (RestaurantId, Slug)
     );
 
     /* Table (seats at one location). Labels are unique per location among active (not removed) tables. */
@@ -161,7 +166,7 @@ BEGIN TRY
         Category        NVARCHAR(50)   NULL,
         Price_Amount    DECIMAL(18,2)  NOT NULL,
         Price_Currency  NVARCHAR(3)    NOT NULL,
-        ImageUrl        NVARCHAR(50)   NULL,
+        ImageUrl        NVARCHAR(100)  NULL,
         IsAvailable     BIT            NOT NULL,
         DeletedAt       DATETIMEOFFSET NULL,
         CreatedDateTime DATETIMEOFFSET NOT NULL,
@@ -229,7 +234,7 @@ BEGIN TRY
         UnitPrice_Amount   DECIMAL(18,2)  NOT NULL,
         UnitPrice_Currency NVARCHAR(3)    NOT NULL,
         Quantity           INT            NOT NULL,
-        ImageUrl           NVARCHAR(50)   NULL,
+        ImageUrl           NVARCHAR(100)  NULL,
         CreatedDateTime    DATETIMEOFFSET NOT NULL,
         CreatedBy          NVARCHAR(256)  NULL,
         UpdatedDateTime    DATETIMEOFFSET NOT NULL,

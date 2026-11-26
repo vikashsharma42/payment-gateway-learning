@@ -1,0 +1,57 @@
+@page
+@model RestaurantModel
+@{
+    ViewData["Title"] = "Manager · Restaurant";
+}
+
+<h1 class="h2 mb-4">Restaurant details</h1>
+
+@if (Model.Workspace is null)
+{
+    <div class="card p-4 text-center text-muted">You are not assigned to a restaurant yet.</div>
+}
+else
+{
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" data-submit-once>
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.Phone" class="form-label"></label>
+                            <input asp-for="Input.Phone" type="tel" class="form-control" />
+                            <span asp-validation-for="Input.Phone" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Input.Description" class="form-label"></label>
+                            <textarea asp-for="Input.Description" class="form-control" rows="4"></textarea>
+                            <span asp-validation-for="Input.Description" class="text-danger small"></span>
+                        </div>
+
+                        <button type="submit" class="btn btn-brand">Save details</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h2 class="h6">Set by the platform</h2>
+                    <dl class="row mb-0">
+                        <dt class="col-5">Name</dt>
+                        <dd class="col-7">@Model.Workspace.Restaurant.Name</dd>
+                        <dt class="col-5">Web address</dt>
+                        <dd class="col-7"><code>/restaurants/@Model.Workspace.Restaurant.Slug</code></dd>
+                        <dt class="col-5">Opening hours</dt>
+                        <dd class="col-7">@Model.Workspace.Restaurant.OpensAt.ToString("HH:mm") to @Model.Workspace.Restaurant.ClosesAt.ToString("HH:mm")</dd>
+                    </dl>
+                    <p class="small text-muted mt-3 mb-0">Changing the name, web address or opening hours is not available yet. Weekly hours per location need a design decision first.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+}

@@ -1,11 +1,11 @@
 :root {
-    --brand: #4338ca;
-    --brand-2: #7c3aed;
-    --brand-dark: #3730a3;
-    --ink: #0f172a;
-    --muted: #64748b;
-    --line: #e2e8f0;
-    --bg: #f5f7fb;
+    --brand: #9a3412;
+    --brand-2: #c2410c;
+    --brand-dark: #7c2d12;
+    --ink: #292524;
+    --muted: #78716c;
+    --line: #e7e5e4;
+    --bg: #faf7f2;
     --radius: 14px;
 }
 
@@ -37,7 +37,7 @@ main {
 }
 
 :focus-visible {
-    outline: 3px solid #a5b4fc;
+    outline: 3px solid #fdba74;
     outline-offset: 2px;
 }
 
@@ -56,7 +56,7 @@ main {
 }
 
 .brand:hover {
-    color: #e0e7ff;
+    color: #fde68a;
 }
 
 .secure-badge {
@@ -93,7 +93,7 @@ main {
 
 .product-media {
     aspect-ratio: 3 / 2;
-    background: #eef2ff;
+    background: #fff7ed;
 }
 
 .product-img {

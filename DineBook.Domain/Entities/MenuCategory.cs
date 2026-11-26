@@ -8,11 +8,6 @@ namespace DineBook.Domain.Entities
     // A section of one restaurant's menu, such as "Starters". Added through Restaurant.AddMenuCategory.
     public class MenuCategory : Entity, IAuditableEntity
     {
-        // Used by EF Core when loading. Validation runs only in the public constructor.
-        private MenuCategory()
-        {
-        }
-
         public MenuCategory(string name)
         {
             DomainValidation<string>.Ensure(name, "Category").IsNotNullOrWhiteSpace().HasMaxLength(50);
@@ -37,7 +32,22 @@ namespace DineBook.Domain.Entities
         private readonly List<MenuItem> _menuItems = [];
         public IReadOnlyCollection<MenuItem> MenuItems => _menuItems.AsReadOnly();
 
-        // Called by Restaurant.AddMenuItem, which has already checked the category belongs to the restaurant
+        public void Rename(string name)
+        {
+            DomainValidation<string>.Ensure(name, "Category").IsNotNullOrWhiteSpace().HasMaxLength(50);
+            Name = name.Trim();
+
+            // Dishes copy the category name for display, so keep their copy in step
+            foreach (var item in _menuItems)
+                item.SetCategoryName(Name);
+        }
+
+        internal void RemoveMenuItem(MenuItem menuItem)
+        {
+            DomainValidation<MenuItem>.Ensure(menuItem).IsNotNull();
+            _menuItems.Remove(menuItem);
+        }
+
         internal void AddMenuItem(MenuItem menuItem)
         {
             DomainValidation<MenuItem>.Ensure(menuItem).IsNotNull();

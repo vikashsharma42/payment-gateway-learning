@@ -35,6 +35,15 @@ namespace DineBook.Application.DependencyInjection
             // Sign-up and staff registration
             services.AddScoped<IRegistrationService, RegistrationService>();
 
+            // Customer account: profile, bookings, orders and payments
+            services.AddScoped<ICustomerService, CustomerService>();
+
+            // Staff view of a location: bookings and incoming orders
+            services.AddScoped<IStaffWorkService, StaffWorkService>();
+
+            // SuperAdmin view across all restaurants
+            services.AddScoped<IPlatformMonitorService, PlatformMonitorService>();
+
             // First admin account, created from configuration when none exists
             services.AddScoped<AdminAccountSeeder>();
 

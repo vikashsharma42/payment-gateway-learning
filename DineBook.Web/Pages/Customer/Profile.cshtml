@@ -1,0 +1,43 @@
+@page
+@model ProfileModel
+@{
+    ViewData["Title"] = "My profile";
+}
+
+<h1 class="h2 mb-4">My profile</h1>
+
+<div class="card shadow-sm" style="max-width: 36rem;">
+    <div class="card-body p-4">
+        <form method="post" data-submit-once>
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+            <div class="mb-3">
+                <label class="form-label" for="email">Email</label>
+                <input id="email" class="form-control" value="@Model.Email" disabled />
+                <div class="form-text">Your sign-in email.</div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label asp-for="Input.FirstName" class="form-label"></label>
+                    <input asp-for="Input.FirstName" class="form-control" autocomplete="given-name" />
+                    <span asp-validation-for="Input.FirstName" class="text-danger small"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="Input.LastName" class="form-label"></label>
+                    <input asp-for="Input.LastName" class="form-control" autocomplete="family-name" />
+                    <span asp-validation-for="Input.LastName" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label asp-for="Input.Phone" class="form-label"></label>
+                <input asp-for="Input.Phone" type="tel" class="form-control" autocomplete="tel" />
+                <div class="form-text">Used to confirm bookings and food orders.</div>
+                <span asp-validation-for="Input.Phone" class="text-danger small"></span>
+            </div>
+
+            <button type="submit" class="btn btn-brand">Save profile</button>
+        </form>
+    </div>
+</div>

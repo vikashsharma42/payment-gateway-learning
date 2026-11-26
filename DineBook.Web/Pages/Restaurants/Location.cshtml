@@ -1,0 +1,31 @@
+@page "/restaurants/{slug}/{locationSlug}"
+@model LocationModel
+@{
+    ViewData["Title"] = Model.Restaurant.Name + " · " + Model.SelectedLocation.Name;
+    var header = new DineBook.Web.Models.RestaurantHeader(Model.Restaurant, Model.SelectedLocation, "overview");
+    var address = Model.SelectedLocation.Address;
+    var phone = string.IsNullOrWhiteSpace(Model.SelectedLocation.Phone) ? Model.Restaurant.Phone : Model.SelectedLocation.Phone;
+}
+
+<partial name="_RestaurantHeader" model="header" />
+
+<section class="card shadow-sm mb-4" aria-labelledby="details-heading">
+    <div class="card-body">
+        <h2 id="details-heading" class="h5">Location details</h2>
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Address</dt>
+            <dd class="col-sm-9">@address.Street, @address.City, @address.State @address.ZipCode, @address.Country</dd>
+
+            <dt class="col-sm-3">Phone</dt>
+            <dd class="col-sm-9">@(string.IsNullOrWhiteSpace(phone) ? "Not listed" : phone)</dd>
+
+            <dt class="col-sm-3">Opening hours</dt>
+            <dd class="col-sm-9 text-muted">Not available yet.</dd>
+        </dl>
+    </div>
+</section>
+
+<div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-brand" asp-page="/Restaurants/Book" asp-route-slug="@Model.Restaurant.Slug" asp-route-locationSlug="@Model.SelectedLocation.Slug">Book a table</a>
+    <a class="btn btn-outline-primary" asp-page="/Restaurants/Menu" asp-route-slug="@Model.Restaurant.Slug" asp-route-locationSlug="@Model.SelectedLocation.Slug">View menu</a>
+</div>

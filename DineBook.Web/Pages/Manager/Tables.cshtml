@@ -1,0 +1,83 @@
+@page
+@model TablesModel
+@{
+    ViewData["Title"] = "Manager · Tables";
+}
+
+<h1 class="h2 mb-4">Tables</h1>
+
+@if (Model.Workspace is null)
+{
+    <div class="card p-4 text-center text-muted">You are not assigned to a restaurant yet.</div>
+}
+else
+{
+    <nav aria-label="Locations" class="mb-4">
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var location in Model.Workspace.Locations)
+            {
+                <a class="btn btn-sm @(location.Id == Model.Workspace.Current.Id ? "btn-brand" : "btn-outline-primary")"
+                   asp-page="/Manager/Tables" asp-route-locationId="@location.Id">@location.Name</a>
+            }
+        </div>
+    </nav>
+
+    <div class="table-responsive mb-4">
+        <table class="table align-middle bg-white shadow-sm">
+            <thead>
+                <tr>
+                    <th scope="col">Label</th>
+                    <th scope="col">Seats</th>
+                    <th scope="col">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var table in Model.Tables)
+                {
+                    <tr>
+                        <td>
+                            <form method="post" asp-page-handler="Rename" class="d-flex gap-2" data-submit-once>
+                                <input type="hidden" name="tableId" value="@table.Id" />
+                                <input name="label" class="form-control form-control-sm" value="@table.Label" maxlength="20" aria-label="Label of table @table.Label" required />
+                                <button class="btn btn-sm btn-outline-primary">Rename</button>
+                            </form>
+                        </td>
+                        <td>
+                            <form method="post" asp-page-handler="Capacity" class="d-flex gap-2" data-submit-once>
+                                <input type="hidden" name="tableId" value="@table.Id" />
+                                <input name="capacity" type="number" min="1" max="20" class="form-control form-control-sm" style="max-width: 6rem;" value="@table.Capacity" aria-label="Seats for table @table.Label" required />
+                                <button class="btn btn-sm btn-outline-primary">Save</button>
+                            </form>
+                        </td>
+                        <td>
+                            <form method="post" asp-page-handler="Remove" data-submit-once>
+                                <input type="hidden" name="tableId" value="@table.Id" />
+                                <button class="btn btn-sm btn-outline-danger">Remove</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card shadow-sm" style="max-width: 32rem;">
+        <div class="card-body p-4">
+            <h2 class="h5">Add a table to @Model.Workspace.Current.Name</h2>
+            <form method="post" asp-page-handler="Add" class="row g-2 align-items-end" data-submit-once>
+                <input type="hidden" name="locationId" value="@Model.Workspace.Current.Id" />
+                <div class="col-sm-6">
+                    <label class="form-label" for="new-label">Label</label>
+                    <input id="new-label" name="label" class="form-control" maxlength="20" required />
+                </div>
+                <div class="col-sm-3">
+                    <label class="form-label" for="new-capacity">Seats</label>
+                    <input id="new-capacity" name="capacity" type="number" min="1" max="20" value="2" class="form-control" required />
+                </div>
+                <div class="col-sm-3">
+                    <button type="submit" class="btn btn-brand w-100">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+}

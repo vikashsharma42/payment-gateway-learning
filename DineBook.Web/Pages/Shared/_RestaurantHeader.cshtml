@@ -1,0 +1,46 @@
+@model DineBook.Web.Models.RestaurantHeader
+@{
+    // Location switcher keeps the same tab open, so switching while on the menu stays on the menu
+    var switchPage = Model.ActiveTab switch
+    {
+        "menu" => "/Restaurants/Menu",
+        "book" => "/Restaurants/Book",
+        _ => "/Restaurants/Location"
+    };
+}
+
+<header class="mb-3">
+    <div class="page-hero">
+        <h1 class="h2 mb-1">@Model.Restaurant.Name</h1>
+        <p class="text-muted mb-0">📍 @Model.SelectedLocation.Name · @Model.SelectedLocation.Address.City</p>
+    </div>
+</header>
+
+<nav aria-label="Locations" class="mb-3">
+    <div class="d-flex flex-wrap gap-2 location-pills">
+        @foreach (var location in Model.Restaurant.ActiveLocations)
+        {
+            var isSelected = location.Id == Model.SelectedLocation.Id;
+            <a class="btn btn-sm @(isSelected ? "btn-brand" : "btn-outline-primary")"
+               aria-current="@(isSelected ? "page" : null)"
+               asp-page="@switchPage" asp-route-slug="@Model.Restaurant.Slug" asp-route-locationSlug="@location.Slug">
+                @location.Name
+            </a>
+        }
+    </div>
+</nav>
+
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item">
+        <a class="nav-link @(Model.ActiveTab == "overview" ? "active" : "")" aria-current="@(Model.ActiveTab == "overview" ? "page" : null)"
+           asp-page="/Restaurants/Location" asp-route-slug="@Model.Restaurant.Slug" asp-route-locationSlug="@Model.SelectedLocation.Slug">Overview</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(Model.ActiveTab == "menu" ? "active" : "")" aria-current="@(Model.ActiveTab == "menu" ? "page" : null)"
+           asp-page="/Restaurants/Menu" asp-route-slug="@Model.Restaurant.Slug" asp-route-locationSlug="@Model.SelectedLocation.Slug">Menu</a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link @(Model.ActiveTab == "book" ? "active" : "")" aria-current="@(Model.ActiveTab == "book" ? "page" : null)"
+           asp-page="/Restaurants/Book" asp-route-slug="@Model.Restaurant.Slug" asp-route-locationSlug="@Model.SelectedLocation.Slug">Book a table</a>
+    </li>
+</ul>

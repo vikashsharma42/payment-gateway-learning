@@ -118,7 +118,8 @@ namespace DineBook.Web.Pages.Reservations
             try
             {
                 var order = await _orders.PlaceOrderAsync(Code, OrderPhone, selections, ct);
-                ToastSuccess($"Order {order.OrderNo} placed: {order.Items.Count} item(s), total {Money.Inr(order.Total().Amount)}.");
+                ToastSuccess($"Order {order.OrderNo} placed with {order.Items.Count} item(s).");
+                TempData["Celebrate"] = "1";
             }
             catch (DomainException ex)
             {

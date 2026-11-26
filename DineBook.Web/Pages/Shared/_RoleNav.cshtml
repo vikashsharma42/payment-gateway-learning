@@ -1,0 +1,51 @@
+@{
+    // Each role sees only its own dashboard links. Access itself is enforced by the folder policies in Startup.
+    var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+}
+
+@if (User.Identity?.IsAuthenticated != true)
+{
+    <a class="link-light" asp-page="/Registration">Create account</a>
+    <a class="link-light" asp-page="/Login">Sign in</a>
+}
+else
+{
+    @switch (role)
+    {
+        case "Customer":
+            <a class="link-light" asp-page="/Customer/Dashboard">My dashboard</a>
+            <a class="link-light" asp-page="/Customer/Reservations">Bookings</a>
+            <a class="link-light" asp-page="/Customer/Orders">Orders</a>
+            <a class="link-light" asp-page="/Customer/Payments">Payments</a>
+            <a class="link-light" asp-page="/Customer/Profile">Profile</a>
+            break;
+
+        case "Staff":
+            <a class="link-light" asp-page="/Staff/Dashboard">Dashboard</a>
+            <a class="link-light" asp-page="/Staff/Reservations">Bookings</a>
+            <a class="link-light" asp-page="/Staff/Orders">Orders</a>
+            break;
+
+        case "Manager":
+            <a class="link-light" asp-page="/Manager/Dashboard">Dashboard</a>
+            <a class="link-light" asp-page="/Manager/Restaurant">Restaurant</a>
+            <a class="link-light" asp-page="/Manager/Locations">Locations</a>
+            <a class="link-light" asp-page="/Manager/Tables">Tables</a>
+            <a class="link-light" asp-page="/Manager/Menu">Menu</a>
+            <a class="link-light" asp-page="/Manager/Reservations">Bookings</a>
+            <a class="link-light" asp-page="/Manager/Orders">Orders</a>
+            <a class="link-light" asp-page="/Manager/Restaurant/Charges">Charges</a>
+            break;
+
+        case "Admin":
+            <a class="link-light" asp-page="/Admin/Dashboard">Dashboard</a>
+            <a class="link-light" asp-page="/Admin/Restaurants/Index">Restaurants</a>
+            <a class="link-light" asp-page="/Admin/Users/Index">Users</a>
+            <a class="link-light" asp-page="/Admin/Payments">Payments</a>
+            break;
+    }
+
+    <form method="post" asp-page="/Admin/Logout" class="d-inline">
+        <button type="submit" class="btn btn-link link-light p-0 text-decoration-none">Sign out</button>
+    </form>
+}

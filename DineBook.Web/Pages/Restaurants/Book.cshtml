@@ -1,81 +1,26 @@
-@page "/{slug}"
+@page "/restaurants/{slug}/{locationSlug}/book"
 @model BookModel
 @{
-    ViewData["Title"] = Model.Restaurant.Name;
+    ViewData["Title"] = Model.Restaurant.Name + " · Book a table";
+    var header = new DineBook.Web.Models.RestaurantHeader(Model.Restaurant, Model.SelectedLocation, "book");
+    var returnUrl = Url.Page("/Restaurants/Book", new { slug = Model.Restaurant.Slug, locationSlug = Model.SelectedLocation.Slug });
 }
 
-<header class="mb-4">
-    <h1 class="h2 mb-1">@Model.Restaurant.Name</h1>
-    @if (Model.SelectedLocation is not null)
-    {
-        <p class="text-muted mb-0">@Model.SelectedLocation.Name · @Model.SelectedLocation.Address.City</p>
-    }
-    else
-    {
-        <p class="text-muted mb-0">No location is open right now.</p>
-    }
-</header>
-
-<section class="mb-4" aria-labelledby="locations-heading">
-    <h2 id="locations-heading" class="h5">Locations</h2>
-    <div class="d-flex flex-wrap gap-2">
-        @foreach (var location in Model.Restaurant.ActiveLocations)
-        {
-            var isSelected = location.Id == Model.SelectedLocation?.Id;
-            <a class="btn btn-sm @(isSelected ? "btn-brand" : "btn-outline-primary")"
-               aria-current="@(isSelected ? "page" : null)"
-               asp-page="/Restaurants/Book" asp-route-slug="@Model.Restaurant.Slug" asp-route-location="@location.Id">
-                @location.Name
-            </a>
-        }
-    </div>
-</section>
-
-<section class="mb-4" aria-labelledby="menu-heading">
-    <h2 id="menu-heading" class="h5">Menu</h2>
-
-    @if (Model.Menu.Count == 0)
-    {
-        <p class="text-muted">No dishes are on the menu right now.</p>
-    }
-    else
-    {
-        @foreach (var category in Model.Menu.GroupBy(m => string.IsNullOrWhiteSpace(m.Category) ? "Other" : m.Category))
-        {
-            <h3 class="h6 mt-3 mb-2">@category.Key</h3>
-            <ul class="list-unstyled mb-0">
-                @foreach (var item in category)
-                {
-                    <li class="d-flex justify-content-between gap-3 py-2 border-bottom">
-                        <span>
-                            @item.Name
-                            @if (!string.IsNullOrWhiteSpace(item.Description))
-                            {
-                                <br /><small class="text-muted">@item.Description</small>
-                            }
-                        </span>
-                        <span class="text-nowrap">@DineBook.Web.Helpers.Money.Inr(item.Price.Amount)</span>
-                    </li>
-                }
-            </ul>
-        }
-    }
-</section>
+<partial name="_RestaurantHeader" model="header" />
 
 <section aria-labelledby="booking-heading">
-    <h2 id="booking-heading" class="h5">Book a table</h2>
+    <h2 id="booking-heading" class="h5">Book a table at @Model.SelectedLocation.Name</h2>
 
     @if (!Model.IsSignedIn)
     {
         <div class="card card-body shadow-sm">
             <p class="mb-3">Sign in to book a table at @Model.Restaurant.Name.</p>
-            <a class="btn btn-brand" asp-page="/Login" asp-route-ReturnUrl="@Url.Page("/Restaurants/Book", new { slug = Model.Restaurant.Slug })">Sign in to book</a>
+            <a class="btn btn-brand" asp-page="/Login" asp-route-slug="@Model.Restaurant.Slug" asp-route-ReturnUrl="@returnUrl">Sign in to book</a>
         </div>
     }
     else
     {
         <form method="get" class="card card-body shadow-sm mb-4">
-            <input type="hidden" name="location" value="@Model.SelectedLocation?.Id" />
             <div class="row g-3 align-items-end">
                 <div class="col-sm-5">
                     <label class="form-label" for="Date">Date</label>

@@ -10,11 +10,6 @@ namespace DineBook.Infrastructure.Database.Configurations
         {
             builder.ToTable(nameof(ApplicationUser));
             builder.Property(x => x.Role).HasConversion<string>().HasMaxLength(20).IsRequired();
-            builder.Property(x => x.Email).HasMaxLength(ApplicationUser.MaxEmailLength).IsRequired();
-            builder.Property(x => x.FirstName).HasMaxLength(ApplicationUser.MaxNameLength).IsRequired();
-            builder.Property(x => x.LastName).HasMaxLength(ApplicationUser.MaxNameLength).IsRequired();
-            builder.Property(x => x.Phone).HasMaxLength(ApplicationUser.MaxPhoneLength);
-            builder.Property(x => x.PasswordHash).HasMaxLength(500).IsRequired();
 
             // Restaurant of a customer or staff member. Null for admins.
             builder.HasOne<Restaurant>()
@@ -22,11 +17,13 @@ namespace DineBook.Infrastructure.Database.Configurations
                 .HasForeignKey(x => x.RestaurantId)
                 .OnDelete(DeleteBehavior.Restrict);
 
-            // Emails are stored lower-case, so one account per address
-            builder.HasIndex(x => x.Email).IsUnique();
+            // Emails are stored lower-case. One account per email within a restaurant, so the same
+            // address can be used at two restaurants. Admins have no restaurant (NULL). SQL Server
+            // treats NULLs as equal in a unique index, so admin emails stay unique across the platform.
+            builder.HasIndex(x => new { x.RestaurantId, x.Email }).IsUnique();
 
-            // Phone numbers are unique when present. Staff may have none.
-            builder.HasIndex(x => x.Phone)
+            // Phone is unique per restaurant when present. Staff may have none.
+            builder.HasIndex(x => new { x.RestaurantId, x.Phone })
                 .IsUnique()
                 .HasFilter("[Phone] IS NOT NULL");
 

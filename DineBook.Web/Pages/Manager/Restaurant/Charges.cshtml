@@ -1,0 +1,42 @@
+@page
+@model ChargesModel
+@{
+    ViewData["Title"] = "Manager · Tax and access fee";
+}
+
+<h1 class="h2 mb-4">Tax and access fee</h1>
+
+@if (Model.Workspace is null)
+{
+    <div class="card p-4 text-center text-muted">You are not assigned to a restaurant yet.</div>
+}
+else
+{
+    <div class="card shadow-sm" style="max-width: 34rem;">
+        <div class="card-body p-4">
+            <form method="post" data-submit-once>
+                <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+                <div class="mb-3">
+                    <label class="form-label">Tax type</label>
+                    <input class="form-control" value="@Model.Workspace.Restaurant.TaxType" disabled />
+                </div>
+
+                <div class="mb-3">
+                    <label asp-for="Input.TaxPercent" class="form-label"></label>
+                    <input asp-for="Input.TaxPercent" type="number" step="0.01" min="0" max="100" class="form-control" />
+                    <span asp-validation-for="Input.TaxPercent" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-4">
+                    <label asp-for="Input.SystemAccessFee" class="form-label"></label>
+                    <input asp-for="Input.SystemAccessFee" type="number" step="0.01" min="0" class="form-control" />
+                    <div class="form-text">Added once to each food order's bill, after the tax.</div>
+                    <span asp-validation-for="Input.SystemAccessFee" class="text-danger small"></span>
+                </div>
+
+                <button type="submit" class="btn btn-brand">Save rates</button>
+            </form>
+        </div>
+    </div>
+}

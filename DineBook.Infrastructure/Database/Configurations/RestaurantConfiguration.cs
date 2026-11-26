@@ -9,11 +9,6 @@ namespace DineBook.Infrastructure.Database.Configurations
         public void Configure(EntityTypeBuilder<Restaurant> builder)
         {
             builder.ToTable(nameof(Restaurant));
-            builder.Property(x => x.Name).HasMaxLength(100).IsRequired();
-            builder.Property(x => x.Slug).HasMaxLength(60).IsRequired();
-            builder.Property(x => x.Phone).HasMaxLength(Restaurant.MaxPhoneLength);
-            builder.Property(x => x.Description).HasMaxLength(Restaurant.MaxDescriptionLength);
-            builder.Property(x => x.TaxType).HasMaxLength(20).IsRequired();
             builder.Property(x => x.TaxPercent).HasPrecision(5, 2);
             builder.Property(x => x.SystemAccessFee).HasPrecision(18, 2);
             builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(20).IsRequired();

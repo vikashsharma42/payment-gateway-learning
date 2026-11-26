@@ -28,11 +28,15 @@ namespace DineBook.Application.Services
             _httpContextAccessor = httpContextAccessor;
         }
 
-        public async Task<ApplicationUser> LoginAsync(string email, string password, CancellationToken ct = default)
+        public async Task<ApplicationUser> LoginAsync(string email, string password, long? restaurantId, CancellationToken ct = default)
         {
             var normalizedEmail = ApplicationUser.NormalizeEmail(email);
 
-            var user = await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail, ct);
+            // The same email can belong to different restaurants, so a restaurant must be named.
+            // Admins have no restaurant and are looked up platform-wide.
+            var user = restaurantId is null
+                ? await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail && u.RestaurantId == null, ct)
+                : await _db.Users.FirstOrDefaultAsync(u => u.Email == normalizedEmail && u.RestaurantId == restaurantId.Value, ct);
 
             if (user is null)
                 return null;

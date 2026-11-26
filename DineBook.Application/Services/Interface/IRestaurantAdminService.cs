@@ -14,10 +14,19 @@ namespace DineBook.Application.Services.Interface
         /// <summary>Creates the restaurant and its first location (the address is stored on the location).</summary>
         Task<Restaurant> CreateRestaurantAsync(CreateRestaurantRequest request, CancellationToken ct = default);
 
+        /// <summary>Activates or deactivates a restaurant. An inactive restaurant takes no new bookings or sign-ups.</summary>
+        Task SetRestaurantActiveAsync(long restaurantId, bool active, CancellationToken ct = default);
+
         Task<Location> AddLocationAsync(long restaurantId, AddLocationRequest request, CancellationToken ct = default);
 
         /// <summary>Closes or reopens a location for staff. The last open location cannot be closed.</summary>
         Task SetLocationActiveAsync(long restaurantId, long locationId, bool active, CancellationToken ct = default);
+
+        /// <summary>Makes a location the default one. The restaurant's web address opens its default location.</summary>
+        Task SetDefaultLocationAsync(long restaurantId, long locationId, CancellationToken ct = default);
+
+        /// <summary>Changes a location's web address. It must be unique within the restaurant.</summary>
+        Task ChangeLocationSlugAsync(long restaurantId, long locationId, string slug, CancellationToken ct = default);
 
         /// <summary>Contact phone and description shown to customers.</summary>
         Task UpdateDetailsAsync(long restaurantId, string phone, string description, CancellationToken ct = default);
@@ -28,6 +37,9 @@ namespace DineBook.Application.Services.Interface
         Task<Table> AddTableAsync(long restaurantId, long locationId, string label, int capacity, CancellationToken ct = default);
 
         Task RenameTableAsync(long restaurantId, long tableId, string label, CancellationToken ct = default);
+
+        /// <summary>Changes how many guests a table seats (1 to 20).</summary>
+        Task ChangeTableCapacityAsync(long restaurantId, long tableId, int capacity, CancellationToken ct = default);
 
         /// <summary>Soft-deletes a table. Past bookings keep it; new bookings no longer use it.</summary>
         Task RemoveTableAsync(long restaurantId, long tableId, CancellationToken ct = default);
@@ -40,6 +52,9 @@ namespace DineBook.Application.Services.Interface
             CancellationToken ct = default);
 
         Task SetMenuItemAvailabilityAsync(long menuItemId, bool available, CancellationToken ct = default);
+
+        /// <summary>Changes a dish's name, description, price and photo. The dish must belong to the restaurant.</summary>
+        Task UpdateMenuItemAsync(long restaurantId, long menuItemId, string name, string description, decimal price, string imageUrl, CancellationToken ct = default);
 
         /// <summary>Soft-deletes a menu item. Past orders keep it.</summary>
         Task RemoveMenuItemAsync(long menuItemId, CancellationToken ct = default);

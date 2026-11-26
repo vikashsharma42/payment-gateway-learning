@@ -20,10 +20,14 @@ namespace DineBook.Application.Services.Interface
         /// <summary>Creates a Staff, Manager or Admin account. Customer accounts are not created here.</summary>
         Task<ApplicationUser> CreateStaffUserAsync(StaffUserRequest request, CancellationToken ct = default);
 
-        Task<IReadOnlyList<ApplicationUser>> GetUsersAsync(CancellationToken ct = default);
+        /// <summary>Users whose email, name or phone contains the search text. Empty search lists the first 200 users.</summary>
+        Task<IReadOnlyList<ApplicationUser>> GetUsersAsync(string search, CancellationToken ct = default);
 
-        /// <summary>True when no account uses this email. Used for live validation on the forms.</summary>
-        Task<bool> IsEmailAvailableAsync(string email, CancellationToken ct = default);
+        /// <summary>
+        /// True when no account at this restaurant uses this email. Admins (null restaurant) are checked platform-wide.
+        /// Used for live validation on the forms.
+        /// </summary>
+        Task<bool> IsEmailAvailableAsync(string email, long? restaurantId, CancellationToken ct = default);
     }
 
     /// <summary>RestaurantId is the restaurant the customer registers with. They can then book at any of its locations.</summary>

@@ -9,7 +9,6 @@ namespace DineBook.Infrastructure.Database.Configurations
         public void Configure(EntityTypeBuilder<MenuCategory> builder)
         {
             builder.ToTable(nameof(MenuCategory));
-            builder.Property(x => x.Name).HasMaxLength(50).IsRequired();
 
             // Many categories belong to one restaurant. Deleting a restaurant removes its categories.
             builder.HasOne(x => x.Restaurant)

@@ -1,0 +1,55 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Admin · Restaurants";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h1 class="h2 mb-0">Restaurants</h1>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-page="/Admin/Dashboard" class="btn btn-outline-secondary">Dashboard</a>
+        <a asp-page="/Admin/Restaurants/New" class="btn btn-brand">New restaurant</a>
+    </div>
+</div>
+
+@if (Model.Restaurants.Count == 0)
+{
+    <div class="card p-4 text-center text-muted">No restaurants yet. Create the first one.</div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle bg-white shadow-sm">
+            <thead>
+                <tr>
+                    <th scope="col">Restaurant</th>
+                    <th scope="col">Web address</th>
+                    <th scope="col">Locations</th>
+                    <th scope="col">Status</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var restaurant in Model.Restaurants)
+                {
+                    <tr>
+                        <td class="fw-semibold">@restaurant.Name</td>
+                        <td><a asp-page="/Restaurants/Index" asp-route-slug="@restaurant.Slug"><code>/restaurants/@restaurant.Slug</code></a></td>
+                        <td>@restaurant.Locations.Count</td>
+                        <td><span class="badge @(restaurant.IsActive ? "text-bg-success" : "text-bg-secondary")">@(restaurant.IsActive ? "Active" : "Inactive")</span></td>
+                        <td class="text-end">
+                            <div class="d-flex flex-wrap gap-1 justify-content-end">
+                                <a class="btn btn-sm btn-outline-primary" asp-page="/Admin/Restaurants/Manage" asp-route-id="@restaurant.Id">Manage</a>
+                                <form method="post" asp-page-handler="SetActive" data-submit-once>
+                                    <input type="hidden" name="restaurantId" value="@restaurant.Id" />
+                                    <input type="hidden" name="active" value="@(!restaurant.IsActive ? "true" : "false")" />
+                                    <button class="btn btn-sm @(restaurant.IsActive ? "btn-outline-danger" : "btn-outline-success")">@(restaurant.IsActive ? "Deactivate" : "Activate")</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

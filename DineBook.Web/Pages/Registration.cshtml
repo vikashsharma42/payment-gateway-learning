@@ -26,7 +26,7 @@
 
             <div class="mb-3">
                 <label asp-for="Input.Email" class="form-label"></label>
-                <input asp-for="Input.Email" type="email" class="form-control" autocomplete="email" data-check-url="@Url.Page("/Registration", "IsEmailAvailable")" />
+                <input asp-for="Input.Email" type="email" class="form-control" autocomplete="email" data-check-url="@Url.Page("/Registration", "IsEmailAvailable")" data-check-scope="#Input_RestaurantId" />
                 <span asp-validation-for="Input.Email" class="text-danger small"></span>
             </div>
 

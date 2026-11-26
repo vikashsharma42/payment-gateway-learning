@@ -83,9 +83,9 @@ namespace DineBook.Web.Pages
         }
 
         // Live check while typing. GET, so it does not use up the sign-up rate limit.
-        public async Task<JsonResult> OnGetIsEmailAvailable(string email, CancellationToken ct)
+        public async Task<JsonResult> OnGetIsEmailAvailable(string email, long? restaurantId, CancellationToken ct)
         {
-            return new JsonResult(new { available = await _registration.IsEmailAvailableAsync(email, ct) });
+            return new JsonResult(new { available = await _registration.IsEmailAvailableAsync(email, restaurantId, ct) });
         }
 
         public async Task<IActionResult> OnPostAsync(CancellationToken ct)
@@ -102,7 +102,7 @@ namespace DineBook.Web.Pages
                     Input.FirstName, Input.LastName, Input.Email, Input.Phone, Input.Password, Input.RestaurantId.Value), ct);
 
                 // Signed in straight away, through the same sign-in as the login page
-                await _authentication.LoginAsync(Input.Email, Input.Password, ct);
+                await _authentication.LoginAsync(Input.Email, Input.Password, Input.RestaurantId, ct);
 
                 ToastSuccess("Welcome to DineBook! Your account is ready.");
 
@@ -110,7 +110,7 @@ namespace DineBook.Web.Pages
                 var restaurant = await _reservations.GetRestaurantAsync(Input.RestaurantId.Value, ct);
                 return restaurant is null
                     ? RedirectToPage("/Login")
-                    : RedirectToPage("/Restaurants/Book", new { slug = restaurant.Slug });
+                    : RedirectToPage("/Restaurants/Index", new { slug = restaurant.Slug });
             }
             catch (DomainException ex)
             {

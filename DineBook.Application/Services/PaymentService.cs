@@ -96,6 +96,7 @@ namespace DineBook.Application.Services
                  .AsNoTracking()
                  .Include(o => o.Items)
                  .Include(o => o.Payments)
+                 .Include(o => o.Restaurant)
                  .Include(o => o.Reservation)
                  .ThenInclude(r => r.Customer)
                  .AsSplitQuery()
@@ -130,16 +131,16 @@ namespace DineBook.Application.Services
                 return ToResult(pending);
 
             var session = await _gateway.CreateOrderAsync(
-                order.Total().Amount,
+                order.BillFor(order.Restaurant).Total.Amount,
                 $"cust_{Guid.NewGuid():N}",
                 customerEmail,
                 customerPhone,
                 returnUrl,
                 ct);
 
-            // The Payment constructor takes its amount from the order again, so both always agree
+            // Same bill as sent to Cashfree above, so the stored amount always matches what the guest was charged
             var payment = new Payment(
-                order, session.OrderId, session.PaymentSessionId, key, customerEmail);
+                order, order.BillFor(order.Restaurant).Total, session.OrderId, session.PaymentSessionId, key, customerEmail);
             _db.Payments.Add(payment);
 
             try

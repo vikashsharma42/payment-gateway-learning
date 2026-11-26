@@ -1,14 +1,14 @@
-using System.Threading;
-using System.Threading.Tasks;
+using DineBook.Application.Services.Interface;
+using DineBook.Domain.Entities;
+using DineBook.Domain.Enums;
+using DineBook.Infrastructure.Database;
+using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using DineBook.Application.Services.Interface;
-using DineBook.Infrastructure.Database;
-using PaymentRecord = DineBook.Domain.Entities.Payment;
-using DineBook.Domain.Enums;
-using DineBook.Web.Infrastructure;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace DineBook.Web.Pages.Payment
+namespace DineBook.Web.Pages.Payments
 {
     public class ResultModel : AppPageModel
     {
@@ -26,7 +26,7 @@ namespace DineBook.Web.Pages.Payment
         public string OrderId { get; set; } = string.Empty;
 
         // The folder name Payment is also a namespace, so the entity needs an alias here
-        public PaymentRecord CurrentOrder { get; private set; }
+        public Payment CurrentOrder { get; private set; }
 
         // The booking this payment belongs to, for the "back to your booking" link
         public string ReservationCode { get; private set; } = string.Empty;
@@ -56,6 +56,9 @@ namespace DineBook.Web.Pages.Payment
             {
                 case PaymentStatus.Paid:
                     ToastSuccess("Payment successful. Thank you for your order.");
+
+                    // Shown on this page, so the bubbles play now rather than on a later visit
+                    TempData["Celebrate"] = "1";
                     break;
                 case PaymentStatus.Failed:
                     ToastError("Payment was not completed. You can try again.");

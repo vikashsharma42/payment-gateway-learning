@@ -51,6 +51,13 @@ namespace DineBook.Domain.Entities
         // True once a payment for this order has succeeded. Needs Payments to be loaded.
         public bool IsPaid => _payments.Any(p => p.Status == PaymentStatus.Paid);
 
+        // What the guest pays for this order: items, GST and the restaurant's access fee
+        public Bill BillFor(Restaurant restaurant)
+        {
+            DomainValidation<Restaurant>.Ensure(restaurant, "Restaurant").IsNotNull();
+            return restaurant.CalculateBill(Total());
+        }
+
         // The order must already belong to a booking (see Reservation.AddFoodOrder).
         // The dish must be available and on this order's restaurant menu. Each dish appears at most once,
         // with 1 to 20 units. The name and price are copied from the menu item.

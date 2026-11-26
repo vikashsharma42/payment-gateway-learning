@@ -1,0 +1,100 @@
+@page
+@model MenuModel
+@{
+    ViewData["Title"] = "Manager · Menu";
+}
+
+<h1 class="h2 mb-4">Menu</h1>
+
+@if (Model.Workspace is null)
+{
+    <div class="card p-4 text-center text-muted">You are not assigned to a restaurant yet.</div>
+}
+else
+{
+    <section class="card shadow-sm mb-4" style="max-width: 48rem;" aria-labelledby="add-dish">
+        <div class="card-body p-4">
+            <h2 id="add-dish" class="h5">Add a dish</h2>
+            <form method="post" asp-page-handler="Add" class="row g-2 align-items-end" data-submit-once>
+                <div class="col-md-4">
+                    <label class="form-label" for="add-name">Name</label>
+                    <input id="add-name" name="name" class="form-control" maxlength="100" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="add-category">Category</label>
+                    <input id="add-category" name="category" class="form-control" maxlength="100" placeholder="e.g. Starters" required />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label" for="add-price">Price (₹)</label>
+                    <input id="add-price" name="price" type="number" step="0.01" min="0" class="form-control" required />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label" for="add-description">Description</label>
+                    <input id="add-description" name="description" class="form-control" maxlength="300" />
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-brand">Add dish</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    @if (Model.Menu.Count == 0)
+    {
+        <p class="text-muted">No dishes yet.</p>
+    }
+    else
+    {
+        @foreach (var item in Model.Menu)
+        {
+            <details class="card shadow-sm mb-2">
+                <summary class="card-body d-flex justify-content-between align-items-center" style="cursor: pointer;">
+                    <span>
+                        <strong>@item.Name</strong>
+                        <span class="small text-muted">· @item.Category</span>
+                    </span>
+                    <span>
+                        <span class="dish-price me-2">@DineBook.Web.Helpers.Money.Inr(item.Price.Amount)</span>
+                        <span class="badge @(item.IsAvailable ? "text-bg-success" : "text-bg-secondary")">@(item.IsAvailable ? "Available" : "Unavailable")</span>
+                    </span>
+                </summary>
+                <div class="card-body border-top">
+                    <form method="post" asp-page-handler="Update" class="row g-2 align-items-end mb-3" data-submit-once>
+                        <input type="hidden" name="menuItemId" value="@item.Id" />
+                        <div class="col-md-3">
+                            <label class="form-label small">Name</label>
+                            <input name="name" class="form-control form-control-sm" value="@item.Name" maxlength="100" required />
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Price (₹)</label>
+                            <input name="price" type="number" step="0.01" min="0" class="form-control form-control-sm" value="@item.Price.Amount" required />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Description</label>
+                            <input name="description" class="form-control form-control-sm" value="@item.Description" maxlength="300" />
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Photo URL</label>
+                            <input name="imageUrl" type="url" class="form-control form-control-sm" value="@item.ImageUrl" maxlength="500" />
+                        </div>
+                        <div class="col-md-1">
+                            <button class="btn btn-sm btn-outline-primary w-100">Save</button>
+                        </div>
+                    </form>
+
+                    <div class="d-flex gap-2">
+                        <form method="post" asp-page-handler="Availability" data-submit-once>
+                            <input type="hidden" name="menuItemId" value="@item.Id" />
+                            <input type="hidden" name="available" value="@(!item.IsAvailable ? "true" : "false")" />
+                            <button class="btn btn-sm btn-outline-secondary">@(item.IsAvailable ? "Mark unavailable" : "Mark available")</button>
+                        </form>
+                        <form method="post" asp-page-handler="Remove" data-submit-once>
+                            <input type="hidden" name="menuItemId" value="@item.Id" />
+                            <button class="btn btn-sm btn-outline-danger">Remove dish</button>
+                        </form>
+                    </div>
+                </div>
+            </details>
+        }
+    }
+}

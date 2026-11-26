@@ -15,8 +15,6 @@ namespace DineBook.Domain.Entities
         public const decimal DefaultSystemAccessFee = 10.00m;
         public const decimal MaxTaxPercent = 28.00m;
         public const decimal MaxSystemAccessFee = 500.00m;
-        public const int MaxPhoneLength = 15;
-        public const int MaxDescriptionLength = 500;
 
         // Used by EF Core when loading. Validation runs only in the public constructor.
         private Restaurant()
@@ -94,8 +92,8 @@ namespace DineBook.Domain.Entities
             var trimmedPhone = (phone ?? string.Empty).Trim();
             var trimmedDescription = (description ?? string.Empty).Trim();
 
-            DomainValidation<string>.Ensure(trimmedPhone, nameof(phone)).HasMaxLength(MaxPhoneLength);
-            DomainValidation<string>.Ensure(trimmedDescription, nameof(description)).HasMaxLength(MaxDescriptionLength);
+            DomainValidation<string>.Ensure(trimmedPhone, nameof(phone)).HasMaxLength(15);
+            DomainValidation<string>.Ensure(trimmedDescription, nameof(description)).HasMaxLength(500);
 
             Phone = trimmedPhone;
             Description = trimmedDescription;
@@ -107,6 +105,27 @@ namespace DineBook.Domain.Entities
             DomainValidation<bool>.Ensure(RestaurantSlug.IsValid(slug)).IsTrue("The restaurant URL is not valid.");
 
             Slug = slug;
+        }
+
+        // Bill for an order's items: GST on the items, plus the access fee once per order
+        public Bill CalculateBill(Money subtotal)
+        {
+            DomainValidation<Money>.Ensure(subtotal, "Subtotal").IsNotNull();
+            var tax = Money.Create(
+                decimal.Round(subtotal.Amount * TaxPercent / 100m, 2, MidpointRounding.AwayFromZero),
+                subtotal.Currency);
+            var accessFee = Money.Create(SystemAccessFee, subtotal.Currency);
+            return new Bill(subtotal, tax, accessFee);
+        }
+
+        public void Activate() => Status = RestaurantStatus.Active;
+
+        public void Deactivate() => Status = RestaurantStatus.Inactive;
+
+        public void Rename(string name)
+        {
+            DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace().HasMaxLength(100);
+            Name = name.Trim();
         }
 
         public void UpdateCharges(decimal taxPercent, decimal systemAccessFee)
@@ -127,19 +146,45 @@ namespace DineBook.Domain.Entities
             return start >= OpensAt.ToTimeSpan() && end <= ClosesAt.ToTimeSpan();
         }
 
+        // The default location is the one a restaurant's web address opens with. The first location added is the default.
+        public Location DefaultLocation => _locations.FirstOrDefault(l => l.IsDefault);
+
         public void AddLocation(Location location)
         {
             DomainValidation<Location>.Ensure(location).IsNotNull();
 
             location.RestaurantId = Id;
+            location.SetSlug(UniqueLocationSlug(location.Slug, excludeLocationId: null));
             _locations.Add(location);
+
+            if (DefaultLocation is null)
+                location.SetDefault(true);
         }
 
-        // Opens or closes a location. The last open location cannot be closed.
+        // Location slugs are unique within one restaurant, so /{restaurant}/{location} is unambiguous
+        public void ChangeLocationSlug(long locationId, string slug)
+        {
+            var location = FindLocation(locationId);
+            DomainValidation<bool>.Ensure(RestaurantSlug.IsValid(slug)).IsTrue("The location URL is not valid.");
+            DomainValidation<bool>.Ensure(
+                _locations.Any(l => l.Id != locationId && string.Equals(l.Slug, slug, StringComparison.Ordinal)) == false)
+                .IsTrue("Another location of this restaurant already uses this URL.");
+            location.SetSlug(slug);
+        }
+
+        public void SetDefaultLocation(long locationId)
+        {
+            var location = FindLocation(locationId);
+            DomainValidation<bool>.Ensure(location.IsActive).IsTrue("Open the location before making it the default.");
+
+            foreach (var other in _locations)
+                other.SetDefault(other.Id == location.Id);
+        }
+
+        // Opens or closes a location. The last open location cannot be closed, and the default cannot be closed.
         public void SetLocationActive(long locationId, bool active)
         {
-            var location = _locations.FirstOrDefault(l => l.Id == locationId)
-                ?? throw new DomainException("Location not found.");
+            var location = FindLocation(locationId);
 
             if (active)
             {
@@ -150,9 +195,28 @@ namespace DineBook.Domain.Entities
             if (location.IsActive)
             {
                 DomainValidation<int>.Ensure(_locations.Count(l => l.IsActive)).IsGreaterThan(1, "The last open location cannot be closed.");
+                DomainValidation<bool>.Ensure(location.IsDefault).IsFalse("Make another location the default before closing this one.");
             }
 
             location.Deactivate();
+        }
+
+        private Location FindLocation(long locationId) =>
+            _locations.FirstOrDefault(l => l.Id == locationId)
+            ?? throw new DomainException("Location not found.");
+
+        private string UniqueLocationSlug(string baseSlug, long? excludeLocationId)
+        {
+            var candidate = baseSlug;
+            var number = 2;
+
+            while (_locations.Any(l => l.Id != excludeLocationId && string.Equals(l.Slug, candidate, StringComparison.Ordinal)))
+            {
+                candidate = RestaurantSlug.WithSuffix(baseSlug, number);
+                number++;
+            }
+
+            return candidate;
         }
 
         public void AddMenuCategory(MenuCategory menuCategory)
@@ -186,6 +250,21 @@ namespace DineBook.Domain.Entities
         }
 
         // The item goes into one of this restaurant's categories, which also sets the item's category name.
+        public void MoveMenuItem(long menuItemId, long menuCategoryId)
+        {
+            var item = _menuItems.FirstOrDefault(i => i.Id == menuItemId)
+                ?? throw new DomainException("Menu item not found.");
+            var target = _menuCategories.FirstOrDefault(c => c.Id == menuCategoryId)
+                ?? throw new DomainException("Menu category not found.");
+            DomainValidation<bool>.Ensure(item.IsDeleted).IsFalse("A removed menu item cannot be moved.");
+
+            var current = _menuCategories.FirstOrDefault(c => c.Id == item.MenuCategoryId);
+            current?.RemoveMenuItem(item);
+
+            item.MenuCategoryId = target.Id;
+            target.AddMenuItem(item);
+        }
+
         public void AddMenuItem(long menuCategoryId, MenuItem menuItem)
         {
             DomainValidation<MenuItem>.Ensure(menuItem).IsNotNull();

@@ -1,0 +1,92 @@
+@page
+@model DashboardModel
+@{
+    ViewData["Title"] = "Admin · Dashboard";
+}
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <h1 class="h2 mb-0">Platform overview</h1>
+    <div class="d-flex flex-wrap gap-2">
+        <a asp-page="/Admin/Restaurants/Index" class="btn btn-outline-secondary">Restaurants</a>
+        <a asp-page="/Admin/Users/Index" class="btn btn-outline-secondary">Users</a>
+        <a asp-page="/Admin/Payments" class="btn btn-outline-secondary">Payments</a>
+        <a asp-page="/Admin/Restaurants/New" class="btn btn-brand">New restaurant</a>
+        <form method="post" asp-page="/Admin/Logout">
+            <button type="submit" class="btn btn-outline-secondary">Sign out</button>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-2"><div class="card card-body shadow-sm h-100"><div class="small text-muted">Restaurants</div><div class="fs-3 fw-semibold">@Model.Stats.Restaurants</div></div></div>
+    <div class="col-6 col-lg-2"><div class="card card-body shadow-sm h-100"><div class="small text-muted">Active</div><div class="fs-3 fw-semibold">@Model.Stats.ActiveRestaurants</div></div></div>
+    <div class="col-6 col-lg-2"><div class="card card-body shadow-sm h-100"><div class="small text-muted">Accounts</div><div class="fs-3 fw-semibold">@Model.Stats.Users</div></div></div>
+    <div class="col-6 col-lg-2"><div class="card card-body shadow-sm h-100"><div class="small text-muted">Customers</div><div class="fs-3 fw-semibold">@Model.Stats.Customers</div></div></div>
+    <div class="col-6 col-lg-2"><div class="card card-body shadow-sm h-100"><div class="small text-muted">Bookings today</div><div class="fs-3 fw-semibold">@Model.Stats.BookingsToday</div></div></div>
+    <div class="col-6 col-lg-2"><div class="card card-body shadow-sm h-100"><div class="small text-muted">Orders to serve</div><div class="fs-3 fw-semibold">@Model.Stats.PlacedOrders</div></div></div>
+</div>
+
+<div class="row g-4">
+    <section class="col-lg-6" aria-labelledby="bookings-heading">
+        <h2 id="bookings-heading" class="h5">Latest bookings</h2>
+        @if (Model.RecentBookings.Count == 0)
+        {
+            <p class="text-muted">No bookings yet.</p>
+        }
+        else
+        {
+            <ul class="list-group shadow-sm">
+                @foreach (var booking in Model.RecentBookings)
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><strong>@booking.Restaurant.Name</strong> <span class="text-muted small">· @booking.StartsAt.ToString("dd MMM HH:mm") · @booking.Guests guests</span></span>
+                        <span class="badge text-bg-light border">@booking.Status</span>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <section class="col-lg-6" aria-labelledby="orders-heading">
+        <h2 id="orders-heading" class="h5">Latest orders</h2>
+        @if (Model.RecentOrders.Count == 0)
+        {
+            <p class="text-muted">No food orders yet.</p>
+        }
+        else
+        {
+            <ul class="list-group shadow-sm">
+                @foreach (var order in Model.RecentOrders)
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><code>@order.OrderNo</code> <span class="text-muted small">· @order.Restaurant.Name</span></span>
+                        <span>
+                            <span class="badge text-bg-light border">@order.Status</span>
+                            <span class="badge @(order.IsPaid ? "text-bg-success" : "text-bg-warning")">@(order.IsPaid ? "Paid" : "Unpaid")</span>
+                        </span>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+
+    <section class="col-12" aria-labelledby="payments-heading">
+        <h2 id="payments-heading" class="h5">Latest payments</h2>
+        @if (Model.RecentPayments.Count == 0)
+        {
+            <p class="text-muted">No payments yet.</p>
+        }
+        else
+        {
+            <ul class="list-group shadow-sm">
+                @foreach (var payment in Model.RecentPayments)
+                {
+                    <li class="list-group-item d-flex justify-content-between">
+                        <span><code>@payment.Order.OrderNo</code> <span class="text-muted small">· @payment.Order.Restaurant.Name</span></span>
+                        <span>@DineBook.Web.Helpers.Money.Inr(payment.Amount.Amount) <span class="badge text-bg-light border ms-1">@payment.Status</span></span>
+                    </li>
+                }
+            </ul>
+        }
+    </section>
+</div>

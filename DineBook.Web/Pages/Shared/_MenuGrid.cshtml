@@ -1,0 +1,38 @@
+@model System.Collections.Generic.IReadOnlyList<DineBook.Domain.Entities.MenuItem>
+
+@if (Model.Count == 0)
+{
+    <p class="text-muted">No dishes are on the menu right now.</p>
+}
+else
+{
+    @foreach (var category in Model.GroupBy(m => string.IsNullOrWhiteSpace(m.Category) ? "Other" : m.Category))
+    {
+        <section class="mb-4" aria-label="@category.Key">
+            <h2 class="menu-category h5 mt-3 mb-2">@category.Key</h2>
+            <ul class="list-unstyled mb-0">
+                @foreach (var item in category)
+                {
+                    <li class="dish d-flex align-items-center gap-3 py-3 border-bottom">
+                        @if (!string.IsNullOrWhiteSpace(item.ImageUrl))
+                        {
+                            <img class="dish-img" src="@item.ImageUrl" alt="@item.Name" loading="lazy" />
+                        }
+                        else
+                        {
+                            <div class="dish-img dish-fallback" aria-hidden="true">@item.Name.Substring(0, 1).ToUpperInvariant()</div>
+                        }
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">@item.Name</div>
+                            @if (!string.IsNullOrWhiteSpace(item.Description))
+                            {
+                                <div class="small text-muted">@item.Description</div>
+                            }
+                        </div>
+                        <span class="dish-price">@DineBook.Web.Helpers.Money.Inr(item.Price.Amount)</span>
+                    </li>
+                }
+            </ul>
+        </section>
+    }
+}

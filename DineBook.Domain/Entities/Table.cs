@@ -9,11 +9,6 @@ namespace DineBook.Domain.Entities
     // Removal is a soft delete, so past bookings keep their table.
     public class Table : Entity, IAuditableEntity
     {
-        // Used by EF Core when loading. Validation runs only in the public constructor.
-        private Table()
-        {
-        }
-
         public Table(string label, int capacity)
         {
             DomainValidation<string>.Ensure(label).IsNotNullOrWhiteSpace().HasMaxLength(20);
@@ -84,6 +79,15 @@ namespace DineBook.Domain.Entities
             if (Status == TableStatus.Occupied)
                 Status = TableStatus.Available;
         }
+
+        public void ChangeCapacity(int capacity)
+        {
+            DomainValidation<int>.Ensure(capacity).IsBetween(1, 20, "Table capacity must be between 1 and 20 guests.");
+            Capacity = capacity;
+        }
+
+        // Called by Location.Rename so the copied location name stays current
+        internal void SetLocationName(string name) => Location = name;
 
         public void Rename(string label)
         {

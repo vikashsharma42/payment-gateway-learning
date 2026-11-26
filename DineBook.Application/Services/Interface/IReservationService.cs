@@ -20,7 +20,7 @@ namespace DineBook.Application.Services.Interface
         Task<Restaurant> GetRestaurantBySlugAsync(string slug, CancellationToken ct = default);
 
         /// <summary>Start times on a day that still have a free table for the party size.</summary>
-        Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(long restaurantId, DateOnly date, int guests, CancellationToken ct = default);
+        Task<IReadOnlyList<DateTime>> GetAvailableSlotsAsync(long restaurantId, DateOnly date, int guests, long? locationId = null, CancellationToken ct = default);
 
         /// <summary>Books the best-fit free table for a registered customer. Throws DomainException when the request breaks a rule.</summary>
         Task<Reservation> BookAsync(BookingRequest request, CancellationToken ct = default);
@@ -41,11 +41,16 @@ namespace DineBook.Application.Services.Interface
         Task MarkNoShowAsync(long restaurantId, long reservationId, CancellationToken ct = default);
     }
 
-    /// <summary>CustomerId is the ApplicationUser (Customer role) who is booking.</summary>
+    /// <summary>
+    /// CustomerId is the ApplicationUser (Customer role) who is booking.
+    /// LocationId limits the table to one open location. Null means any location of the restaurant.
+    /// A booking's location is the location of its table, so no extra column is stored.
+    /// </summary>
     public sealed record BookingRequest(
         long RestaurantId,
         long CustomerId,
         DateTime StartsAt,
         int Guests,
-        string SpecialRequests);
+        string SpecialRequests,
+        long? LocationId = null);
 }

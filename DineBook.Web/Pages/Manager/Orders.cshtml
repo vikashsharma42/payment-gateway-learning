@@ -1,0 +1,63 @@
+@page
+@model OrdersModel
+@{
+    ViewData["Title"] = "Manager · Orders and payments";
+}
+
+<h1 class="h2 mb-4">Orders and payments</h1>
+
+@if (Model.Workspace is null)
+{
+    <div class="card p-4 text-center text-muted">You are not assigned to a restaurant yet.</div>
+}
+else if (Model.AllOrders.Count == 0)
+{
+    <p class="text-muted">No food orders yet.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle bg-white shadow-sm">
+            <thead>
+                <tr>
+                    <th scope="col">Order</th>
+                    <th scope="col">Location · table</th>
+                    <th scope="col">Guest</th>
+                    <th scope="col" class="text-end">Total</th>
+                    <th scope="col">Status</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var order in Model.AllOrders)
+                {
+                    <tr>
+                        <td><code>@order.OrderNo</code></td>
+                        <td>@order.Reservation?.Table?.Location · @order.Reservation?.Table?.Label</td>
+                        <td>@order.Reservation?.CustomerName</td>
+                        <td class="text-end">@DineBook.Web.Helpers.Money.Inr(order.BillFor(Model.Workspace.Restaurant).Total.Amount)</td>
+                        <td>
+                            <span class="badge text-bg-light border">@order.Status</span>
+                            <span class="badge @(order.IsPaid ? "text-bg-success" : "text-bg-warning")">@(order.IsPaid ? "Paid" : "Unpaid")</span>
+                        </td>
+                        <td class="text-end">
+                            @if (order.Status == DineBook.Domain.Enums.OrderStatus.Placed)
+                            {
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <form method="post" asp-page-handler="Serve" data-submit-once>
+                                        <input type="hidden" name="orderId" value="@order.Id" />
+                                        <button class="btn btn-sm btn-brand">Served</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="Cancel" data-submit-once>
+                                        <input type="hidden" name="orderId" value="@order.Id" />
+                                        <button class="btn btn-sm btn-outline-danger">Cancel</button>
+                                    </form>
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}

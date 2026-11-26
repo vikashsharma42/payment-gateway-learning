@@ -9,11 +9,6 @@ namespace DineBook.Domain.Entities
     // Added through Restaurant.AddMenuItem.
     public class MenuItem : Entity, IAuditableEntity
     {
-        // Used by EF Core when loading. Validation runs only in the public constructor.
-        private MenuItem()
-        {
-        }
-
         public MenuItem(string name, string description, decimal price, string imageUrl = null)
         {
             DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace().HasMaxLength(100);
@@ -62,6 +57,16 @@ namespace DineBook.Domain.Entities
 
         public virtual MenuCategory MenuCategory { get; private set; }
 
+        public void UpdateDetails(string name, string description)
+        {
+            DomainValidation<bool>.Ensure(IsDeleted).IsFalse("A removed menu item cannot be changed.");
+            DomainValidation<string>.Ensure(name).IsNotNullOrWhiteSpace().HasMaxLength(100);
+            DomainValidation<string>.Ensure(description ?? string.Empty, nameof(description)).HasMaxLength(300);
+
+            Name = name.Trim();
+            Description = (description ?? string.Empty).Trim();
+        }
+
         public void ChangePrice(decimal price)
         {
             EnsurePrice(price);
@@ -92,7 +97,7 @@ namespace DineBook.Domain.Entities
         private static string NormalizeImage(string imageUrl)
         {
             var value = (imageUrl ?? string.Empty).Trim();
-            DomainValidation<string>.Ensure(value, nameof(imageUrl)).HasMaxLength(50);
+            DomainValidation<string>.Ensure(value, nameof(imageUrl)).HasMaxLength(100);
 
             return value.Length == 0 ? null : value;
         }

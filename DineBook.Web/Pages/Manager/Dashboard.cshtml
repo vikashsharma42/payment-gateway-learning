@@ -1,0 +1,45 @@
+@page
+@model DashboardModel
+@{
+    ViewData["Title"] = "Manager · Dashboard";
+}
+
+@if (Model.Workspace is null)
+{
+    <div class="card p-4 text-center text-muted">You are not assigned to a restaurant yet. Ask an admin to set your restaurant.</div>
+}
+else
+{
+    <div class="page-hero mb-4">
+        <h1 class="h2 mb-1">@Model.Workspace.Restaurant.Name</h1>
+        <p class="text-muted mb-0">Overview across all locations</p>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg">
+            <div class="card card-body shadow-sm h-100"><div class="small text-muted">Open locations</div><div class="fs-3 fw-semibold">@Model.OpenLocationCount</div></div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card card-body shadow-sm h-100"><div class="small text-muted">Tables</div><div class="fs-3 fw-semibold">@Model.TableCount</div></div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card card-body shadow-sm h-100"><div class="small text-muted">Dishes</div><div class="fs-3 fw-semibold">@Model.DishCount</div></div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card card-body shadow-sm h-100"><div class="small text-muted">Bookings today</div><div class="fs-3 fw-semibold">@Model.TodayBookingCount</div></div>
+        </div>
+        <div class="col-6 col-lg">
+            <div class="card card-body shadow-sm h-100"><div class="small text-muted">Orders to serve</div><div class="fs-3 fw-semibold">@Model.PlacedOrderCount</div></div>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-outline-primary" asp-page="/Manager/Restaurant">Restaurant details</a>
+        <a class="btn btn-outline-primary" asp-page="/Manager/Restaurant/Charges">Tax and access fee</a>
+        <a class="btn btn-outline-primary" asp-page="/Manager/Locations">Locations</a>
+        <a class="btn btn-outline-primary" asp-page="/Manager/Tables">Tables</a>
+        <a class="btn btn-outline-primary" asp-page="/Manager/Menu">Menu</a>
+        <a class="btn btn-outline-primary" asp-page="/Manager/Reservations">Bookings</a>
+        <a class="btn btn-outline-primary" asp-page="/Manager/Orders">Orders and payments</a>
+    </div>
+}

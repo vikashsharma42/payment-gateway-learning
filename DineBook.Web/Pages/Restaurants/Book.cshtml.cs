@@ -14,27 +14,23 @@ using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Restaurants
 {
-    // Public dashboard at /{slug}: locations and the menu are open to everyone.
-    // Booking needs a signed-in account, so OnPostAsync sends visitors to sign in first.
+    // /restaurants/{slug}/{locationSlug}/book: booking for signed-in accounts.
+    // Visitors who are signed out are sent to sign in, then back to this page.
     [EnableRateLimiting("checkout")]
     public class BookModel : AppPageModel
     {
         private readonly IReservationService _reservations;
-        private readonly IMenuService _menu;
 
-        public BookModel(IReservationService reservations, IMenuService menu)
+        public BookModel(IReservationService reservations)
         {
             _reservations = reservations;
-            _menu = menu;
         }
 
-        // The restaurant's web address, for example "spice-garden" in /spice-garden
         [BindProperty(SupportsGet = true)]
         public string Slug { get; set; } = string.Empty;
 
-        // Location switcher: /spice-garden?location=5
-        [BindProperty(SupportsGet = true, Name = "location")]
-        public long? LocationId { get; set; }
+        [BindProperty(SupportsGet = true)]
+        public string LocationSlug { get; set; } = string.Empty;
 
         [BindProperty(SupportsGet = true)]
         public DateOnly? Date { get; set; }
@@ -55,10 +51,8 @@ namespace DineBook.Web.Pages.Restaurants
 
         public Restaurant Restaurant { get; private set; }
 
-        // The location shown on the dashboard: the one picked in the switcher, otherwise the first open one
+        // The open location this booking page is for
         public Location SelectedLocation { get; private set; }
-
-        public IReadOnlyList<MenuItem> Menu { get; private set; } = Array.Empty<MenuItem>();
 
         public IReadOnlyList<DateTime> Slots { get; private set; } = Array.Empty<DateTime>();
 
@@ -108,7 +102,8 @@ namespace DineBook.Web.Pages.Restaurants
                     UserId,
                     StartsAt,
                     Guests,
-                    (SpecialRequests ?? string.Empty).Trim()),
+                    (SpecialRequests ?? string.Empty).Trim(),
+                    SelectedLocation.Id),
                     ct);
 
                 ToastSuccess("Your table is booked.");
@@ -124,18 +119,16 @@ namespace DineBook.Web.Pages.Restaurants
             }
         }
 
-        // Loads the restaurant from its slug, the picked location and the menu. False when no restaurant has this slug.
+        // Loads the restaurant from its slug and the open location from its slug. False when either is not found.
         private async Task<bool> LoadAsync(CancellationToken ct)
         {
             Restaurant = await _reservations.GetRestaurantBySlugAsync(Slug, ct);
-            if (Restaurant is null)
+            if (Restaurant is null || !Restaurant.IsActive)
                 return false;
 
-            var openLocations = Restaurant.ActiveLocations.ToList();
-            SelectedLocation = openLocations.FirstOrDefault(l => l.Id == LocationId) ?? openLocations.FirstOrDefault();
-
-            Menu = await _menu.GetAvailableItemsAsync(Restaurant.Id, ct);
-            return true;
+            SelectedLocation = Restaurant.ActiveLocations
+                .FirstOrDefault(l => string.Equals(l.Slug, LocationSlug, StringComparison.OrdinalIgnoreCase));
+            return SelectedLocation is not null;
         }
 
         private async Task LoadSlotsAsync(CancellationToken ct)
@@ -145,7 +138,7 @@ namespace DineBook.Web.Pages.Restaurants
 
             try
             {
-                Slots = await _reservations.GetAvailableSlotsAsync(Restaurant.Id, Date.Value, Guests, ct);
+                Slots = await _reservations.GetAvailableSlotsAsync(Restaurant.Id, Date.Value, Guests, SelectedLocation?.Id, ct);
             }
             catch (DomainException ex)
             {

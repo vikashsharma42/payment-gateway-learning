@@ -1,7 +1,6 @@
 
 using DineBook.Application.Configuration;
 using DineBook.Application.DependencyInjection;
-using DineBook.Application.Security;
 using DineBook.Application.Services;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Enums;
@@ -43,6 +42,11 @@ namespace DineBook.Web
                 options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
                 options.Conventions.AllowAnonymousToPage("/Admin/Login");
                 options.Conventions.AllowAnonymousToPage("/Admin/Logout");
+
+                // Each dashboard is limited to its own role. Restaurant scope is checked on each page.
+                options.Conventions.AuthorizeFolder("/Customer", "CustomerOnly");
+                options.Conventions.AuthorizeFolder("/Staff", "StaffArea");
+                options.Conventions.AuthorizeFolder("/Manager", "ManagerOnly");
             });
 
             // Response caching is used by the error pages in production
@@ -58,10 +62,8 @@ namespace DineBook.Web
 
                     options.Cookie.Name = "DineBook.Auth";
                     options.Cookie.HttpOnly = true;
-                    options.Cookie.SecurePolicy =
-                        CookieSecurePolicy.Always;
-                    options.Cookie.SameSite =
-                        SameSiteMode.Strict;
+                    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                    options.Cookie.SameSite = SameSiteMode.Strict;
                     options.Cookie.IsEssential = true;
 
                     options.ExpireTimeSpan = TimeSpan.FromDays(7);
@@ -72,6 +74,11 @@ namespace DineBook.Web
             services.AddAuthorization(options =>
             {
                 options.AddPolicy("AdminOnly", policy => policy.RequireRole(nameof(UserRole.Admin)));
+                options.AddPolicy("CustomerOnly", policy => policy.RequireRole(nameof(UserRole.Customer)));
+
+                // Staff work the floor and managers can do the same, so both may open the staff pages
+                options.AddPolicy("StaffArea", policy => policy.RequireRole(nameof(UserRole.Staff), nameof(UserRole.Manager)));
+                options.AddPolicy("ManagerOnly", policy => policy.RequireRole(nameof(UserRole.Manager)));
             });
 
             // Rate limiting for checkout POST requests

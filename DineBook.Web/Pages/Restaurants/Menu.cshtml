@@ -1,0 +1,13 @@
+@page "/restaurants/{slug}/{locationSlug}/menu"
+@model MenuModel
+@{
+    ViewData["Title"] = Model.Restaurant.Name + " · Menu";
+    var header = new DineBook.Web.Models.RestaurantHeader(Model.Restaurant, Model.SelectedLocation, "menu");
+}
+
+<partial name="_RestaurantHeader" model="header" />
+
+<section aria-labelledby="menu-heading">
+    <h2 id="menu-heading" class="visually-hidden">Menu</h2>
+    <partial name="_MenuGrid" model="Model.Menu" />
+</section>
