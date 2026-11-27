@@ -1,3 +1,5 @@
+using DineBook.Application.Paging;
+using DineBook.Web.Dtos;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Exceptions;
@@ -27,13 +29,19 @@ namespace DineBook.Web.Pages.Manager
             _reservations = reservations;
         }
 
-        public IReadOnlyList<Reservation> Bookings { get; private set; } = Array.Empty<Reservation>();
+        // Page number and size from the query string. Action redirects keep them.
+        [BindProperty(SupportsGet = true)]
+        public PageQuery Query { get; set; } = new();
+
+        public PagedResult<Reservation> Bookings { get; private set; }
+
+        protected override object ReturnRoute => new { Query.Page, Query.PageSize };
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
             await LoadWorkspaceAsync(null, ct);
             if (Workspace is not null)
-                Bookings = await _work.GetRestaurantReservationsAsync(Workspace.Restaurant.Id, _reservations.LocalNow().Date, ct);
+                Bookings = await _work.GetRestaurantReservationsPageAsync(Workspace.Restaurant.Id, _reservations.LocalNow().Date, Query.Page, Query.PageSize, ct);
 
             return Page();
         }

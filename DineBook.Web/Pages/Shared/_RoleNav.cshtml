@@ -58,10 +58,9 @@ else
             <a class="link-light" asp-page="/Admin/Restaurants/Index">Restaurants</a>
             <a class="link-light" asp-page="/Admin/Users/Index">Users</a>
             <a class="link-light" asp-page="/Admin/Payments">Payments</a>
+            <a class="link-light" asp-page="/Admin/Monitoring">Security</a>
             break;
     }
 
-    <form method="post" asp-page="/Admin/Logout" class="d-inline">
-        <button type="submit" class="btn btn-link link-light p-0 text-decoration-none">Sign out</button>
-    </form>
+    <button type="button" class="btn btn-link link-light p-0 text-decoration-none" data-bs-toggle="modal" data-bs-target="#logout-modal">Sign out</button>
 }

@@ -1,12 +1,12 @@
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Exceptions;
+using DineBook.Web.Dtos;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Security.Claims;
 using System.Threading;
@@ -26,28 +26,16 @@ namespace DineBook.Web.Pages.Restaurants
             _reservations = reservations;
         }
 
+        // Restaurant and location from the address
         [BindProperty(SupportsGet = true)]
         public string Slug { get; set; } = string.Empty;
 
         [BindProperty(SupportsGet = true)]
         public string LocationSlug { get; set; } = string.Empty;
 
+        // Day, party size, chosen time and requests (see BookingDto)
         [BindProperty(SupportsGet = true)]
-        public DateOnly? Date { get; set; }
-
-        [BindProperty(SupportsGet = true)]
-        [Range(1, 10, ErrorMessage = "Party size must be between 1 and 10.")]
-        public int Guests { get; set; } = 2;
-
-        // Chosen slot. Posted as "yyyy-MM-ddTHH:mm:ss" from the time buttons.
-        [BindProperty]
-        [Required(ErrorMessage = "Please choose a time.")]
-        public DateTime StartsAt { get; set; }
-
-        [BindProperty]
-        [StringLength(200)]
-        [Display(Name = "Special requests (optional)")]
-        public string SpecialRequests { get; set; } = string.Empty;
+        public BookingDto Input { get; set; } = new();
 
         public Restaurant Restaurant { get; private set; }
 
@@ -70,7 +58,7 @@ namespace DineBook.Web.Pages.Restaurants
 
             if (IsSignedIn)
             {
-                Date ??= Today;
+                Input.Date ??= Today;
                 await LoadSlotsAsync(ct);
             }
 
@@ -86,7 +74,7 @@ namespace DineBook.Web.Pages.Restaurants
             if (!await LoadAsync(ct))
                 return NotFound();
 
-            Date ??= Today;
+            Input.Date ??= Today;
 
             if (!ModelState.IsValid)
             {
@@ -100,13 +88,13 @@ namespace DineBook.Web.Pages.Restaurants
                 var reservation = await _reservations.BookAsync(new BookingRequest(
                     Restaurant.Id,
                     UserId,
-                    StartsAt,
-                    Guests,
-                    (SpecialRequests ?? string.Empty).Trim(),
+                    Input.StartsAt,
+                    Input.Guests,
+                    (Input.SpecialRequests ?? string.Empty).Trim(),
                     SelectedLocation.Id),
                     ct);
 
-                ToastSuccess("Your table is booked.");
+                ToastSuccess("Your table is booked. See you soon!");
 
                 // Post/Redirect/Get: a refresh does not book again
                 return RedirectToPage("/Reservations/Details", new { slug = Restaurant.Slug, code = reservation.Code });
@@ -133,12 +121,12 @@ namespace DineBook.Web.Pages.Restaurants
 
         private async Task LoadSlotsAsync(CancellationToken ct)
         {
-            if (Date is null || Restaurant is null)
+            if (Input.Date is null || Restaurant is null)
                 return;
 
             try
             {
-                Slots = await _reservations.GetAvailableSlotsAsync(Restaurant.Id, Date.Value, Guests, SelectedLocation?.Id, ct);
+                Slots = await _reservations.GetAvailableSlotsAsync(Restaurant.Id, Input.Date.Value, Input.Guests, SelectedLocation?.Id, ct);
             }
             catch (DomainException ex)
             {

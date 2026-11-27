@@ -22,9 +22,5 @@
 		<ProjectReference Include="..\DineBook.Email\DineBook.Email.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<!-- JWT sign-in -->
-		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
-	</ItemGroup>
 
 </Project>

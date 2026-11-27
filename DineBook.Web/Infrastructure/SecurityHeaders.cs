@@ -28,7 +28,7 @@ namespace DineBook.Web.Infrastructure
                 headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
                 headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
                 headers["Cross-Origin-Opener-Policy"] = "same-origin";
-                headers["Content-Security-Policy-Report-Only"] = ContentSecurityPolicy;
+                headers["Content-Security-Policy"] = ContentSecurityPolicy;
 
                 await next();
             });

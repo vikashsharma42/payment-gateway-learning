@@ -1,38 +1,17 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using System.Security.Claims;
-using System.Threading.Tasks;
-using DineBook.Application.Services.Interface;
-using DineBook.Domain.Enums;
-using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Admin
 {
-    // Shared sign-out for every signed-in user (header button and admin page)
+    // Kept so old links and forms still work. Sign-out for every role is the shared /Logout page.
+    // A POST keeps its method on the redirect (308), so the sign-out really runs. Any role may use it,
+    // because the folder rule would otherwise block staff and managers with an old form.
+    [AllowAnonymous]
     public class LogoutModel : PageModel
     {
-        private readonly IWebAuthenticationService _authentication;
+        public IActionResult OnGet() => RedirectToPage("/Logout");
 
-        public LogoutModel(IWebAuthenticationService authentication)
-        {
-            _authentication = authentication;
-        }
-
-        public async Task<IActionResult> OnPostAsync()
-        {
-            // Read before signing out: a customer returns to the restaurant they were using
-            var isCustomer = User.FindFirstValue(ClaimTypes.Role) == nameof(UserRole.Customer);
-            var slug = RestaurantCookie.Recall(Request);
-
-            await _authentication.LogoutAsync();
-
-            // The chosen staff location belongs to the session that is ending
-            Response.Cookies.Delete(DineBook.Web.Pages.Staff.IndexModel.LocationCookie);
-
-            if (isCustomer && slug is not null)
-                return RedirectToPage("/Restaurants/Index", new { slug });
-
-            return RedirectToPage("/Login");
-        }
+        public IActionResult OnPost() => RedirectToPagePreserveMethod("/Logout");
     }
 }

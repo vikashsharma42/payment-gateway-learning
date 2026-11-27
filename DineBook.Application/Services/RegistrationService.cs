@@ -1,3 +1,4 @@
+using DineBook.Application.Paging;
 using DineBook.Application.Security;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
@@ -6,7 +7,6 @@ using DineBook.Domain.Exceptions;
 using DineBook.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -94,7 +94,7 @@ namespace DineBook.Application.Services
             return user;
         }
 
-        public async Task<IReadOnlyList<ApplicationUser>> GetUsersAsync(string search, CancellationToken ct = default)
+        public Task<PagedResult<ApplicationUser>> GetUsersAsync(string search, int page, int pageSize, CancellationToken ct = default)
         {
             var term = (search ?? string.Empty).Trim();
 
@@ -108,11 +108,12 @@ namespace DineBook.Application.Services
                     (u.Phone != null && u.Phone.Contains(term)));
             }
 
-            return await query
+            // Stable order so that paging never repeats or skips a user
+            return query
                 .OrderBy(u => u.Role)
                 .ThenBy(u => u.FirstName)
-                .Take(200)
-                .ToListAsync(ct);
+                .ThenBy(u => u.Id)
+                .ToPagedAsync(page, pageSize, ct);
         }
 
         public async Task<bool> IsEmailAvailableAsync(string email, long? restaurantId, CancellationToken ct = default)

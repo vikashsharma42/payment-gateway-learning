@@ -14,13 +14,13 @@
 {
     <div class="card p-4 text-center text-muted">You are not assigned to a restaurant yet.</div>
 }
-else if (Model.IncomingOrders.Count == 0)
+else if (Model.IncomingOrders.TotalCount == 0)
 {
-    <p class="text-muted">No food orders at this location yet.</p>
+    <p class="text-muted">No food orders at this location yet. They'll appear here as guests order.</p>
 }
 else
 {
-    @foreach (var order in Model.IncomingOrders)
+    @foreach (var order in Model.IncomingOrders.Items)
     {
         <section class="card shadow-sm mb-3" aria-label="Order @order.OrderNo">
             <div class="card-body">
@@ -49,10 +49,14 @@ else
                     <div class="d-flex gap-2">
                         <form method="post" asp-page-handler="Serve" data-submit-once>
                             <input type="hidden" name="orderId" value="@order.Id" />
+                            <input type="hidden" name="Query.Page" value="@Model.Query.Page" />
+                            <input type="hidden" name="Query.PageSize" value="@Model.Query.PageSize" />
                             <button class="btn btn-sm btn-brand">Mark served</button>
                         </form>
                         <form method="post" asp-page-handler="Cancel" data-submit-once>
                             <input type="hidden" name="orderId" value="@order.Id" />
+                            <input type="hidden" name="Query.Page" value="@Model.Query.Page" />
+                            <input type="hidden" name="Query.PageSize" value="@Model.Query.PageSize" />
                             <button class="btn btn-sm btn-outline-danger">Cancel order</button>
                         </form>
                     </div>
@@ -60,4 +64,5 @@ else
             </div>
         </section>
     }
+    <partial name="_Pager" model="Model.IncomingOrders" />
 }

@@ -53,5 +53,20 @@ namespace DineBook.Application.Services.Interface
         /// Returns null when the order does not exist.
         /// </summary>
         Task<Payment> RefundAsync(string gatewayOrderId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Returns one food order for the signed-in customer, with its items, payments, restaurant and booking.
+        /// Returns null when the order is not at this restaurant or does not belong to this customer,
+        /// so other people's bills are never revealed.
+        /// </summary>
+        Task<Orders> GetOrderForCustomerAsync(long orderId, string restaurantSlug, long customerId, CancellationToken ct = default);
+
+        /// <summary>
+        /// The booking code and restaurant address of a food order, for the "back to your booking" links.
+        /// Returns null when the order does not exist.
+        /// </summary>
+        Task<PaymentBookingLinks> GetBookingLinksAsync(long orderId, CancellationToken ct = default);
     }
+
+    public sealed record PaymentBookingLinks(string ReservationCode, string RestaurantSlug);
 }

@@ -33,6 +33,9 @@ namespace DineBook.Web.Pages.Manager
         protected async Task LoadWorkspaceAsync(long? locationId, CancellationToken ct) =>
             Workspace = await StaffLocations.GetWorkspaceAsync(UserId, locationId ?? CookieLocationId(), ct);
 
+        // Route values kept when an action redirects back to the same page (the page number, for example)
+        protected virtual object ReturnRoute => null;
+
         // Runs one change for the manager's restaurant. A rule that fails becomes a toast, then the page reloads.
         protected async Task<IActionResult> RunAsync(Func<StaffWorkspace, Task> action, string success, CancellationToken ct)
         {
@@ -49,7 +52,7 @@ namespace DineBook.Web.Pages.Manager
                 ToastError(ex.Message);
             }
 
-            return RedirectToPage();
+            return RedirectToPage(ReturnRoute);
         }
     }
 }

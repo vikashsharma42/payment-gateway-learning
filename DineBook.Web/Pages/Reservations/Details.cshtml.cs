@@ -9,6 +9,7 @@ using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Exceptions;
+using DineBook.Web.Dtos;
 using DineBook.Web.Helpers;
 using DineBook.Web.Infrastructure;
 
@@ -41,17 +42,16 @@ namespace DineBook.Web.Pages.Reservations
         [BindProperty(SupportsGet = true)]
         public string Code { get; set; } = string.Empty;
 
-        // Only used by the cancel form
+        // The phone number from the cancel, food order or pay form (one form is posted at a time)
         [BindProperty]
-        public string Phone { get; set; } = string.Empty;
+        public BookingPhoneDto Input { get; set; } = new();
 
-        // Only used by the food order form
+        // The edit form: phone number, party size and special requests
         [BindProperty]
-        public string OrderPhone { get; set; } = string.Empty;
+        public BookingChangeDto Change { get; set; } = new();
 
-        // Only used by the pay form
-        [BindProperty]
-        public string PayPhone { get; set; } = string.Empty;
+        // Customers can change or cancel until the cutoff before the start time
+        public bool CanChange => Reservation is not null && Reservation.CanCustomerChange(_reservations.LocalNow());
 
         public Reservation Reservation { get; private set; }
 
@@ -74,7 +74,38 @@ namespace DineBook.Web.Pages.Reservations
             if (!await LoadAsync(ct))
                 return NotFound();
 
+            // The edit form starts with the current values
+            Change.Guests = Reservation.Guests;
+            Change.SpecialRequests = Reservation.SpecialRequests;
+
             return Page();
+        }
+
+        // Changes the party size or special requests. Shows the form again with the messages when the input is invalid.
+        public async Task<IActionResult> OnPostUpdateAsync(CancellationToken ct)
+        {
+            if (!await BelongsToSlugAsync(ct))
+                return NotFound();
+
+            if (!ModelState.IsValid)
+            {
+                if (!await LoadAsync(ct))
+                    return NotFound();
+
+                return Page();
+            }
+
+            try
+            {
+                await _reservations.UpdateBookingAsync(Code, Change.Phone, Change.Guests, Change.SpecialRequests ?? string.Empty, ct);
+                ToastSuccess("Your booking has been updated.");
+            }
+            catch (DomainException ex)
+            {
+                ToastError(ex.Message);
+            }
+
+            return RedirectToPage(new { slug = Slug, code = Code });
         }
 
         public async Task<IActionResult> OnPostCancelAsync(CancellationToken ct)
@@ -84,7 +115,7 @@ namespace DineBook.Web.Pages.Reservations
 
             try
             {
-                await _reservations.CancelAsync(Code, Phone, ct);
+                await _reservations.CancelAsync(Code, Input.Phone, ct);
                 ToastSuccess("Your booking has been cancelled.");
             }
             catch (DomainException ex)
@@ -117,7 +148,7 @@ namespace DineBook.Web.Pages.Reservations
 
             try
             {
-                var order = await _orders.PlaceOrderAsync(Code, OrderPhone, selections, ct);
+                var order = await _orders.PlaceOrderAsync(Code, Input.Phone, selections, ct);
                 ToastSuccess($"Order {order.OrderNo} placed with {order.Items.Count} item(s).");
                 TempData["Celebrate"] = "1";
             }
@@ -137,7 +168,7 @@ namespace DineBook.Web.Pages.Reservations
 
             try
             {
-                var orders = await _payments.GetPayableOrdersAsync(Code, PayPhone, ct);
+                var orders = await _payments.GetPayableOrdersAsync(Code, Input.Phone, ct);
                 PayableOrders = orders.Where(o => !o.IsPaid).ToList();
 
                 if (PayableOrders.Count == 0)
@@ -161,10 +192,10 @@ namespace DineBook.Web.Pages.Reservations
 
             try
             {
-                var orders = await _payments.GetPayableOrdersAsync(Code, PayPhone, ct);
+                var orders = await _payments.GetPayableOrdersAsync(Code, Input.Phone, ct);
                 if (!orders.Any(o => o.Id == orderId && !o.IsPaid))
                 {
-                    ToastError("That order cannot be paid.");
+                    ToastError("This order can't be paid right now.");
                     return RedirectToPage(new { slug = Slug, code = Code });
                 }
 

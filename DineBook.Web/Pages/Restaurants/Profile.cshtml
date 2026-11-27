@@ -9,6 +9,7 @@
 <div class="card shadow-sm" style="max-width: 36rem;">
     <div class="card-body p-4">
         <form method="post" data-submit-once>
+            <div class="visually-hidden" aria-hidden="true"><label>Leave this field empty<input type="text" name="website_url" tabindex="-1" autocomplete="off" /></label></div>
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
 
             <div class="mb-3">
@@ -37,7 +38,7 @@
                 <span asp-validation-for="Input.Phone" class="text-danger small"></span>
             </div>
 
-            <button type="submit" class="btn btn-brand">Save profile</button>
+            <button type="submit" class="btn btn-brand">Save changes</button>
         </form>
     </div>
 </div>

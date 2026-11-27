@@ -23,6 +23,11 @@ namespace DineBook.Application.Services
             _db = db;
         }
 
+        public async Task<ApplicationUser> FindProfileAsync(long customerId, CancellationToken ct = default)
+        {
+            return await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == customerId, ct);
+        }
+
         public async Task<ApplicationUser> GetProfileAsync(long customerId, CancellationToken ct = default)
         {
             return await _db.Users.AsNoTracking()

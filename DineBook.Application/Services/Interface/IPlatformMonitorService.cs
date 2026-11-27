@@ -1,3 +1,4 @@
+using DineBook.Application.Paging;
 using DineBook.Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -20,6 +21,9 @@ namespace DineBook.Application.Services.Interface
 
         /// <summary>Most recent payments and refunds across all restaurants. Order and restaurant are loaded.</summary>
         Task<IReadOnlyList<Payment>> GetRecentPaymentsAsync(CancellationToken ct = default);
+
+        /// <summary>One page of every payment and refund, newest first.</summary>
+        Task<PagedResult<Payment>> GetPaymentsPageAsync(int page, int pageSize, CancellationToken ct = default);
     }
 
     public sealed record PlatformStats(

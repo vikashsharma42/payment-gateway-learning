@@ -12,12 +12,16 @@ using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.CookiePolicy;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using System;
+using System.IO;
+using System.Security.Claims;
 using System.Threading.RateLimiting;
 using System.Threading.Tasks;
 
@@ -37,6 +41,7 @@ namespace DineBook.Web
         public void ConfigureServices(IServiceCollection services)
         {
             // Razor Pages. Everything under /Admin needs the admin role, except sign-in and sign-out.
+            services.AddHostedService<SecurityLogCleanupService>();
             services.AddRazorPages(options =>
             {
                 options.Conventions.AuthorizeFolder("/Admin", "AdminOnly");
@@ -51,6 +56,19 @@ namespace DineBook.Web
 
             // Response caching is used by the error pages in production
             services.AddResponseCaching();
+
+            // Short-lived cache for the per-address risk checks
+            services.AddMemoryCache();
+
+            // Antiforgery tokens for form posts. The cookie is strict: it is never sent on requests from other sites.
+            services.AddAntiforgery(options =>
+            {
+                options.Cookie.Name = "DineBook.Antiforgery";
+                options.Cookie.HttpOnly = true;
+                options.Cookie.SameSite = SameSiteMode.Strict;
+                options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+                options.HeaderName = "X-CSRF-TOKEN";
+            });
 
             // Cookie Authentication for Razor Pages
             services
@@ -81,23 +99,46 @@ namespace DineBook.Web
                 options.AddPolicy("ManagerOnly", policy => policy.RequireRole(nameof(UserRole.Manager)));
             });
 
-            // Rate limiting for checkout POST requests
+            // Rate limits. Only POST requests are counted; reads are never limited.
             services.AddRateLimiter(options =>
             {
                 options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+                // Sign-in and sign-up, per client address. Strict enough against password guessing,
+                // loose enough that a whole office or mobile network behind one address is not locked out.
+                options.AddPolicy("auth", context =>
+                    context.Request.Method == HttpMethods.Post
+                        ? RateLimitPartition.GetFixedWindowLimiter(
+                            "ip:" + ClientKey(context),
+                            _ => new FixedWindowRateLimiterOptions
+                            {
+                                PermitLimit = 20,
+                                Window = TimeSpan.FromMinutes(1),
+                                QueueLimit = 0
+                            })
+                        : RateLimitPartition.GetNoLimiter("read"));
+
+                // Bookings, orders, cancel and payment, per signed-in account (or per address when anonymous).
+                // A customer can retry a failed payment straight away.
                 options.AddPolicy("checkout", context =>
                     context.Request.Method == HttpMethods.Post
                         ? RateLimitPartition.GetFixedWindowLimiter(
-                            ClientKey(context),
+                            ClientPartitionKey(context),
                             _ => new FixedWindowRateLimiterOptions
                             {
-                                PermitLimit = 5,
-                                Window = TimeSpan.FromMinutes(5),
+                                PermitLimit = 30,
+                                Window = TimeSpan.FromMinutes(1),
                                 QueueLimit = 0
                             })
                         : RateLimitPartition.GetNoLimiter("read"));
             });
+
+            // Cookies are encrypted with these keys. Every server must share them, or a sign-in made on one server
+            // cannot be read by another. Set DataProtection:KeysPath to a folder all servers can reach.
+            var dataProtection = services.AddDataProtection().SetApplicationName("DineBook");
+            var keysPath = _configuration["DataProtection:KeysPath"];
+            if (!string.IsNullOrWhiteSpace(keysPath))
+                dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
 
             // Database, payments and application services
             services.AddApplicationDatabase(_configuration);
@@ -150,9 +191,32 @@ namespace DineBook.Web
                 app.UseHsts();
             }
 
+            // Behind a load balancer the visitor's address is in X-Forwarded-For. Without this, every visitor
+            // looks like the proxy and shares one rate-limit bucket. Trust the header only behind a proxy that sets it.
+            if (_configuration.GetValue<bool>("Proxy:TrustForwardedHeaders"))
+            {
+                var forwarded = new ForwardedHeadersOptions
+                {
+                    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+                };
+                forwarded.KnownIPNetworks.Clear();
+                forwarded.KnownProxies.Clear();
+                app.UseForwardedHeaders(forwarded);
+            }
+
             app.UseSecurityHeaders();
+
+            // Attack detection, scanner and probe refusal, and per-address risk checks before any page runs
+            app.UseMiddleware<SecurityMiddleware>();
             app.UseHttpsRedirection();
-            app.UseStaticFiles();
+            // Images, CSS and JavaScript are cached in the browser for one hour
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                OnPrepareResponse = context =>
+                {
+                    context.Context.Response.Headers["Cache-Control"] = "public, max-age=3600";
+                }
+            });
             app.UseRouting();
 
             // Authentication and authorization
@@ -166,6 +230,13 @@ namespace DineBook.Web
             {
                 endpoints.MapRazorPages();
             });
+        }
+
+        // Per-account key for signed-in visitors, otherwise the client address
+        private static string ClientPartitionKey(HttpContext context)
+        {
+            var account = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            return account is null ? "ip:" + ClientKey(context) : "user:" + account;
         }
 
         // Client IP address

@@ -35,6 +35,9 @@ namespace DineBook.Infrastructure.Database
 
         public DbSet<Payment> Payments { get; set; }
 
+        // Security events (failed sign-ins, blocked attacks, probes) for the security log and risk scores
+        public DbSet<SecurityEvent> SecurityEvents { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);

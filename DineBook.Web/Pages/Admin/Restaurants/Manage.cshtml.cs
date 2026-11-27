@@ -1,11 +1,11 @@
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Exceptions;
+using DineBook.Web.Dtos;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -30,76 +30,19 @@ namespace DineBook.Web.Pages.Admin.Restaurants
         [BindProperty(SupportsGet = true)]
         public long LocationId { get; set; }
 
-        // Add-location form
+        // Each form on this page has its own DTO. Their field names are prefixed by the property name.
         [BindProperty]
-        [Required(ErrorMessage = "Location name is required.")]
-        [StringLength(100)]
-        public string NewLocationName { get; set; } = string.Empty;
+        public NewLocationDto NewLocation { get; set; } = new();
 
         [BindProperty]
-        [Required(ErrorMessage = "Street is required.")]
-        [StringLength(200)]
-        public string NewLocationStreet { get; set; } = string.Empty;
+        public NewTableDto NewTable { get; set; } = new();
 
         [BindProperty]
-        [Required(ErrorMessage = "City is required.")]
-        [StringLength(100)]
-        public string NewLocationCity { get; set; } = string.Empty;
-
-        [BindProperty]
-        [Required(ErrorMessage = "State is required.")]
-        [StringLength(100)]
-        public string NewLocationState { get; set; } = string.Empty;
-
-        [BindProperty]
-        [Required(ErrorMessage = "Country is required.")]
-        [StringLength(100)]
-        public string NewLocationCountry { get; set; } = "India";
-
-        [BindProperty]
-        [Required(ErrorMessage = "Zip code is required.")]
-        [StringLength(20)]
-        public string NewLocationZipCode { get; set; }
-
-        [BindProperty]
-        [StringLength(100)]
-        public string NewLocationPhone { get; set; }
-
-        // Add-table form
-        [BindProperty]
-        [Required(ErrorMessage = "Table label is required.")]
-        [StringLength(20)]
-        public string TableLabel { get; set; } = string.Empty;
-
-        [BindProperty]
-        [Range(1, 20, ErrorMessage = "Capacity must be between 1 and 20.")]
-        public int TableCapacity { get; set; } = 2;
-
-        // Add-menu-item form
-        [BindProperty]
-        [Required(ErrorMessage = "Item name is required.")]
-        [StringLength(100)]
-        public string ItemName { get; set; } = string.Empty;
-
-        [BindProperty]
-        [StringLength(300)]
-        public string ItemDescription { get; set; } = string.Empty;
-
-        [BindProperty]
-        [Required(ErrorMessage = "Category is required.")]
-        [StringLength(50)]
-        public string ItemCategory { get; set; } = string.Empty;
-
-        [BindProperty]
-        [Range(0.01, 100000, ErrorMessage = "Price must be between 0.01 and 100000.")]
-        public decimal ItemPrice { get; set; }
+        public NewMenuItemDto NewItem { get; set; } = new();
 
         // Bill charges form. Range is checked by the domain (UpdateCharges), so a bad value shows as a toast.
         [BindProperty]
-        public decimal TaxPercent { get; set; }
-
-        [BindProperty]
-        public decimal SystemAccessFee { get; set; }
+        public RestaurantChargesDto Rates { get; set; } = new();
 
         public Restaurant Restaurant { get; private set; }
 
@@ -120,20 +63,19 @@ namespace DineBook.Web.Pages.Admin.Restaurants
 
         public async Task<IActionResult> OnPostAddLocationAsync(CancellationToken ct)
         {
-            RemoveTableFormErrors();
-            RemoveItemFormErrors();
+            ValidateOnly("NewLocation");
 
             if (!ModelState.IsValid)
             {
-                ToastError("Check the location details and try again.");
+                ToastError("Please check the location details and try again.");
                 return await ReloadAsync(ct);
             }
 
             try
             {
                 var location = await _admin.AddLocationAsync(Id, new AddLocationRequest(
-                    NewLocationName, NewLocationStreet, NewLocationCity, NewLocationState,
-                    NewLocationCountry, NewLocationZipCode, NewLocationPhone), ct);
+                    NewLocation.Name, NewLocation.Street, NewLocation.City, NewLocation.State,
+                    NewLocation.Country, NewLocation.ZipCode, NewLocation.Phone), ct);
 
                 ToastSuccess($"{location.Name} added. Add its tables next.");
                 return RedirectToPage(new { id = Id, locationId = location.Id });
@@ -162,20 +104,18 @@ namespace DineBook.Web.Pages.Admin.Restaurants
 
         public async Task<IActionResult> OnPostAddTableAsync(CancellationToken ct)
         {
-            // Both forms share this page, so the other form's fields must not fail this one
-            RemoveItemFormErrors();
-            RemoveLocationFormErrors();
+            ValidateOnly("NewTable");
 
             if (!ModelState.IsValid)
             {
-                ToastError("Check the table details and try again.");
+                ToastError("Please check the table details and try again.");
                 return await ReloadAsync(ct);
             }
 
             try
             {
-                await _admin.AddTableAsync(Id, LocationId, TableLabel.Trim(), TableCapacity, ct);
-                ToastSuccess($"Table {TableLabel.Trim()} added.");
+                await _admin.AddTableAsync(Id, LocationId, NewTable.TableLabel.Trim(), NewTable.TableCapacity, ct);
+                ToastSuccess($"Table {NewTable.TableLabel.Trim()} added.");
             }
             catch (DomainException ex)
             {
@@ -187,19 +127,18 @@ namespace DineBook.Web.Pages.Admin.Restaurants
 
         public async Task<IActionResult> OnPostAddItemAsync(CancellationToken ct)
         {
-            RemoveTableFormErrors();
-            RemoveLocationFormErrors();
+            ValidateOnly("NewItem");
 
             if (!ModelState.IsValid)
             {
-                ToastError("Check the menu item details and try again.");
+                ToastError("Please check the menu item details and try again.");
                 return await ReloadAsync(ct);
             }
 
             try
             {
-                await _admin.AddMenuItemAsync(Id, ItemName, ItemDescription, ItemCategory, ItemPrice, ct);
-                ToastSuccess($"{ItemName.Trim()} added to the menu.");
+                await _admin.AddMenuItemAsync(Id, NewItem.ItemName, NewItem.ItemDescription, NewItem.ItemCategory, NewItem.ItemPrice, ct);
+                ToastSuccess($"{NewItem.ItemName.Trim()} added to the menu.");
             }
             catch (DomainException ex)
             {
@@ -211,13 +150,11 @@ namespace DineBook.Web.Pages.Admin.Restaurants
 
         public async Task<IActionResult> OnPostChargesAsync(CancellationToken ct)
         {
-            RemoveItemFormErrors();
-            RemoveTableFormErrors();
-            RemoveLocationFormErrors();
+            ValidateOnly("Rates");
 
             try
             {
-                await _admin.UpdateChargesAsync(Id, TaxPercent, SystemAccessFee, ct);
+                await _admin.UpdateChargesAsync(Id, Rates.TaxPercent, Rates.SystemAccessFee, ct);
                 ToastSuccess("Charges saved. New bills at this restaurant use these rates.");
             }
             catch (DomainException ex)
@@ -243,29 +180,11 @@ namespace DineBook.Web.Pages.Admin.Restaurants
             return RedirectToPage(new { id = Id, locationId = LocationId });
         }
 
-        private void RemoveItemFormErrors()
+        // Only the submitted form is validated. The other forms are bound too, but their errors must not block this one.
+        private void ValidateOnly(string form)
         {
-            ModelState.Remove(nameof(ItemName));
-            ModelState.Remove(nameof(ItemDescription));
-            ModelState.Remove(nameof(ItemCategory));
-            ModelState.Remove(nameof(ItemPrice));
-        }
-
-        private void RemoveTableFormErrors()
-        {
-            ModelState.Remove(nameof(TableLabel));
-            ModelState.Remove(nameof(TableCapacity));
-        }
-
-        private void RemoveLocationFormErrors()
-        {
-            ModelState.Remove(nameof(NewLocationName));
-            ModelState.Remove(nameof(NewLocationStreet));
-            ModelState.Remove(nameof(NewLocationCity));
-            ModelState.Remove(nameof(NewLocationState));
-            ModelState.Remove(nameof(NewLocationCountry));
-            ModelState.Remove(nameof(NewLocationZipCode));
-            ModelState.Remove(nameof(NewLocationPhone));
+            foreach (var key in ModelState.Keys.Where(k => !k.StartsWith(form + ".", StringComparison.Ordinal)).ToList())
+                ModelState.Remove(key);
         }
 
         private async Task<IActionResult> ReloadAsync(CancellationToken ct)

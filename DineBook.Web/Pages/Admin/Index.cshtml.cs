@@ -1,11 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using DineBook.Application.Paging;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
+using DineBook.Web.Dtos;
 using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace DineBook.Web.Pages.Admin
 {
@@ -18,11 +18,12 @@ namespace DineBook.Web.Pages.Admin
             _reservations = reservations;
         }
 
-        public IReadOnlyList<Restaurant> Restaurants { get; private set; } = Array.Empty<Restaurant>();
+        // Every restaurant, open or closed, one page at a time
+        public PagedResult<Restaurant> Restaurants { get; private set; }
 
-        public async Task OnGetAsync(CancellationToken ct)
+        public async Task OnGetAsync([FromQuery] PageQuery query, CancellationToken ct)
         {
-            Restaurants = await _reservations.GetRestaurantsAsync(ct);
+            Restaurants = await _reservations.GetRestaurantsPageAsync(query.Page, query.PageSize, openOnly: false, ct);
         }
     }
 }

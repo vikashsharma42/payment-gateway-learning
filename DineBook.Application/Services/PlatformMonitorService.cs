@@ -1,3 +1,4 @@
+using DineBook.Application.Paging;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
@@ -58,6 +59,14 @@ namespace DineBook.Application.Services
                 .AsSplitQuery()
                 .ToListAsync(ct);
         }
+
+        public Task<PagedResult<Payment>> GetPaymentsPageAsync(int page, int pageSize, CancellationToken ct = default) =>
+            _db.Payments.AsNoTracking()
+                .Include(p => p.Order)
+                .ThenInclude(o => o.Restaurant)
+                .OrderByDescending(p => p.CreatedDateTime)
+                .ThenByDescending(p => p.Id)
+                .ToPagedAsync(page, pageSize, ct);
 
         public async Task<IReadOnlyList<Payment>> GetRecentPaymentsAsync(CancellationToken ct = default)
         {

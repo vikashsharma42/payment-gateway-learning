@@ -98,6 +98,43 @@ namespace DineBook.Domain.Entities
 
         public void Cancel() => MoveFrom(ReservationStatus.Confirmed, ReservationStatus.Cancelled, "Only confirmed reservations can be cancelled.");
 
+        // Customers can change or cancel while the booking is confirmed and before the cutoff
+        public DateTime ChangeDeadline => StartsAt - ReservationRules.CustomerChangeCutoff;
+
+        public bool CanCustomerChange(DateTime nowLocal) =>
+            Status == ReservationStatus.Confirmed && nowLocal < ChangeDeadline;
+
+        public void EnsureCustomerCanChange(DateTime nowLocal) =>
+            DomainValidation<bool>.Ensure(CanCustomerChange(nowLocal)).IsTrue(CutoffMessage);
+
+        public void CancelByCustomer(DateTime nowLocal)
+        {
+            EnsureCustomerCanChange(nowLocal);
+            Cancel();
+        }
+
+        // The service passes a table that is free for the slot and seats the new party size
+        public void ChangeParty(int guests, Table table, DateTime nowLocal)
+        {
+            EnsureCustomerCanChange(nowLocal);
+            DomainValidation<int>.Ensure(guests).IsGreaterThanOrEqualTo(1, "At least one guest is required.");
+            DomainValidation<Table>.Ensure(table, nameof(table)).IsNotNull();
+            DomainValidation<bool>.Ensure(table.Capacity >= guests).IsTrue("That table is too small for this party.");
+
+            Guests = guests;
+            TableId = table.Id;
+        }
+
+        public void ChangeSpecialRequests(string specialRequests, DateTime nowLocal)
+        {
+            EnsureCustomerCanChange(nowLocal);
+            DomainValidation<string>.Ensure(specialRequests ?? string.Empty, nameof(specialRequests)).HasMaxLength(200, "Special requests can be at most 200 characters.");
+            SpecialRequests = (specialRequests ?? string.Empty).Trim();
+        }
+
+        private static string CutoffMessage =>
+            $"Changes and cancellations close {ReservationRules.CustomerChangeCutoff.TotalHours:0} hours before your booking starts. Please call the restaurant for help.";
+
         // Food can be ordered while the booking is still active (confirmed or seated, before it ends)
         public bool AcceptsFoodOrders(DateTime nowLocal) =>
             (Status == ReservationStatus.Confirmed || Status == ReservationStatus.Seated) && nowLocal < EndsAt;
@@ -106,7 +143,7 @@ namespace DineBook.Domain.Entities
         public void AddFoodOrder(Orders order, DateTime nowLocal)
         {
             DomainValidation<Orders>.Ensure(order, "Order").IsNotNull();
-            DomainValidation<bool>.Ensure(AcceptsFoodOrders(nowLocal)).IsTrue("Food can only be ordered while your booking is active.");
+            DomainValidation<bool>.Ensure(AcceptsFoodOrders(nowLocal)).IsTrue("You can order food while your booking is active.");
 
             order.RestaurantId = RestaurantId;
             order.ReservationId = Id;

@@ -9,7 +9,7 @@
     <a asp-page="/Admin/Dashboard" class="btn btn-outline-secondary">Dashboard</a>
 </div>
 
-@if (Model.Payments.Count == 0)
+@if (Model.Payments.Items.Count == 0)
 {
     <div class="card p-4 text-center text-muted">No payments yet.</div>
 }
@@ -28,7 +28,7 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var payment in Model.Payments)
+                @foreach (var payment in Model.Payments.Items)
                 {
                     <tr>
                         <td>@payment.CreatedDateTime.LocalDateTime.ToString("dd MMM yyyy HH:mm")</td>
@@ -48,4 +48,5 @@ else
             </tbody>
         </table>
     </div>
+    <partial name="_Pager" model="Model.Payments" />
 }

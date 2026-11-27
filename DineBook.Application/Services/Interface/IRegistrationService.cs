@@ -1,3 +1,4 @@
+using DineBook.Application.Paging;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using System.Collections.Generic;
@@ -20,8 +21,8 @@ namespace DineBook.Application.Services.Interface
         /// <summary>Creates a Staff, Manager or Admin account. Customer accounts are not created here.</summary>
         Task<ApplicationUser> CreateStaffUserAsync(StaffUserRequest request, CancellationToken ct = default);
 
-        /// <summary>Users whose email, name or phone contains the search text. Empty search lists the first 200 users.</summary>
-        Task<IReadOnlyList<ApplicationUser>> GetUsersAsync(string search, CancellationToken ct = default);
+        /// <summary>One page of users whose email, name or phone contains the search text. Empty search lists every user.</summary>
+        Task<PagedResult<ApplicationUser>> GetUsersAsync(string search, int page, int pageSize, CancellationToken ct = default);
 
         /// <summary>
         /// True when no account at this restaurant uses this email. Admins (null restaurant) are checked platform-wide.

@@ -1,14 +1,15 @@
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using DineBook.Application.Paging;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
+using DineBook.Web.Dtos;
 using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using System.Threading;
+using System.Threading.Tasks;
 
-namespace DineBook.Web.Pages
+namespace DineBook.Web.Pages.Admin.Restaurants
 {
-    // "/" lists restaurants that have at least one open location. Browsing needs no sign-in.
+    // Every restaurant, open or closed, one page at a time
     public class IndexModel : AppPageModel
     {
         private readonly IReservationService _reservations;
@@ -18,14 +19,11 @@ namespace DineBook.Web.Pages
             _reservations = reservations;
         }
 
-        public IReadOnlyList<Restaurant> Restaurants { get; private set; } = new List<Restaurant>();
+        public PagedResult<Restaurant> Restaurants { get; private set; }
 
-        public async Task OnGetAsync(CancellationToken ct)
+        public async Task OnGetAsync([FromQuery] PageQuery query, CancellationToken ct)
         {
-            Restaurants = (await _reservations.GetRestaurantsAsync(ct))
-                .Where(r => r.IsActive && r.ActiveLocations.Any())
-                .OrderBy(r => r.Name)
-                .ToList();
+            Restaurants = await _reservations.GetRestaurantsPageAsync(query.Page, query.PageSize, openOnly: true, ct);
         }
     }
 }

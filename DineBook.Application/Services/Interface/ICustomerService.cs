@@ -26,5 +26,7 @@ namespace DineBook.Application.Services.Interface
 
         /// <summary>Payments and refunds for the customer's orders, newest first. Order and restaurant are loaded.</summary>
         Task<IReadOnlyList<Payment>> GetPaymentsAsync(long customerId, CancellationToken ct = default);
+        /// <summary>The account with this id, or null when there is none. Used to pre-fill forms.</summary>
+        Task<ApplicationUser> FindProfileAsync(long customerId, CancellationToken ct = default);
     }
 }

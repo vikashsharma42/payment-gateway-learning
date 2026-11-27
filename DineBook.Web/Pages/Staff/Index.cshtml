@@ -22,8 +22,8 @@ else
 
         <form method="post" asp-page-handler="Switch" class="d-flex gap-2 align-items-end" data-submit-once>
             <div>
-                <label asp-for="LocationId" class="form-label small mb-1">Location</label>
-                <select asp-for="LocationId" class="form-select">
+                <label asp-for="Input.LocationId" class="form-label small mb-1">Location</label>
+                <select asp-for="Input.LocationId" class="form-select">
                     @foreach (var location in ws.Locations)
                     {
                         <option value="@location.Id" selected="@(location.Id == ws.Current.Id)">@location.Name · @location.Address.City</option>
@@ -61,7 +61,7 @@ else
                     }
                     @if (tables.Count == 0)
                     {
-                        <p class="text-muted mb-0">No tables here yet.</p>
+                        <p class="text-muted mb-0">No tables at this location yet. Ask your manager to add some.</p>
                     }
                     else
                     {

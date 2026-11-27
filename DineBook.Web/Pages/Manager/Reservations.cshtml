@@ -10,9 +10,9 @@
 {
     <div class="card p-4 text-center text-muted">You are not assigned to a restaurant yet.</div>
 }
-else if (Model.Bookings.Count == 0)
+else if (Model.Bookings.TotalCount == 0)
 {
-    <p class="text-muted">No bookings today or later.</p>
+    <p class="text-muted">No bookings today or coming up at any location.</p>
 }
 else
 {
@@ -29,7 +29,7 @@ else
                 </tr>
             </thead>
             <tbody>
-                @foreach (var booking in Model.Bookings)
+                @foreach (var booking in Model.Bookings.Items)
                 {
                     <tr>
                         <td>@booking.StartsAt.ToString("ddd dd MMM") @booking.StartsAt.ToString("HH:mm")</td>
@@ -43,10 +43,14 @@ else
                                 {
                                     <form method="post" asp-page-handler="Seat" data-submit-once>
                                         <input type="hidden" name="reservationId" value="@booking.Id" />
+                                        <input type="hidden" name="Query.Page" value="@Model.Query.Page" />
+                                        <input type="hidden" name="Query.PageSize" value="@Model.Query.PageSize" />
                                         <button class="btn btn-sm btn-brand">Seat</button>
                                     </form>
                                     <form method="post" asp-page-handler="NoShow" data-submit-once>
                                         <input type="hidden" name="reservationId" value="@booking.Id" />
+                                        <input type="hidden" name="Query.Page" value="@Model.Query.Page" />
+                                        <input type="hidden" name="Query.PageSize" value="@Model.Query.PageSize" />
                                         <button class="btn btn-sm btn-outline-danger">No-show</button>
                                     </form>
                                 }
@@ -54,6 +58,8 @@ else
                                 {
                                     <form method="post" asp-page-handler="Complete" data-submit-once>
                                         <input type="hidden" name="reservationId" value="@booking.Id" />
+                                        <input type="hidden" name="Query.Page" value="@Model.Query.Page" />
+                                        <input type="hidden" name="Query.PageSize" value="@Model.Query.PageSize" />
                                         <button class="btn btn-sm btn-outline-success">Complete</button>
                                     </form>
                                 }
@@ -64,4 +70,5 @@ else
             </tbody>
         </table>
     </div>
+    <partial name="_Pager" model="Model.Bookings" />
 }

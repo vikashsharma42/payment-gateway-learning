@@ -1,18 +1,16 @@
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
 using DineBook.Application.Configuration;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
-using DineBook.Infrastructure.Database;
+using DineBook.Web.Dtos;
 using DineBook.Web.Infrastructure;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,21 +27,21 @@ namespace DineBook.Web.Pages
         // Cashfree payment sessions expire. Confirm the lifetime in the Cashfree docs.
         private static readonly TimeSpan SessionLifetime = TimeSpan.FromMinutes(30);
 
-        private readonly ApplicationDbContext _db;
+        private readonly ICustomerService _customers;
         private readonly IPaymentService _payments;
         private readonly IConfiguration _configuration;
         private readonly SiteOptions _site;
         private readonly ILogger<CheckoutModel> _logger;
 
         public CheckoutModel(
-            ApplicationDbContext db,
             IPaymentService payments,
+            ICustomerService customers,
             IConfiguration configuration,
             IOptions<SiteOptions> site,
             ILogger<CheckoutModel> logger)
         {
-            _db = db;
             _payments = payments;
+            _customers = customers;
             _configuration = configuration;
             _site = site.Value;
             _logger = logger;
@@ -51,22 +49,11 @@ namespace DineBook.Web.Pages
 
         // The restaurant's web address. An order is paid only under its own restaurant.
         [BindProperty(SupportsGet = true)]
-        public string Slug { get; set; } = string.Empty;
+        public string Slug { get; set; }
 
+        // Email, phone and the idempotency key (see CheckoutDto)
         [BindProperty]
-        [Required(ErrorMessage = "Email is required.")]
-        [EmailAddress]
-        public string Email { get; set; } = string.Empty;
-
-        [BindProperty]
-        [Required(ErrorMessage = "Phone is required.")]
-        [RegularExpression(@"^\+?[0-9 ]{10,15}$", ErrorMessage = "Enter a valid phone number.")]
-        public string Phone { get; set; } = string.Empty;
-
-        // One key per checkout form. A double submit or a "back" resubmit sends the same key,
-        // so the customer gets the same payment instead of a new one.
-        [BindProperty]
-        public string IdempotencyKey { get; set; } = string.Empty;
+        public CheckoutDto Input { get; set; }
 
         // The food order being paid. Its items, categories and prices are shown as the bill.
         public Orders Order { get; private set; }
@@ -92,7 +79,7 @@ namespace DineBook.Web.Pages
                 return RedirectToSettled();
 
             Pending = ReadPending(id);
-            IdempotencyKey = Guid.NewGuid().ToString("N");
+            Input.IdempotencyKey = Guid.NewGuid().ToString("N");
             await PrefillFromAccountAsync(ct);
             return Page();
         }
@@ -111,8 +98,8 @@ namespace DineBook.Web.Pages
                 return Page();
             }
 
-            if (string.IsNullOrWhiteSpace(IdempotencyKey))
-                IdempotencyKey = Guid.NewGuid().ToString("N");
+            if (string.IsNullOrWhiteSpace(Input.IdempotencyKey))
+                Input.IdempotencyKey = Guid.NewGuid().ToString("N");
 
             try
             {
@@ -121,7 +108,7 @@ namespace DineBook.Web.Pages
 
                 // The amount is read from the order inside PaymentService, never from the form
                 var session = await _payments.CreateOrderAsync(
-                    id, Email.Trim(), Phone.Trim(), returnUrl, IdempotencyKey, ct);
+                    id, Input.Email.Trim(), Input.Phone.Trim(), returnUrl, Input.IdempotencyKey, ct);
 
                 if (session is null)
                     return NotFound();
@@ -137,7 +124,7 @@ namespace DineBook.Web.Pages
             {
                 // Log the error, but never the email or phone
                 _logger.LogError(ex, "Failed to start payment for order {OrderId}", id);
-                ToastError("Payment could not be started. Please try again.");
+                ToastError("We couldn't start your payment. Please try again in a moment.");
                 return Page();
             }
         }
@@ -159,20 +146,10 @@ namespace DineBook.Web.Pages
 
         private async Task<bool> LoadOrderAsync(long id, CancellationToken ct)
         {
-            Order = await _db.Orders
-                .AsNoTracking()
-                .Include(o => o.Items)
-                .ThenInclude(i => i.MenuItem)
-                .Include(o => o.Payments)
-                .Include(o => o.Restaurant)
-                .Include(o => o.Reservation)
-                .FirstOrDefaultAsync(o => o.Id == id, ct);
-
-            // The order must belong to this restaurant's address and to the signed-in owner of the booking.
-            // Anything else reads as "not found", so other people's bills are not revealed.
-            if (Order is null
-                || !string.Equals(Order.Restaurant?.Slug, Slug, StringComparison.OrdinalIgnoreCase)
-                || Order.Reservation?.ApplicationUserId != UserId)
+            // The service checks that the order belongs to this restaurant and this customer.
+            // Anything else comes back as null, which the page shows as "not found".
+            Order = await _payments.GetOrderForCustomerAsync(id, Slug, UserId, ct);
+            if (Order is null)
                 return false;
 
             ReservationCode = Order.Reservation?.Code ?? string.Empty;
@@ -184,18 +161,18 @@ namespace DineBook.Web.Pages
         // CreateOrderAsync still checks that the typed email and phone match the account.
         private async Task PrefillFromAccountAsync(CancellationToken ct)
         {
-            if (!string.IsNullOrEmpty(Email) && !string.IsNullOrEmpty(Phone))
+            if (!string.IsNullOrEmpty(Input.Email) && !string.IsNullOrEmpty(Input.Phone))
                 return;
 
-            var account = await _db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == UserId, ct);
+            var account = await _customers.FindProfileAsync(UserId, ct);
             if (account is null)
                 return;
 
-            if (string.IsNullOrEmpty(Email))
-                Email = account.Email;
+            if (string.IsNullOrEmpty(Input.Email))
+                Input.Email = account.Email;
 
-            if (string.IsNullOrEmpty(Phone))
-                Phone = account.Phone;
+            if (string.IsNullOrEmpty(Input.Phone))
+                Input.Phone = account.Phone;
         }
 
         // A paid or cancelled order needs no checkout: show the booking instead

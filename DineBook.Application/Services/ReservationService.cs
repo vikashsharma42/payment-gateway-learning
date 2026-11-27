@@ -1,4 +1,5 @@
 using DineBook.Application.Configuration;
+using DineBook.Application.Paging;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
@@ -57,6 +58,23 @@ namespace DineBook.Application.Services
                 .ToListAsync(ct);
         }
 
+        public Task<PagedResult<Restaurant>> GetRestaurantsPageAsync(int page, int pageSize, bool openOnly, CancellationToken ct = default)
+        {
+            var query = _db.Restaurants.AsNoTracking()
+                .Include(r => r.Tables).Include(r => r.Locations)
+                .AsSplitQuery()
+                .AsQueryable();
+
+            // The public directory lists only restaurants with an open location. The admin list shows all of them.
+            if (openOnly)
+                query = query.Where(r => r.IsActive && r.Locations.Any(l => l.IsActive));
+
+            return query
+                .OrderBy(r => r.Name)
+                .ThenBy(r => r.Id)
+                .ToPagedAsync(page, pageSize, ct);
+        }
+
         public Task<Restaurant> GetRestaurantAsync(long restaurantId, CancellationToken ct = default) =>
             _db.Restaurants.AsNoTracking()
                 .Include(r => r.Tables).Include(r => r.Locations)
@@ -90,7 +108,7 @@ namespace DineBook.Application.Services
         {
             var policy = _options.ToPolicy();
             if (guests < 1 || guests > policy.MaxGuests)
-                throw new DomainException($"Party size must be between 1 and {policy.MaxGuests} guests.");
+                throw new DomainException($"Please choose between 1 and {policy.MaxGuests} guests for your party.");
 
             var restaurant = await GetRestaurantAsync(restaurantId, ct)
                 ?? throw new DomainException("Restaurant not found.");
@@ -157,13 +175,25 @@ namespace DineBook.Application.Services
                     request.StartsAt.AddMinutes(policy.DurationMinutes),
                     ct);
 
+                // One booking per time for this guest. Overlapping bookings at any location of this restaurant are refused too.
+                var guestBookings = await _db.Reservations.AsNoTracking()
+                    .Where(r => r.ApplicationUserId == customer.Id
+                                && r.RestaurantId == restaurant.Id
+                                && (r.Status == ReservationStatus.Confirmed || r.Status == ReservationStatus.Seated)
+                                && r.StartsAt >= request.StartsAt - LookBack
+                                && r.StartsAt < request.StartsAt.AddMinutes(policy.DurationMinutes))
+                    .ToListAsync(ct);
+
+                if (guestBookings.Any(r => ReservationRules.Overlaps(r.StartsAt, r.DurationMinutes, request.StartsAt, policy.DurationMinutes)))
+                    throw new DomainException("You already have a booking at this time. Check your bookings before booking again.");
+
                 var table = ReservationRules.PickTable(
                     tables,
                     existing,
                     request.Guests,
                     request.StartsAt,
                     policy.DurationMinutes)
-                    ?? throw new DomainException("No table is free at that time for this party size.");
+                    ?? throw new DomainException("Sorry, no table is free at that time for your party size. Please try another time.");
 
                 var newReservation = new Reservation(
                     await NewCodeAsync(ct),
@@ -213,13 +243,13 @@ namespace DineBook.Application.Services
 
             var reservation = await _db.Reservations.Include(r => r.Customer)
                 .FirstOrDefaultAsync(r => r.Code == normalizedCode, ct)
-                ?? throw new DomainException("We could not find a booking with those details.");
+                ?? throw new DomainException("We couldn't find a booking with that code and phone number. Please check them and try again.");
 
             // Same message for an unknown code and a wrong phone
             if (reservation.Customer?.Phone != normalizedPhone)
-                throw new DomainException("We could not find a booking with those details.");
+                throw new DomainException("We couldn't find a booking with that code and phone number. Please check them and try again.");
 
-            reservation.Cancel();
+            reservation.CancelByCustomer(LocalNow());
             await _db.SaveChangesAsync(ct);
 
             var restaurantName = await _db.Restaurants.AsNoTracking()
@@ -236,6 +266,80 @@ namespace DineBook.Application.Services
                     reservation.Code,
                     reservation.StartsAt),
                 ct);
+
+            return reservation;
+        }
+
+        // Customer changes the party size and/or special requests. Same phone check as cancel.
+        // A new party size picks a free table in the same location. The check and save run in a serializable transaction.
+        public async Task<Reservation> UpdateBookingAsync(string code, string phone, int guests, string specialRequests, CancellationToken ct = default)
+        {
+            var policy = _options.ToPolicy();
+            var normalizedCode = (code ?? string.Empty).Trim().ToUpperInvariant();
+            var normalizedPhone = ApplicationUser.NormalizePhone(phone);
+            var now = LocalNow();
+
+            var reservation = await _db.Reservations.Include(r => r.Customer)
+                .FirstOrDefaultAsync(r => r.Code == normalizedCode, ct)
+                ?? throw new DomainException("We couldn't find a booking with that code and phone number. Please check them and try again.");
+
+            // Same message for an unknown code and a wrong phone
+            if (reservation.Customer?.Phone != normalizedPhone)
+                throw new DomainException("We couldn't find a booking with that code and phone number. Please check them and try again.");
+
+            var requests = (specialRequests ?? string.Empty).Trim();
+            var partyChanged = guests != reservation.Guests;
+            var requestsChanged = !string.Equals(requests, reservation.SpecialRequests, StringComparison.Ordinal);
+
+            // Nothing changed: nothing to save
+            if (!partyChanged && !requestsChanged)
+                return reservation;
+
+            reservation.EnsureCustomerCanChange(now);
+
+            if (partyChanged && (guests < 1 || guests > policy.MaxGuests))
+                throw new DomainException($"Please choose between 1 and {policy.MaxGuests} guests for your party.");
+
+            var restaurant = await GetRestaurantAsync(reservation.RestaurantId, ct)
+                ?? throw new DomainException("Restaurant not found.");
+
+            // The booking stays in the location of its current table
+            var currentTable = restaurant.Tables.FirstOrDefault(t => t.Id == reservation.TableId);
+            var tables = TablesFor(restaurant, currentTable?.LocationId);
+
+            var strategy = _db.Database.CreateExecutionStrategy();
+
+            await strategy.ExecuteAsync(async () =>
+            {
+                await using var transaction = _db.Database.IsRelational()
+                    ? await _db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
+                    : null;
+
+                if (partyChanged)
+                {
+                    var existing = await LoadBlockingAsync(
+                        restaurant.Id,
+                        reservation.StartsAt - LookBack,
+                        reservation.EndsAt,
+                        ct);
+
+                    // The booking's own table must not count as taken by itself
+                    var others = existing.Where(r => r.Id != reservation.Id).ToList();
+
+                    var table = ReservationRules.PickTable(tables, others, guests, reservation.StartsAt, reservation.DurationMinutes)
+                        ?? throw new DomainException("Sorry, no table is free at this time for that party size. Please try another time or call the restaurant.");
+
+                    reservation.ChangeParty(guests, table, now);
+                }
+
+                if (requestsChanged)
+                    reservation.ChangeSpecialRequests(requests, now);
+
+                await _db.SaveChangesAsync(ct);
+
+                if (transaction is not null)
+                    await transaction.CommitAsync(ct);
+            });
 
             return reservation;
         }

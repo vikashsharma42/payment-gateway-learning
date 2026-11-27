@@ -1,7 +1,9 @@
+using DineBook.Application.Events;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Exceptions;
+using DineBook.Domain.Specifications;
 using DineBook.Email;
 using DineBook.Email.EmailModels;
 using DineBook.Infrastructure.Database;
@@ -26,18 +28,57 @@ namespace DineBook.Application.Services
         private readonly ApplicationDbContext _db;
         private readonly IPaymentGateway _gateway;
         private readonly IEmailService _email;
+        private readonly IDomainEventDispatcher _events;
         private readonly ILogger<PaymentService> _logger;
 
         public PaymentService(
             ApplicationDbContext db,
             IPaymentGateway gateway,
             IEmailService email,
+            IDomainEventDispatcher events,
             ILogger<PaymentService> logger)
         {
             _db = db;
             _gateway = gateway;
             _email = email;
+            _events = events;
             _logger = logger;
+        }
+
+        public async Task<Orders> GetOrderForCustomerAsync(long orderId, string restaurantSlug, long customerId, CancellationToken ct = default)
+        {
+            var order = await _db.Orders
+                .AsNoTracking()
+                .Include(o => o.Items)
+                .ThenInclude(i => i.MenuItem)
+                .Include(o => o.Payments)
+                .Include(o => o.Restaurant)
+                .Include(o => o.Reservation)
+                .AsSingleQuery()
+                .FirstOrDefaultAsync(o => o.Id == orderId, ct);
+
+            // The order must belong to this restaurant's address and to the signed-in owner of the booking.
+            if (order is null
+                || !string.Equals(order.Restaurant?.Slug, restaurantSlug, StringComparison.OrdinalIgnoreCase)
+                || order.Reservation?.ApplicationUserId != customerId)
+                return null;
+
+            return order;
+        }
+
+        public async Task<PaymentBookingLinks> GetBookingLinksAsync(long orderId, CancellationToken ct = default)
+        {
+            var order = await _db.Orders
+                .AsNoTracking()
+                .Include(o => o.Reservation)
+                .Include(o => o.Restaurant)
+                .AsSplitQuery()
+                .FirstOrDefaultAsync(o => o.Id == orderId, ct);
+
+            if (order is null)
+                return null;
+
+            return new PaymentBookingLinks(order.Reservation?.Code ?? string.Empty, order.Restaurant?.Slug ?? string.Empty);
         }
 
         public async Task<IReadOnlyList<Orders>> GetPayableOrdersAsync(string reservationCode, string phone, CancellationToken ct = default)
@@ -46,7 +87,7 @@ namespace DineBook.Application.Services
             var normalizedPhone = ApplicationUser.NormalizePhone(phone);
 
             if (string.IsNullOrWhiteSpace(code) || string.IsNullOrWhiteSpace(normalizedPhone))
-                throw new DomainException("We could not find a booking with those details.");
+                throw new DomainException("We couldn't find a booking with that code and phone number. Please check them and try again.");
 
             var reservation = await _db.Reservations
                 .AsNoTracking()
@@ -54,7 +95,7 @@ namespace DineBook.Application.Services
                 .FirstOrDefaultAsync(r => r.Code == code, ct);
 
             if (reservation?.Customer is null || reservation.Customer.Phone != normalizedPhone)
-                throw new DomainException("We could not find a booking with those details.");
+                throw new DomainException("We couldn't find a booking with that code and phone number. Please check them and try again.");
 
             var orders = await _db.Orders.AsNoTracking()
                 .Where(o => o.ReservationId == reservation.Id && o.Status != OrderStatus.Cancelled)
@@ -172,7 +213,7 @@ namespace DineBook.Application.Services
 
         public async Task<Payment> GetOrderStatusAsync(string gatewayOrderId, CancellationToken ct = default)
         {
-            var payment = await _db.Payments.FirstOrDefaultAsync(p => p.GatewayOrderId == gatewayOrderId, ct);
+            var payment = await _db.Payments.Matching(new PaymentByGatewayOrderIdSpecification(gatewayOrderId)).FirstOrDefaultAsync(ct);
             if (payment is null)
                 return null;
 
@@ -214,7 +255,7 @@ namespace DineBook.Application.Services
             if (string.IsNullOrWhiteSpace(gatewayOrderId))
                 return true;
 
-            var payment = await _db.Payments.AsNoTracking().FirstOrDefaultAsync(p => p.GatewayOrderId == gatewayOrderId, ct);
+            var payment = await _db.Payments.AsNoTracking().Matching(new PaymentByGatewayOrderIdSpecification(gatewayOrderId)).FirstOrDefaultAsync(ct);
             if (payment is null)
             {
                 _logger.LogWarning("Webhook for unknown payment {GatewayOrderId}", gatewayOrderId);
@@ -244,22 +285,23 @@ namespace DineBook.Application.Services
 
         public async Task<bool> MarkPaidAsync(string gatewayOrderId, CancellationToken ct = default)
         {
-            var payment = await _db.Payments.FirstOrDefaultAsync(p => p.GatewayOrderId == gatewayOrderId, ct);
+            var payment = await _db.Payments.Matching(new PaymentByGatewayOrderIdSpecification(gatewayOrderId)).FirstOrDefaultAsync(ct);
             if (payment is null || !payment.MarkAsPaid())
                 return false;
 
             await _db.SaveChangesAsync(ct);
             _logger.LogInformation("Payment {GatewayOrderId} marked paid", gatewayOrderId);
 
-            await SendEmailSafelyAsync(
-                new PaymentReceivedEmailModel(payment.CustomerEmail, payment.GatewayOrderId, payment.Amount.Amount), ct);
+            // The receipt email is a side effect of the saved change. It runs from the domain event.
+            await _events.DispatchAsync(payment.DomainEvents, ct);
+            payment.ClearDomainEvents();
 
             return true;
         }
 
         public async Task<Payment> RefundAsync(string gatewayOrderId, CancellationToken ct = default)
         {
-            var payment = await _db.Payments.FirstOrDefaultAsync(p => p.GatewayOrderId == gatewayOrderId, ct);
+            var payment = await _db.Payments.Matching(new PaymentByGatewayOrderIdSpecification(gatewayOrderId)).FirstOrDefaultAsync(ct);
             if (payment is null)
                 return null;
 

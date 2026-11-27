@@ -167,3 +167,294 @@ main {
         transition: none;
     }
 }
+
+/* Usability: consistent focus, touch-sized controls, clear errors */
+.form-control:focus,
+.form-select:focus {
+    border-color: var(--brand-2);
+    box-shadow: 0 0 0 0.2rem rgba(194, 65, 12, 0.2);
+}
+
+.form-control.is-invalid,
+.form-select.is-invalid {
+    border-color: #dc2626;
+}
+
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220, 38, 38, 0.2);
+}
+
+.btn:disabled,
+.btn.is-busy {
+    cursor: not-allowed;
+    opacity: 0.75;
+}
+
+/* Keep focus rings visible on the dark header */
+.site-header a:focus-visible,
+.site-header button:focus-visible {
+    outline-color: #fff;
+}
+
+.site-header .link-light:hover {
+    text-decoration: underline;
+}
+
+/* Phones: 16px inputs stop iOS zooming in; buttons and fields are easy to tap */
+@media (max-width: 576px) {
+    .form-control,
+    .form-select {
+        font-size: 16px;
+    }
+}
+
+@media (pointer: coarse) {
+    .btn,
+    .form-control,
+    .form-select {
+        min-height: 44px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .toast,
+    .fade,
+    .btn {
+        transition: none !important;
+    }
+}
+
+/* Animated pages: sections of each page reveal one after another */
+.page-stagger > * {
+    animation: fade-up 0.45s ease both;
+}
+
+.page-stagger > *:nth-child(2) { animation-delay: 0.06s; }
+.page-stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.page-stagger > *:nth-child(4) { animation-delay: 0.18s; }
+.page-stagger > *:nth-child(n+5) { animation-delay: 0.24s; }
+
+/* Thin bar at the top that moves while a page or form is loading */
+.nav-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 3px;
+    width: 0;
+    background: linear-gradient(90deg, #fdba74, #c2410c);
+    z-index: 1100;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.nav-progress.is-running {
+    opacity: 1;
+    animation: nav-progress-grow 6s cubic-bezier(0.1, 0.6, 0.3, 1) forwards;
+}
+
+.nav-progress.is-done {
+    width: 100%;
+    opacity: 0;
+    transition: opacity 0.3s ease, width 0.2s ease;
+}
+
+@keyframes nav-progress-grow {
+    from { width: 0; }
+    to { width: 85%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .page-stagger > *,
+    .nav-progress.is-running {
+        animation: none !important;
+    }
+    .nav-progress.is-running { opacity: 1; width: 60%; }
+}
+
+/* Table booking, styled like the pickup schedule: day chips, time rows, confirm bar */
+.booking-panel {
+    max-width: 36rem;
+    margin: 0 auto;
+}
+
+.date-chips {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.25rem 0.1rem 0.5rem;
+    scrollbar-width: none;
+}
+
+.date-chips::-webkit-scrollbar {
+    display: none;
+}
+
+.date-chip {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 4.6rem;
+    padding: 0.5rem 0.8rem;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    color: #1c1917;
+    text-decoration: none;
+    line-height: 1.2;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.date-chip-day {
+    font-weight: 600;
+}
+
+.date-chip-date {
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.date-chip:hover {
+    border-color: var(--brand-2);
+}
+
+.date-chip.is-active {
+    background: #fef2f2;
+    border-color: var(--brand-2);
+    color: var(--brand-2);
+}
+
+.date-chip.is-active .date-chip-date {
+    color: var(--brand-2);
+}
+
+.date-chip:focus-visible {
+    outline: 3px solid var(--brand-2);
+    outline-offset: 2px;
+}
+
+.booking-card {
+    border-radius: 1rem;
+    overflow: hidden;
+}
+
+.slot-list {
+    max-height: 22rem;
+    overflow-y: auto;
+    border-top: 1px solid var(--line);
+}
+
+.slot-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 0.25rem;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    font-size: 1.02rem;
+}
+
+.slot-row:hover {
+    background: #fafaf9;
+}
+
+.slot-time {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-weight: 500;
+}
+
+.slot-clock {
+    color: var(--muted);
+}
+
+.slot-radio {
+    width: 1.35rem;
+    height: 1.35rem;
+    margin: 0;
+    flex: 0 0 auto;
+    cursor: pointer;
+}
+
+.slot-row:has(.slot-radio:checked) {
+    background: #fef2f2;
+}
+
+.booking-card .btn:disabled {
+    background: #d6d3d1;
+    border-color: #d6d3d1;
+    color: #57534e;
+    opacity: 1;
+}
+
+/* Location picker (opened from "Change location"), styled like the FoodMe location list */
+.location-picker {
+    border-radius: 1rem;
+    border: 0;
+}
+
+.location-row {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.9rem 0.25rem;
+    border-bottom: 1px solid var(--line);
+    color: inherit;
+    text-decoration: none;
+}
+
+a.location-row:hover {
+    background: #fafaf9;
+}
+
+a.location-row:focus-visible {
+    outline: 3px solid var(--brand-2);
+    outline-offset: -3px;
+}
+
+.location-row.is-closed {
+    opacity: 0.55;
+}
+
+.location-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: #f5f5f4;
+    flex: 0 0 auto;
+}
+
+.location-name {
+    font-weight: 600;
+    font-size: 1.02rem;
+}
+
+.location-address {
+    color: var(--muted);
+}
+
+.location-chevron {
+    font-size: 1.5rem;
+    color: var(--muted);
+    line-height: 1;
+}
+
+a[aria-current="true"].location-row {
+    background: #fef2f2;
+}
+
+/* Sign-out popup */
+.logout-modal .modal-content { border: 0; border-radius: 1.25rem; box-shadow: 0 1rem 2.5rem rgba(0, 0, 0, .18); }
+.logout-modal .modal-body { padding-top: 1.75rem; }
+.logout-icon {
+    width: 4.25rem; height: 4.25rem; margin: 0 auto 1rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(220, 38, 38, .12); color: #dc2626;
+}
+.logout-icon svg { width: 1.9rem; height: 1.9rem; }

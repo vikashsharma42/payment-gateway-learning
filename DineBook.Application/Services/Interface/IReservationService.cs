@@ -1,3 +1,4 @@
+using DineBook.Application.Paging;
 using DineBook.Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -12,6 +13,9 @@ namespace DineBook.Application.Services.Interface
         DateTime LocalNow();
 
         Task<IReadOnlyList<Restaurant>> GetRestaurantsAsync(CancellationToken ct = default);
+
+        /// <summary>One page of restaurants ordered by name. openOnly keeps those with an open location (the public directory).</summary>
+        Task<PagedResult<Restaurant>> GetRestaurantsPageAsync(int page, int pageSize, bool openOnly, CancellationToken ct = default);
 
         /// <summary>Restaurant with its tables. Null when it does not exist.</summary>
         Task<Restaurant> GetRestaurantAsync(long restaurantId, CancellationToken ct = default);
@@ -28,8 +32,11 @@ namespace DineBook.Application.Services.Interface
         /// <summary>Null when no booking has this code.</summary>
         Task<Reservation> FindByCodeAsync(string code, CancellationToken ct = default);
 
-        /// <summary>Cancels a confirmed booking. The phone number must match the booking's customer.</summary>
+        /// <summary>Cancels a confirmed booking up to the cutoff before it starts. The phone number must match the booking's customer.</summary>
         Task<Reservation> CancelAsync(string code, string phone, CancellationToken ct = default);
+
+        /// <summary>Customer changes the party size and/or special requests up to the cutoff. The phone number must match the booking's customer.</summary>
+        Task<Reservation> UpdateBookingAsync(string code, string phone, int guests, string specialRequests, CancellationToken ct = default);
 
         /// <summary>Staff: guests have arrived. The table becomes occupied.</summary>
         Task SeatAsync(long restaurantId, long reservationId, CancellationToken ct = default);

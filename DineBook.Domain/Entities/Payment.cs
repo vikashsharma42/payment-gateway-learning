@@ -1,4 +1,5 @@
 using DineBook.Domain.Abstractions;
+using DineBook.Domain.Events;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Validation;
 using DineBook.Domain.ValueObjects;
@@ -81,6 +82,7 @@ namespace DineBook.Domain.Entities
 
             DomainValidation<PaymentStatus>.Ensure(Status).IsNotEqualTo(PaymentStatus.Refunded);
             Status = PaymentStatus.Paid;
+            AddDomainEvent(new PaymentPaidEvent(Id, GatewayOrderId, CustomerEmail, Amount.Amount, DateTimeOffset.UtcNow));
             return true;
         }
 

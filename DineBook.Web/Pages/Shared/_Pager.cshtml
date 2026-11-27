@@ -1,0 +1,40 @@
+@model DineBook.Application.Paging.IPagedInfo
+@{
+    // Links keep the current search and other query values, and change only Page
+    string PageUrl(int page)
+    {
+        var parts = Context.Request.Query
+            .Where(q => !string.Equals(q.Key, "Page", StringComparison.OrdinalIgnoreCase))
+            .Select(q => Uri.EscapeDataString(q.Key) + "=" + Uri.EscapeDataString(q.Value.ToString()))
+            .ToList();
+        parts.Add("Page=" + page.ToString(System.Globalization.CultureInfo.InvariantCulture));
+        return Context.Request.Path + "?" + string.Join("&", parts);
+    }
+}
+
+@if (Model.TotalPages > 1)
+{
+    <nav aria-label="Pages" class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+        <span class="text-muted small" aria-live="polite">
+            Page @Model.Page of @Model.TotalPages · @Model.TotalCount in total
+        </span>
+        <div class="btn-group" role="group">
+            @if (Model.HasPrevious)
+            {
+                <a class="btn btn-outline-secondary btn-sm" href="@PageUrl(Model.Page - 1)" rel="prev">Previous</a>
+            }
+            else
+            {
+                <span class="btn btn-outline-secondary btn-sm disabled" aria-disabled="true">Previous</span>
+            }
+            @if (Model.HasNext)
+            {
+                <a class="btn btn-outline-secondary btn-sm" href="@PageUrl(Model.Page + 1)" rel="next">Next</a>
+            }
+            else
+            {
+                <span class="btn btn-outline-secondary btn-sm disabled" aria-disabled="true">Next</span>
+            }
+        </div>
+    </nav>
+}

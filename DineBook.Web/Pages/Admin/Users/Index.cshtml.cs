@@ -1,7 +1,9 @@
+using DineBook.Application.Paging;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Exceptions;
+using DineBook.Web.Dtos;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -26,10 +28,9 @@ namespace DineBook.Web.Pages.Admin.Users
         }
 
         // Search by email, name or phone (?Search=...)
-        [BindProperty(SupportsGet = true)]
-        public string Search { get; set; } = string.Empty;
+        public UserSearchQuery Query { get; private set; } = new();
 
-        public IReadOnlyList<ApplicationUser> Users { get; private set; }
+        public PagedResult<ApplicationUser> Users { get; private set; }
 
         // Restaurants to choose from, and their names for the list
         public IReadOnlyList<Restaurant> Restaurants { get; private set; } = new List<Restaurant>();
@@ -43,7 +44,7 @@ namespace DineBook.Web.Pages.Admin.Users
                 : Restaurants.FirstOrDefault(r => r.Id == user.RestaurantId)?.Name ?? "(removed)";
 
         [BindProperty]
-        public CreateInputModel Input { get; set; }
+        public StaffUserCreateDto Input { get; set; } = new();
 
         // Set when the create popup has to be shown again with its errors
         public bool ShowCreateModal { get; private set; }
@@ -52,41 +53,9 @@ namespace DineBook.Web.Pages.Admin.Users
             new[] { UserRole.Staff, UserRole.Manager, UserRole.Admin }
                 .Select(r => new SelectListItem(r.ToString(), r.ToString()));
 
-        public class CreateInputModel
+        public async Task OnGetAsync([FromQuery] UserSearchQuery query, CancellationToken ct)
         {
-            [Required(ErrorMessage = "First name is required.")]
-            [StringLength(100)]
-            [Display(Name = "First name")]
-            public string FirstName { get; set; } = string.Empty;
-
-            [Required(ErrorMessage = "Last name is required.")]
-            [StringLength(100)]
-            [Display(Name = "Last name")]
-            public string LastName { get; set; } = string.Empty;
-
-            [Required(ErrorMessage = "Email is required.")]
-            [EmailAddress(ErrorMessage = "Enter a valid email.")]
-            [StringLength(254)]
-            [Display(Name = "Email")]
-            public string Email { get; set; } = string.Empty;
-
-            [Required(ErrorMessage = "Password is required.")]
-            [StringLength(128, MinimumLength = 12, ErrorMessage = "Password must be at least 12 characters.")]
-            [DataType(DataType.Password)]
-            [Display(Name = "Temporary password")]
-            public string Password { get; set; } = string.Empty;
-
-            [Required(ErrorMessage = "Choose a role.")]
-            [Display(Name = "Role")]
-            public UserRole Role { get; set; } = UserRole.Staff;
-
-            // Required for Staff and Manager. Admins are not tied to a restaurant.
-            [Display(Name = "Restaurant")]
-            public long? RestaurantId { get; set; }
-        }
-
-        public async Task OnGetAsync(CancellationToken ct)
-        {
+            Query = query;
             await LoadAsync(ct);
         }
 
@@ -96,8 +65,11 @@ namespace DineBook.Web.Pages.Admin.Users
             return new JsonResult(new { available = await _registration.IsEmailAvailableAsync(email, restaurantId, ct) });
         }
 
-        public async Task<IActionResult> OnPostCreateAsync(CancellationToken ct)
+        public async Task<IActionResult> OnPostCreateAsync([FromQuery] UserSearchQuery query, CancellationToken ct)
         {
+            // Keep the search and page the admin was on, for the redirect and the redisplay
+            Query = query;
+
             if (!ModelState.IsValid)
             {
                 await LoadAsync(ct);
@@ -111,7 +83,7 @@ namespace DineBook.Web.Pages.Admin.Users
                     Input.FirstName, Input.LastName, Input.Email, Input.Password, Input.Role, Input.RestaurantId), ct);
 
                 ToastSuccess($"{Input.FirstName} {Input.LastName} was added as {Input.Role}.");
-                return RedirectToPage();
+                return RedirectToPage(new { Search = Query.Search, Page = Query.Page, PageSize = Query.PageSize });
             }
             catch (DomainException ex)
             {
@@ -125,7 +97,7 @@ namespace DineBook.Web.Pages.Admin.Users
 
         private async Task LoadAsync(CancellationToken ct)
         {
-            Users = await _registration.GetUsersAsync(Search, ct);
+            Users = await _registration.GetUsersAsync(Query.Search, Query.Page, Query.PageSize, ct);
             Restaurants = await _reservations.GetRestaurantsAsync(ct);
         }
     }

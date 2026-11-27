@@ -1,4 +1,4 @@
-@page
+@page "/Payment/Result"
 @model ResultModel
 @{
     ViewData["Title"] = "Payment status";
@@ -32,7 +32,7 @@
 <div class="d-flex gap-2 mt-4">
     @if (Model.CurrentOrder.Status == PaymentStatus.Pending)
     {
-        <a asp-page="/Payment/Result" asp-route-order_id="@Model.OrderId" class="btn btn-outline-primary">Check again</a>
+        <a asp-page="/Payments/Result" asp-route-order_id="@Model.Query.OrderId" class="btn btn-outline-primary">Check again</a>
     }
     @if (!string.IsNullOrEmpty(Model.RestaurantSlug))
     {

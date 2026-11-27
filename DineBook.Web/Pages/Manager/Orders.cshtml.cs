@@ -1,3 +1,5 @@
+using DineBook.Application.Paging;
+using DineBook.Web.Dtos;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
@@ -25,13 +27,19 @@ namespace DineBook.Web.Pages.Manager
             _orders = orders;
         }
 
-        public IReadOnlyList<Orders> AllOrders { get; private set; } = Array.Empty<Orders>();
+        // Page number and size from the query string. Action redirects keep them.
+        [BindProperty(SupportsGet = true)]
+        public PageQuery Query { get; set; } = new();
+
+        public PagedResult<Orders> AllOrders { get; private set; }
+
+        protected override object ReturnRoute => new { Query.Page, Query.PageSize };
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
             await LoadWorkspaceAsync(null, ct);
             if (Workspace is not null)
-                AllOrders = await _work.GetRestaurantOrdersAsync(Workspace.Restaurant.Id, ct);
+                AllOrders = await _work.GetRestaurantOrdersPageAsync(Workspace.Restaurant.Id, Query.Page, Query.PageSize, ct);
 
             return Page();
         }

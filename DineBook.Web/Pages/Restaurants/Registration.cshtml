@@ -6,12 +6,13 @@
 
 <div class="page-hero mb-4">
     <h1 class="h2 mb-1">Create your account</h1>
-    <p class="text-muted mb-0">@Model.Restaurant.Name. You can book at any location of this restaurant.</p>
+    <p class="text-muted mb-0">@Model.Restaurant.Name · Your account lets you book at any of its locations.</p>
 </div>
 
 <div class="card shadow-sm" style="max-width: 40rem;">
     <div class="card-body p-4">
         <form method="post" data-submit-once>
+            <div class="visually-hidden" aria-hidden="true"><label>Leave this field empty<input type="text" name="website_url" tabindex="-1" autocomplete="off" /></label></div>
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
 
             <div class="row g-3 mb-3">

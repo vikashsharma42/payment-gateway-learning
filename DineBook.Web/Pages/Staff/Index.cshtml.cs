@@ -1,5 +1,6 @@
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Exceptions;
+using DineBook.Web.Dtos;
 using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -28,7 +29,7 @@ namespace DineBook.Web.Pages.Staff
         public StaffWorkspace Workspace { get; private set; }
 
         [BindProperty]
-        public long LocationId { get; set; }
+        public LocationSwitchDto Input { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync(long? locationId, CancellationToken ct)
         {
@@ -37,7 +38,7 @@ namespace DineBook.Web.Pages.Staff
 
             // The user has no restaurant (or no open location): the page explains that
             if (Workspace is not null)
-                LocationId = Workspace.Current.Id;
+                Input.LocationId = Workspace.Current.Id;
 
             return Page();
         }
@@ -46,15 +47,15 @@ namespace DineBook.Web.Pages.Staff
         {
             try
             {
-                var workspace = await _staffLocations.GetWorkspaceAsync(UserId, LocationId, ct);
+                var workspace = await _staffLocations.GetWorkspaceAsync(UserId, Input.LocationId, ct);
                 if (workspace is null)
                     throw new DomainException("You are not assigned to a restaurant.");
 
                 // Only an open location of this user's restaurant can be chosen
-                if (workspace.Current.Id != LocationId)
+                if (workspace.Current.Id != Input.LocationId)
                     throw new DomainException("That location is not available.");
 
-                Response.Cookies.Append(LocationCookie, LocationId.ToString(CultureInfo.InvariantCulture), new CookieOptions
+                Response.Cookies.Append(LocationCookie, Input.LocationId.ToString(CultureInfo.InvariantCulture), new CookieOptions
                 {
                     HttpOnly = true,
                     Secure = true,

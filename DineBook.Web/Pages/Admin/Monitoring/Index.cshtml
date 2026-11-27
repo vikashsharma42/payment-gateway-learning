@@ -1,0 +1,112 @@
+@page
+@model DineBook.Web.Pages.Admin.Monitoring.IndexModel
+@using DineBook.Domain.Security
+@{
+    ViewData["Title"] = "Admin · Security";
+}
+
+<h1 class="h2 mb-1">Security</h1>
+<p class="text-muted mb-4">Suspected attacks, failed sign-ins and risky addresses. An address at Critical risk is refused for up to an hour.</p>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <div class="card card-body shadow-sm h-100">
+            <div class="small text-muted">Events, last 24 hours</div>
+            <div class="fs-3 fw-semibold">@Model.Summary.EventsLast24Hours</div>
+        </div>
+    </div>
+    <div class="col-6 col-lg-3">
+        <div class="card card-body shadow-sm h-100">
+            <div class="small text-muted">Blocked, last 24 hours</div>
+            <div class="fs-3 fw-semibold">@Model.Summary.BlockedLast24Hours</div>
+        </div>
+    </div>
+</div>
+
+<h2 class="h5">Risky addresses (last hour)</h2>
+@if (Model.TopRisk.Count == 0)
+{
+    <p class="text-muted">Nothing risky in the last hour.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle bg-white shadow-sm">
+            <thead>
+                <tr>
+                    <th scope="col">Address</th>
+                    <th scope="col" class="text-end">Score</th>
+                    <th scope="col">Risk</th>
+                    <th scope="col">Last seen</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.TopRisk)
+                {
+                    var level = RiskScoring.LevelOf(row.Score);
+                    var badge = level switch
+                    {
+                        RiskLevel.Critical => "text-bg-danger",
+                        RiskLevel.High => "text-bg-warning",
+                        RiskLevel.Medium => "text-bg-info",
+                        _ => "text-bg-success"
+                    };
+                    <tr>
+                        <td><code>@row.IpAddress</code></td>
+                        <td class="text-end">@row.Score</td>
+                        <td><span class="badge @badge">@level</span></td>
+                        <td>@row.LastSeen.ToLocalTime().ToString("dd MMM HH:mm")</td>
+                        <td class="text-end">
+                            <form method="post" asp-page-handler="Unblock" data-submit-once>
+                                <input type="hidden" name="ipAddress" value="@row.IpAddress" />
+                                <button class="btn btn-sm btn-outline-secondary">Unblock</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<h2 class="h5 mt-4">Recent events</h2>
+@if (Model.Events.TotalCount == 0)
+{
+    <p class="text-muted">Nothing has been detected yet.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table align-middle bg-white shadow-sm">
+            <thead>
+                <tr>
+                    <th scope="col">When</th>
+                    <th scope="col">Event</th>
+                    <th scope="col">Address</th>
+                    <th scope="col">Request</th>
+                    <th scope="col">Account</th>
+                    <th scope="col">Detail</th>
+                    <th scope="col">Result</th>
+                    <th scope="col" class="text-end">Points</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var e in Model.Events.Items)
+                {
+                    <tr>
+                        <td class="small">@e.OccurredAt.ToLocalTime().ToString("dd MMM HH:mm:ss")</td>
+                        <td>@e.Kind</td>
+                        <td><code>@e.IpAddress</code></td>
+                        <td class="small"><code>@e.Path</code><div class="text-muted">@e.Method</div></td>
+                        <td class="small">@e.Subject</td>
+                        <td class="small">@e.Detail</td>
+                        <td><span class="badge @(e.Blocked ? "text-bg-danger" : "text-bg-secondary")">@(e.Blocked ? "Blocked" : "Logged")</span></td>
+                        <td class="text-end">@e.Points</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <partial name="_Pager" model="Model.Events" />
+}

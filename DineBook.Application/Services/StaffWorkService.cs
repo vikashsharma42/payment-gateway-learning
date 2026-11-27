@@ -1,3 +1,4 @@
+using DineBook.Application.Paging;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Exceptions;
@@ -70,6 +71,42 @@ namespace DineBook.Application.Services
                 .AsSplitQuery()
                 .ToListAsync(ct);
         }
+
+        public Task<PagedResult<Reservation>> GetReservationsPageAsync(long restaurantId, long locationId, DateTime from, int page, int pageSize, CancellationToken ct = default) =>
+            _db.Reservations.AsNoTracking()
+                .Include(r => r.Customer)
+                .Include(r => r.Table)
+                .Where(r => r.RestaurantId == restaurantId && r.Table.LocationId == locationId && r.StartsAt >= from)
+                .OrderBy(r => r.StartsAt).ThenBy(r => r.Id)
+                .ToPagedAsync(page, pageSize, ct);
+
+        public Task<PagedResult<Orders>> GetOrdersPageAsync(long restaurantId, long locationId, int page, int pageSize, CancellationToken ct = default) =>
+            _db.Orders.AsNoTracking()
+                .Include(o => o.Reservation)
+                .ThenInclude(r => r.Table)
+                .Include(o => o.Items)
+                .Where(o => o.RestaurantId == restaurantId && o.Reservation.Table.LocationId == locationId)
+                .OrderByDescending(o => o.CreatedDateTime).ThenByDescending(o => o.Id)
+                .AsSplitQuery()
+                .ToPagedAsync(page, pageSize, ct);
+
+        public Task<PagedResult<Reservation>> GetRestaurantReservationsPageAsync(long restaurantId, DateTime from, int page, int pageSize, CancellationToken ct = default) =>
+            _db.Reservations.AsNoTracking()
+                .Include(r => r.Customer)
+                .Include(r => r.Table)
+                .Where(r => r.RestaurantId == restaurantId && r.StartsAt >= from)
+                .OrderBy(r => r.StartsAt).ThenBy(r => r.Id)
+                .ToPagedAsync(page, pageSize, ct);
+
+        public Task<PagedResult<Orders>> GetRestaurantOrdersPageAsync(long restaurantId, int page, int pageSize, CancellationToken ct = default) =>
+            _db.Orders.AsNoTracking()
+                .Include(o => o.Reservation)
+                .ThenInclude(r => r.Table)
+                .Include(o => o.Items)
+                .Where(o => o.RestaurantId == restaurantId)
+                .OrderByDescending(o => o.CreatedDateTime).ThenByDescending(o => o.Id)
+                .AsSplitQuery()
+                .ToPagedAsync(page, pageSize, ct);
 
         public async Task EnsureReservationAtLocationAsync(long restaurantId, long locationId, long reservationId, CancellationToken ct = default)
         {

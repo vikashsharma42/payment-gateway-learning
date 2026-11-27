@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
 using System.Text.Json;
+using DineBook.Domain.Enums;
 using DineBook.Domain.ValueObjects;
 
 namespace DineBook.Web.Infrastructure
@@ -21,6 +22,28 @@ namespace DineBook.Web.Infrastructure
 
         private void SetToast(string type, string message) =>
             TempData[ToastKey] = JsonSerializer.Serialize(new ToastMessage(type, message));
+
+        // Where a signed-in user goes next. Every sign-in page uses this one rule.
+        // A safe ReturnUrl wins. Admins go to their dashboard, staff and managers to the staff dashboard,
+        // and customers to their restaurant. Null means there is nowhere to go, so the caller keeps the sign-in page.
+        protected IActionResult RedirectAfterSignIn(UserRole role, string restaurantSlug, string returnUrl)
+        {
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return LocalRedirect(returnUrl);
+
+            switch (role)
+            {
+                case UserRole.Admin:
+                    return RedirectToPage("/Admin/Dashboard");
+                case UserRole.Staff:
+                case UserRole.Manager:
+                    return RedirectToPage("/Staff/Dashboard");
+                default:
+                    return string.IsNullOrEmpty(restaurantSlug)
+                        ? null
+                        : RedirectToPage("/Restaurants/Index", new { slug = restaurantSlug });
+            }
+        }
 
         // A page under /{slug}/... remembers that restaurant, so the header can link to it elsewhere.
         // Pages that answer "not found" do not count.

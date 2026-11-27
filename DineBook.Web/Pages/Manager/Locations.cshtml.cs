@@ -1,4 +1,5 @@
 using DineBook.Application.Services.Interface;
+using DineBook.Web.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
@@ -16,44 +17,7 @@ namespace DineBook.Web.Pages.Manager
         }
 
         [BindProperty]
-        public NewLocationInput NewLocation { get; set; } = new();
-
-        public class NewLocationInput
-        {
-            [Required(ErrorMessage = "Location name is required.")]
-            [StringLength(100)]
-            [Display(Name = "Name")]
-            public string Name { get; set; } = string.Empty;
-
-            [Required(ErrorMessage = "Street is required.")]
-            [StringLength(200)]
-            [Display(Name = "Street")]
-            public string Street { get; set; } = string.Empty;
-
-            [Required(ErrorMessage = "City is required.")]
-            [StringLength(100)]
-            [Display(Name = "City")]
-            public string City { get; set; } = string.Empty;
-
-            [Required(ErrorMessage = "State is required.")]
-            [StringLength(100)]
-            [Display(Name = "State")]
-            public string State { get; set; } = string.Empty;
-
-            [Required(ErrorMessage = "Country is required.")]
-            [StringLength(100)]
-            [Display(Name = "Country")]
-            public string Country { get; set; } = "India";
-
-            [Required(ErrorMessage = "Zip code is required.")]
-            [StringLength(20)]
-            [Display(Name = "Zip code")]
-            public string ZipCode { get; set; } = string.Empty;
-
-            [StringLength(15)]
-            [Display(Name = "Phone (optional)")]
-            public string Phone { get; set; } = string.Empty;
-        }
+        public NewLocationDto NewLocation { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
@@ -66,7 +30,7 @@ namespace DineBook.Web.Pages.Manager
             if (!ModelState.IsValid)
             {
                 await LoadWorkspaceAsync(null, ct);
-                ToastError("Check the location details and try again.");
+                ToastError("Please check the location details and try again.");
                 return Page();
             }
 

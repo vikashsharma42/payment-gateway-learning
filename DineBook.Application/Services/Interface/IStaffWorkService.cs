@@ -1,3 +1,4 @@
+using DineBook.Application.Paging;
 using DineBook.Domain.Entities;
 using System;
 using System.Collections.Generic;
@@ -24,6 +25,18 @@ namespace DineBook.Application.Services.Interface
 
         /// <summary>Food orders at every location of the restaurant, newest first.</summary>
         Task<IReadOnlyList<Orders>> GetRestaurantOrdersAsync(long restaurantId, CancellationToken ct = default);
+
+        /// <summary>One page of bookings at the location from the given moment, earliest first.</summary>
+        Task<PagedResult<Reservation>> GetReservationsPageAsync(long restaurantId, long locationId, DateTime from, int page, int pageSize, CancellationToken ct = default);
+
+        /// <summary>One page of food orders for bookings at the location, newest first.</summary>
+        Task<PagedResult<Orders>> GetOrdersPageAsync(long restaurantId, long locationId, int page, int pageSize, CancellationToken ct = default);
+
+        /// <summary>One page of bookings at every location of the restaurant from the given moment, earliest first.</summary>
+        Task<PagedResult<Reservation>> GetRestaurantReservationsPageAsync(long restaurantId, DateTime from, int page, int pageSize, CancellationToken ct = default);
+
+        /// <summary>One page of food orders at every location of the restaurant, newest first.</summary>
+        Task<PagedResult<Orders>> GetRestaurantOrdersPageAsync(long restaurantId, int page, int pageSize, CancellationToken ct = default);
 
         /// <summary>Throws DomainException when the booking is not at this location of this restaurant.</summary>
         Task EnsureReservationAtLocationAsync(long restaurantId, long locationId, long reservationId, CancellationToken ct = default);

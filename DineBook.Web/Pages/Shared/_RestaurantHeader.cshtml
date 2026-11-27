@@ -7,28 +7,77 @@
         "book" => "/Restaurants/Book",
         _ => "/Restaurants/Location"
     };
+    var locations = Model.Restaurant.Locations.OrderBy(l => l.Name).ToList();
 }
 
 <header class="mb-3">
-    <div class="page-hero">
-        <h1 class="h2 mb-1">@Model.Restaurant.Name</h1>
-        <p class="text-muted mb-0">📍 @Model.SelectedLocation.Name · @Model.SelectedLocation.Address.City</p>
+    <div class="page-hero d-flex flex-wrap justify-content-between align-items-start gap-3">
+        <div>
+            <h1 class="h2 mb-1">@Model.Restaurant.Name</h1>
+            <p class="text-muted mb-0">📍 @Model.SelectedLocation.Name · @Model.SelectedLocation.Address.City</p>
+        </div>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#location-picker">
+            Change location
+        </button>
     </div>
 </header>
 
-<nav aria-label="Locations" class="mb-3">
-    <div class="d-flex flex-wrap gap-2 location-pills">
-        @foreach (var location in Model.Restaurant.ActiveLocations)
-        {
-            var isSelected = location.Id == Model.SelectedLocation.Id;
-            <a class="btn btn-sm @(isSelected ? "btn-brand" : "btn-outline-primary")"
-               aria-current="@(isSelected ? "page" : null)"
-               asp-page="@switchPage" asp-route-slug="@Model.Restaurant.Slug" asp-route-locationSlug="@location.Slug">
-                @location.Name
-            </a>
-        }
+<div class="modal fade" id="location-picker" tabindex="-1" aria-labelledby="location-picker-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered">
+        <div class="modal-content location-picker">
+            <div class="modal-header border-0 pb-0">
+                <h2 class="modal-title h5" id="location-picker-title">Select restaurant location</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <h3 class="h4 mb-0">@Model.Restaurant.Name</h3>
+                <p class="text-muted mb-1">@locations.Count location@(locations.Count == 1 ? "" : "s")</p>
+                @if (!string.IsNullOrWhiteSpace(Model.Restaurant.Phone))
+                {
+                    <a class="small" href="tel:@Model.Restaurant.Phone">📞 @Model.Restaurant.Phone</a>
+                }
+
+                <div class="location-list mt-3">
+                    @foreach (var location in locations)
+                    {
+                        var isSelected = location.Id == Model.SelectedLocation.Id;
+                        var isOpen = location.IsActive;
+                        var address = $"{location.Address.Street}, {location.Address.City}, {location.Address.State} {location.Address.ZipCode}";
+
+                        if (isOpen)
+                        {
+                            <a class="location-row" href="@Url.Page(switchPage, new { slug = Model.Restaurant.Slug, locationSlug = location.Slug })"
+                               aria-current="@(isSelected ? "true" : null)">
+                                <span class="location-icon" aria-hidden="true">📍</span>
+                                <span class="flex-grow-1">
+                                    <span class="location-name d-block">@location.Name</span>
+                                    <span class="location-address d-block small">@address</span>
+                                    <span class="badge text-bg-success mt-1">Open</span>
+                                    @if (isSelected)
+                                    {
+                                        <span class="badge text-bg-light border ms-1">Viewing</span>
+                                    }
+                                </span>
+                                <span class="location-chevron" aria-hidden="true">›</span>
+                            </a>
+                        }
+                        else
+                        {
+                            <div class="location-row is-closed" aria-disabled="true">
+                                <span class="location-icon" aria-hidden="true">📍</span>
+                                <span class="flex-grow-1">
+                                    <span class="location-name d-block">@location.Name</span>
+                                    <span class="location-address d-block small">@address</span>
+                                    <span class="badge text-bg-danger mt-1">Closed</span>
+                                </span>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
     </div>
-</nav>
+</div>
 
 <ul class="nav nav-tabs mb-4">
     <li class="nav-item">

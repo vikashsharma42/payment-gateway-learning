@@ -20,8 +20,7 @@ namespace DineBook.Application.Services
         private readonly IPasswordHasher _hasher;
         private readonly IHttpContextAccessor _httpContextAccessor;
 
-        public WebAuthenticationService(ApplicationDbContext db, IPasswordHasher hasher,
-            IHttpContextAccessor httpContextAccessor)
+        public WebAuthenticationService(ApplicationDbContext db, IPasswordHasher hasher, IHttpContextAccessor httpContextAccessor)
         {
             _db = db;
             _hasher = hasher;

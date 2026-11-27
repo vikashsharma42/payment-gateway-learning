@@ -7,6 +7,7 @@ using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Exceptions;
+using DineBook.Web.Dtos;
 using DineBook.Web.Infrastructure;
 
 namespace DineBook.Web.Pages.Restaurants
@@ -30,28 +31,10 @@ namespace DineBook.Web.Pages.Restaurants
         public Restaurant Restaurant { get; private set; }
 
         [BindProperty]
-        public InputModel Input { get; set; } = new();
+        public CustomerProfileDto Input { get; set; } = new();
 
         // Shown but not editable here. Changing the sign-in email is not part of this version.
         public string Email { get; private set; } = string.Empty;
-
-        public class InputModel
-        {
-            [Required(ErrorMessage = "First name is required.")]
-            [StringLength(100)]
-            [Display(Name = "First name")]
-            public string FirstName { get; set; } = string.Empty;
-
-            [Required(ErrorMessage = "Last name is required.")]
-            [StringLength(100)]
-            [Display(Name = "Last name")]
-            public string LastName { get; set; } = string.Empty;
-
-            [Required(ErrorMessage = "Phone is required.")]
-            [RegularExpression(@"^\+?[0-9 ]{10,15}$", ErrorMessage = "Enter a valid phone number.")]
-            [Display(Name = "Phone")]
-            public string Phone { get; set; } = string.Empty;
-        }
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
@@ -61,7 +44,7 @@ namespace DineBook.Web.Pages.Restaurants
 
             var profile = await _customers.GetProfileAsync(UserId, ct);
             Email = profile.Email;
-            Input = new InputModel
+            Input = new CustomerProfileDto
             {
                 FirstName = profile.FirstName,
                 LastName = profile.LastName,
@@ -85,7 +68,7 @@ namespace DineBook.Web.Pages.Restaurants
             try
             {
                 await _customers.UpdateProfileAsync(UserId, Input.FirstName, Input.LastName, Input.Phone, ct);
-                ToastSuccess("Your profile is saved.");
+                ToastSuccess("Your profile has been updated.");
                 return RedirectToPage(new { slug = Slug });
             }
             catch (DomainException ex)

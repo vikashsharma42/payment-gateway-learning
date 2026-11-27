@@ -103,7 +103,7 @@ namespace DineBook.Application.Services
             var normalizedPhone = ApplicationUser.NormalizePhone(phone);
 
             if (string.IsNullOrWhiteSpace(normalizedCode) || string.IsNullOrWhiteSpace(normalizedPhone))
-                throw new DomainException("We could not find a booking with those details.");
+                throw new DomainException("We couldn't find a booking with that code and phone number. Please check them and try again.");
 
             // The customer is needed to check the phone number. FindByCodeAsync does not load it.
             var reservation = await _db.Reservations.AsNoTracking()
@@ -112,7 +112,7 @@ namespace DineBook.Application.Services
 
             // Same message for an unknown code and a wrong phone, so the code alone reveals nothing
             if (reservation?.Customer is null || reservation.Customer.Phone != normalizedPhone)
-                throw new DomainException("We could not find a booking with those details.");
+                throw new DomainException("We couldn't find a booking with that code and phone number. Please check them and try again.");
 
             return reservation;
         }

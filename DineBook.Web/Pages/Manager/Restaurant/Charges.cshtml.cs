@@ -1,4 +1,5 @@
 using DineBook.Application.Services.Interface;
+using DineBook.Web.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using System.ComponentModel.DataAnnotations;
 using System.Threading;
@@ -15,25 +16,14 @@ namespace DineBook.Web.Pages.Manager.Restaurant
         }
 
         [BindProperty]
-        public ChargesInput Input { get; set; } = new();
-
-        public class ChargesInput
-        {
-            [Range(0, 100, ErrorMessage = "GST must be between 0 and 100 percent.")]
-            [Display(Name = "GST (percent)")]
-            public decimal TaxPercent { get; set; }
-
-            [Range(0, 10000, ErrorMessage = "The access fee must be between 0 and 10,000.")]
-            [Display(Name = "System access fee per order")]
-            public decimal SystemAccessFee { get; set; }
-        }
+        public RestaurantChargesDto Input { get; set; } = new();
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
             await LoadWorkspaceAsync(null, ct);
             if (Workspace is not null)
             {
-                Input = new ChargesInput
+                Input = new RestaurantChargesDto
                 {
                     TaxPercent = Workspace.Restaurant.TaxPercent,
                     SystemAccessFee = Workspace.Restaurant.SystemAccessFee
@@ -48,7 +38,7 @@ namespace DineBook.Web.Pages.Manager.Restaurant
             if (!ModelState.IsValid)
             {
                 await LoadWorkspaceAsync(null, ct);
-                ToastError("Check the rates and try again.");
+                ToastError("Please check the rates and try again.");
                 return Page();
             }
 

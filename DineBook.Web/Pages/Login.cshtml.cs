@@ -6,7 +6,6 @@ using DineBook.Web.Infrastructure;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using System;
-using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,33 +15,27 @@ namespace DineBook.Web.Pages
     // Two sign-in pages share this model:
     //   /{slug}/Login  customers, staff and managers of that restaurant
     //   /Login         administrators (no restaurant)
-    [EnableRateLimiting("checkout")]
+    [EnableRateLimiting("auth")]
     public class LoginModel : AppPageModel
     {
         private readonly IWebAuthenticationService _authentication;
         private readonly IReservationService _reservations;
+        private readonly ISecurityService _security;
 
-        public LoginModel(IWebAuthenticationService authentication, IReservationService reservations)
+        public LoginModel(IWebAuthenticationService authentication, IReservationService reservations, ISecurityService security)
         {
             _authentication = authentication;
             _reservations = reservations;
+            _security = security;
         }
 
         // Restaurant web address from the URL. Empty on /Login.
         [FromRoute]
         public string Slug { get; set; }
 
+        // The shared sign-in fields (email and password) and their rules
         [BindProperty]
-        [Required(ErrorMessage = "Enter your email.")]
-        [EmailAddress]
-        [Display(Name = "Email")]
-        public string Email { get; set; }
-
-        [BindProperty]
-        [Required(ErrorMessage = "Enter your password.")]
-        [DataType(DataType.Password)]
-        [Display(Name = "Password")]
-        public string Password { get; set; }
+        public CredentialsInput Input { get; set; }
 
         [BindProperty(SupportsGet = true)]
         public string ReturnUrl { get; set; }
@@ -60,8 +53,8 @@ namespace DineBook.Web.Pages
             if (!await LoadRestaurantAsync(ct))
                 return NotFound();
 
-            if (User.Identity?.IsAuthenticated == true
-                && Enum.TryParse<UserRole>(User.FindFirstValue(ClaimTypes.Role), out var role))
+            // Already signed in: skip the form and go where this account belongs
+            if (User.Identity?.IsAuthenticated == true && Enum.TryParse<UserRole>(User.FindFirstValue(ClaimTypes.Role), out var role))
             {
                 return await AfterSignInAsync(role, UserClaimsFactory.RestaurantIdOf(User), ct) ?? Page();
             }
@@ -77,42 +70,46 @@ namespace DineBook.Web.Pages
             if (!ModelState.IsValid)
                 return Page();
 
+            var email = Input.Email.Trim().ToLowerInvariant();
+            var address = ClientInfo.Address(HttpContext);
+            var agent = ClientInfo.Agent(HttpContext);
+            var path = Request.Path.Value ?? string.Empty;
+
+            // Brute-force protection: repeated failures for this account or address pause sign-in for a while
+            if (await _security.IsSignInLockedAsync(email, address, ct))
+            {
+                await _security.RecordAsync(SecurityEventKind.LoginLocked, address, agent, Request.Method, path, email,
+                    "Sign-in paused after repeated failures", true, ct);
+                Error = "Too many unsuccessful sign-in attempts. Please wait 15 minutes and try again.";
+                return Page();
+            }
+
             // Administrators are looked up platform-wide (no restaurant). Everyone else must use their restaurant's address.
-            var user = await _authentication.LoginAsync(Email, Password, Restaurant?.Id, ct);
+            var user = await _authentication.LoginAsync(Input.Email.Trim(), Input.Password, Restaurant?.Id, ct);
 
             if (user is null)
             {
+                await _security.RecordAsync(SecurityEventKind.LoginFailed, address, agent, Request.Method, path, email,
+                    "Wrong email or password", false, ct);
                 Error = Restaurant is null
                     ? "That email or password is not correct for an administrator account."
                     : "That email or password is not correct for this restaurant.";
                 return Page();
             }
 
+            ToastSuccess($"Welcome back, {user.FirstName}.");
             return await AfterSignInAsync(user.Role, user.RestaurantId, ct) ?? Page();
         }
 
-        // Where a signed-in user goes next. Null means there is nowhere to go, so the sign-in page stays.
+        // Null means there is nowhere to go, so the sign-in page stays.
         private async Task<IActionResult> AfterSignInAsync(UserRole role, long? restaurantId, CancellationToken ct)
         {
-            if (!string.IsNullOrEmpty(ReturnUrl) && Url.IsLocalUrl(ReturnUrl))
-                return LocalRedirect(ReturnUrl);
-
-            switch (role)
-            {
-                case UserRole.Admin:
-                    return RedirectToPage("/Admin/Dashboard");
-                case UserRole.Staff:
-                case UserRole.Manager:
-                    return RedirectToPage("/Staff/Dashboard");
-            }
-
             // Customers go to the restaurant whose address they used, or else to their own restaurant
-            var target = Restaurant
-                ?? (restaurantId is { } id ? await _reservations.GetRestaurantAsync(id, ct) : null);
+            var slug = Restaurant?.Slug;
+            if (slug is null && role == UserRole.Customer && restaurantId is { } id)
+                slug = (await _reservations.GetRestaurantAsync(id, ct))?.Slug;
 
-            return target is null
-                ? null
-                : RedirectToPage("/Restaurants/Index", new { slug = target.Slug });
+            return RedirectAfterSignIn(role, slug, ReturnUrl);
         }
 
         private async Task<bool> LoadRestaurantAsync(CancellationToken ct)

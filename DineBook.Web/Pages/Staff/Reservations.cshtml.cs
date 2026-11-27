@@ -1,3 +1,5 @@
+using DineBook.Application.Paging;
+using DineBook.Web.Dtos;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Exceptions;
@@ -30,7 +32,11 @@ namespace DineBook.Web.Pages.Staff
 
         public StaffWorkspace Workspace { get; private set; }
 
-        public IReadOnlyList<Reservation> Bookings { get; private set; } = Array.Empty<Reservation>();
+        // Page number and size from the query string. Action redirects keep them.
+        [BindProperty(SupportsGet = true)]
+        public PageQuery Query { get; set; } = new();
+
+        public PagedResult<Reservation> Bookings { get; private set; }
 
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
@@ -38,7 +44,7 @@ namespace DineBook.Web.Pages.Staff
             if (Workspace is not null)
             {
                 var today = _reservations.LocalNow().Date;
-                Bookings = await _work.GetReservationsAsync(Workspace.Restaurant.Id, Workspace.Current.Id, today, ct);
+                Bookings = await _work.GetReservationsPageAsync(Workspace.Restaurant.Id, Workspace.Current.Id, today, Query.Page, Query.PageSize, ct);
             }
 
             return Page();
@@ -70,7 +76,7 @@ namespace DineBook.Web.Pages.Staff
                 ToastError(ex.Message);
             }
 
-            return RedirectToPage();
+            return RedirectToPage(new { Query.Page, Query.PageSize });
         }
 
         private long? ReadCookieLocationId() =>

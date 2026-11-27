@@ -1,7 +1,8 @@
-
+using DineBook.Application.Events;
 using DineBook.Application.Security;
 using DineBook.Application.Services;
 using DineBook.Application.Services.Interface;
+using DineBook.Domain.Events;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace DineBook.Application.DependencyInjection
@@ -15,6 +16,10 @@ namespace DineBook.Application.DependencyInjection
         {
             // Legacy single-product payment flow
             services.AddScoped<IPaymentService, PaymentService>();
+
+            // Side effects that run after a change is saved (receipts, notifications)
+            services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
+            services.AddScoped<IDomainEventSubscriber<PaymentPaidEvent>, PaymentPaidEmailHandler>();
 
             // Restaurant table reservations
             services.AddScoped<IReservationService, ReservationService>();
@@ -43,6 +48,9 @@ namespace DineBook.Application.DependencyInjection
 
             // SuperAdmin view across all restaurants
             services.AddScoped<IPlatformMonitorService, PlatformMonitorService>();
+
+            // Security monitor: event log, sign-in lockouts and risk scores
+            services.AddScoped<ISecurityService, SecurityService>();
 
             // First admin account, created from configuration when none exists
             services.AddScoped<AdminAccountSeeder>();
