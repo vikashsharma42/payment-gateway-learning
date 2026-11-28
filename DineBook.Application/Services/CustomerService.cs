@@ -61,19 +61,22 @@ namespace DineBook.Application.Services
 
         public async Task<IReadOnlyList<Reservation>> GetReservationsAsync(long customerId, CancellationToken ct = default)
         {
-            return await _db.Reservations.AsNoTracking()
+            return await _db.Reservations.AsNoTracking().IgnoreQueryFilters()
+                .Include(r => r.Table)
                 .Include(r => r.Restaurant)
+                .ThenInclude(x => x.Locations)
                 .Where(r => r.ApplicationUserId == customerId)
                 .OrderByDescending(r => r.StartsAt)
                 .Take(MaxRows)
+                .AsSplitQuery()
                 .ToListAsync(ct);
         }
 
         public async Task<IReadOnlyList<Orders>> GetOrdersAsync(long customerId, CancellationToken ct = default)
         {
-            return await _db.Orders.AsNoTracking()
-                .Include(o => o.Restaurant)
-                .Include(o => o.Reservation)
+            return await _db.Orders.AsNoTracking().IgnoreQueryFilters()
+                .Include(o => o.Restaurant).ThenInclude(x => x.Locations)
+                .Include(o => o.Reservation).ThenInclude(x => x.Table)
                 .Include(o => o.Items)
                 .Where(o => o.Reservation.ApplicationUserId == customerId)
                 .OrderByDescending(o => o.CreatedDateTime)
@@ -84,9 +87,9 @@ namespace DineBook.Application.Services
 
         public async Task<IReadOnlyList<Orders>> GetRestaurantOrdersAsync(long customerId, long restaurantId, CancellationToken ct = default)
         {
-            return await _db.Orders.AsNoTracking()
-                .Include(o => o.Restaurant)
-                .Include(o => o.Reservation)
+            return await _db.Orders.AsNoTracking().IgnoreQueryFilters()
+                .Include(o => o.Restaurant).ThenInclude(x => x.Locations)
+                .Include(o => o.Reservation).ThenInclude(x => x.Table)
                 .Include(o => o.Items)
                 .Where(o => o.Reservation.ApplicationUserId == customerId && o.RestaurantId == restaurantId)
                 .OrderByDescending(o => o.CreatedDateTime)

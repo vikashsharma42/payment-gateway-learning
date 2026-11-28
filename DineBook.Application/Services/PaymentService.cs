@@ -229,24 +229,27 @@ namespace DineBook.Application.Services
             if (payment?.ReservationId is not long reservationId)
                 return null;
 
-            var reservation = await _db.Reservations.AsNoTracking()
-                .Include(r => r.Restaurant)
+            var reservation = await _db.Reservations.AsNoTracking().IgnoreQueryFilters()
+                .Include(r => r.Table)
+                .Include(r => r.Restaurant).ThenInclude(x => x.Locations)
                 .FirstOrDefaultAsync(r => r.Id == reservationId, ct);
 
             return reservation is null
                 ? null
-                : new PaymentBookingLinks(reservation.Code, reservation.Restaurant?.Slug ?? string.Empty);
+                : new PaymentBookingLinks(reservation.Code, reservation.Restaurant?.Slug ?? string.Empty,
+                    reservation.Restaurant?.LocationSlugFor(reservation) ?? string.Empty);
         }
 
         public async Task<Orders> GetOrderForCustomerAsync(long orderId, string restaurantSlug, long customerId, CancellationToken ct = default)
         {
             var order = await _db.Orders
                 .AsNoTracking()
+                .IgnoreQueryFilters()
                 .Include(o => o.Items)
                 .ThenInclude(i => i.MenuItem)
                 .Include(o => o.Payments)
-                .Include(o => o.Restaurant)
-                .Include(o => o.Reservation)
+                .Include(o => o.Restaurant).ThenInclude(x => x.Locations)
+                .Include(o => o.Reservation).ThenInclude(x => x.Table)
                 .AsSingleQuery()
                 .FirstOrDefaultAsync(o => o.Id == orderId, ct);
 
@@ -263,15 +266,17 @@ namespace DineBook.Application.Services
         {
             var order = await _db.Orders
                 .AsNoTracking()
-                .Include(o => o.Reservation)
-                .Include(o => o.Restaurant)
+                .IgnoreQueryFilters()
+                .Include(o => o.Reservation).ThenInclude(x => x.Table)
+                .Include(o => o.Restaurant).ThenInclude(x => x.Locations)
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(o => o.Id == orderId, ct);
 
             if (order is null)
                 return null;
 
-            return new PaymentBookingLinks(order.Reservation?.Code ?? string.Empty, order.Restaurant?.Slug ?? string.Empty);
+            return new PaymentBookingLinks(order.Reservation?.Code ?? string.Empty, order.Restaurant?.Slug ?? string.Empty,
+                order.Restaurant?.LocationSlugFor(order.Reservation) ?? string.Empty);
         }
 
         public async Task<IReadOnlyList<Orders>> GetPayableOrdersAsync(string reservationCode, string phone, CancellationToken ct = default)

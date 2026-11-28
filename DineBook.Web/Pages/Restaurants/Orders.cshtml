@@ -73,6 +73,7 @@ else
                     <a class="btn btn-sm btn-outline-primary"
                        asp-page="/Reservations/Details"
                        asp-route-slug="@Model.Restaurant.Slug"
+                       asp-route-locationSlug="@Model.Restaurant.LocationSlugFor(order.Reservation)"
                        asp-route-code="@order.Reservation.Code">Open booking</a>
                 </div>
             </div>

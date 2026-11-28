@@ -2,6 +2,20 @@
 
 > Entries below are a history of each change. Where a later entry changes an earlier one, the later entry applies. The current behaviour is in [README.md](README.md) and [architecture.md](architecture.md).
 
+## Location in every booking, deposit and checkout address (latest)
+
+- Booking, deposit and checkout addresses now include the location, like the menu and book pages: `/{restaurant}/{location}/Reservations/{code}`, `/{restaurant}/{location}/Reservations/{code}/Deposit` and `/{restaurant}/{location}/Checkout/{id}`. The old addresses without the location no longer exist; bookmarks to them will show "Not Found".
+- The booking's own location is the one that counts. If the address has a different location, the page redirects to the correct one.
+- Every link and redirect to these pages passes the location: the book page, the booking page and its pay button, the deposit page, checkout, the payment result, my bookings, and the orders page.
+- The booking, order and payment lookups now load the booking's table and the restaurant's locations to find the location slug. No database change.
+
+## Theme applied to all customer pages (latest)
+
+- Error page rewritten in the site theme: a status-specific explanation and a link back home. The old Metronic markup and its missing background image are removed.
+- Restaurant home, menu, administrator sign-in, payment status, my payments and my bookings use the site's `page-hero`, `card` and new `empty-state` / `status-banner` styles.
+- Payment status shows a banner for each state (paid, waiting, failed, refunded) with wording that matches the state. Waiting payments still offer Check again.
+- New classes are added at the end of `wwwroot/css/enhance.css`. No existing rules changed.
+
 ## Customer country and phone format (latest)
 
 - **Country on every customer account:** `ApplicationUser.CountryCode` (ISO alpha-2, for example `IN`). Registration asks for the country first. The country sets the flag, the dial code, the number of digits and the grouping.

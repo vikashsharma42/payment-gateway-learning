@@ -42,6 +42,10 @@ namespace DineBook.Web.Pages.Reservations
         [BindProperty(SupportsGet = true)]
         public string Code { get; set; } = string.Empty;
 
+        // The location in the address. The booking's own location is the one that counts (see OnGetAsync).
+        [BindProperty(SupportsGet = true)]
+        public string LocationSlug { get; set; } = string.Empty;
+
         // The phone number from the cancel, food order or pay form (one form is posted at a time)
         [BindProperty]
         public BookingPhoneDto Input { get; set; } = new();
@@ -80,6 +84,12 @@ namespace DineBook.Web.Pages.Reservations
             if (!await LoadAsync(ct))
                 return NotFound();
 
+            // The booking's own location decides its address: a wrong location in the URL is corrected
+            var bookingLocation = Restaurant.LocationSlugFor(Reservation);
+            if (!string.IsNullOrEmpty(bookingLocation)
+                && !string.Equals(bookingLocation, LocationSlug, StringComparison.OrdinalIgnoreCase))
+                return RedirectToPage(new { slug = Slug, locationSlug = bookingLocation, code = Code });
+
             // A cancelled booking's refund is retried here until it has gone through
             if (Reservation.Status == ReservationStatus.Cancelled)
                 await _payments.RefundCancelledBookingAsync(Code, ct);
@@ -115,7 +125,7 @@ namespace DineBook.Web.Pages.Reservations
                 ToastError(ex.Message);
             }
 
-            return RedirectToPage(new { slug = Slug, code = Code });
+            return RedirectToPage(new { slug = Slug, locationSlug = LocationSlug, code = Code });
         }
 
         public async Task<IActionResult> OnPostCancelAsync(CancellationToken ct)
@@ -138,7 +148,7 @@ namespace DineBook.Web.Pages.Reservations
                 ToastError(ex.Message);
             }
 
-            return RedirectToPage(new { slug = Slug, code = Code });
+            return RedirectToPage(new { slug = Slug, locationSlug = LocationSlug, code = Code });
         }
 
         // Reads one quantity per menu item from the form (named qty_{id}) and places them as one order
@@ -172,7 +182,7 @@ namespace DineBook.Web.Pages.Reservations
                 ToastError(ex.Message);
             }
 
-            return RedirectToPage(new { slug = Slug, code = Code });
+            return RedirectToPage(new { slug = Slug, locationSlug = LocationSlug, code = Code });
         }
 
         // Step 1: the guest proves the booking with the phone number, then picks which order to pay
@@ -195,7 +205,7 @@ namespace DineBook.Web.Pages.Reservations
             catch (DomainException ex)
             {
                 ToastError(ex.Message);
-                return RedirectToPage(new { slug = Slug, code = Code });
+                return RedirectToPage(new { slug = Slug, locationSlug = LocationSlug, code = Code });
             }
         }
 
@@ -211,15 +221,15 @@ namespace DineBook.Web.Pages.Reservations
                 if (!orders.Any(o => o.Id == orderId && !o.IsPaid))
                 {
                     ToastError("This order can't be paid right now.");
-                    return RedirectToPage(new { slug = Slug, code = Code });
+                    return RedirectToPage(new { slug = Slug, locationSlug = LocationSlug, code = Code });
                 }
 
-                return RedirectToPage("/Checkout", new { slug = Slug, id = orderId });
+                return RedirectToPage("/Checkout", new { slug = Slug, locationSlug = LocationSlug, id = orderId });
             }
             catch (DomainException ex)
             {
                 ToastError(ex.Message);
-                return RedirectToPage(new { slug = Slug, code = Code });
+                return RedirectToPage(new { slug = Slug, locationSlug = LocationSlug, code = Code });
             }
         }
 

@@ -108,13 +108,13 @@ namespace DineBook.Web.Pages.Restaurants
                 if (_payments.BookingAdvance > 0m)
                 {
                     ToastSuccess("Your booking is created. Pay the deposit to secure your table.");
-                    return RedirectToPage("/Reservations/Deposit", new { slug = Restaurant.Slug, code = reservation.Code });
+                    return RedirectToPage("/Reservations/Deposit", new { slug = Restaurant.Slug, locationSlug = SelectedLocation.Slug, code = reservation.Code });
                 }
 
                 ToastSuccess("Your table is booked. See you soon!");
 
                 // Post/Redirect/Get: a refresh does not book again
-                return RedirectToPage("/Reservations/Details", new { slug = Restaurant.Slug, code = reservation.Code });
+                return RedirectToPage("/Reservations/Details", new { slug = Restaurant.Slug, locationSlug = SelectedLocation.Slug, code = reservation.Code });
             }
             catch (DomainException ex)
             {

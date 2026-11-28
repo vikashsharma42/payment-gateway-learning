@@ -4,11 +4,18 @@
     ViewData["Title"] = "My bookings";
 }
 
-<h1 class="h2 mb-4">My bookings</h1>
+<div class="page-hero mb-4">
+    <h1 class="h2 mb-1">My bookings</h1>
+    <p class="text-muted mb-0">Your table reservations and their status.</p>
+</div>
 
 @if (Model.Bookings.Count == 0)
 {
-    <p class="text-muted">You have not made any bookings yet.</p>
+    <div class="empty-state">
+        <p class="empty-state-icon" aria-hidden="true">📅</p>
+        <h2 class="h5 mb-1">No bookings yet</h2>
+        <p class="text-muted mb-0">When you book a table, it will show up here.</p>
+    </div>
 }
 else
 {
@@ -32,7 +39,7 @@ else
                         <td>@booking.Guests</td>
                         <td><span class="badge text-bg-light border">@booking.Status</span></td>
                         <td class="text-end">
-                            <a class="btn btn-sm btn-outline-primary" asp-page="/Reservations/Details" asp-route-slug="@booking.Restaurant.Slug" asp-route-code="@booking.Code">Open</a>
+                            <a class="btn btn-sm btn-outline-primary" asp-page="/Reservations/Details" asp-route-slug="@booking.Restaurant.Slug" asp-route-locationSlug="@booking.Restaurant.LocationSlugFor(booking)" asp-route-code="@booking.Code">Open</a>
                         </td>
                     </tr>
                 }

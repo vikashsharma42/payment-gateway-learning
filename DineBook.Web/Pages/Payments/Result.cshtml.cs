@@ -29,6 +29,8 @@ namespace DineBook.Web.Pages.Payments
 
         public string RestaurantSlug { get; private set; } = string.Empty;
 
+        public string LocationSlug { get; private set; } = string.Empty;
+
         public async Task<IActionResult> OnGetAsync([FromQuery] PaymentResultQuery query, CancellationToken ct)
         {
             Query = query;
@@ -43,6 +45,7 @@ namespace DineBook.Web.Pages.Payments
             var links = await _payments.GetPaymentLinksAsync(CurrentOrder.GatewayOrderId, ct);
             ReservationCode = links?.ReservationCode ?? string.Empty;
             RestaurantSlug = links?.RestaurantSlug ?? string.Empty;
+            LocationSlug = links?.LocationSlug ?? string.Empty;
 
             switch (CurrentOrder.Status)
             {

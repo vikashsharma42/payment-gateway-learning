@@ -75,6 +75,10 @@ namespace DineBook.Domain.Entities
         // Locations that are open for staff and new bookings
         public IEnumerable<Location> ActiveLocations => _locations.Where(l => l.IsActive);
 
+        // Slug of the location a booking is for, found through its table. Needs Locations and the booking's Table loaded.
+        public string LocationSlugFor(Reservation reservation) =>
+            Locations.FirstOrDefault(l => l.Id == reservation?.Table?.LocationId)?.Slug;
+
         private readonly List<Table> _tables = [];
         public virtual IReadOnlyCollection<Table> Tables => _tables.AsReadOnly();
 

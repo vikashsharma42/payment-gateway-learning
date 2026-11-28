@@ -105,5 +105,5 @@ namespace DineBook.Application.Services.Interface
         Task<PaymentBookingLinks> GetPaymentLinksAsync(string gatewayOrderId, CancellationToken ct = default);
     }
 
-    public sealed record PaymentBookingLinks(string ReservationCode, string RestaurantSlug);
+    public sealed record PaymentBookingLinks(string ReservationCode, string RestaurantSlug, string LocationSlug);
 }

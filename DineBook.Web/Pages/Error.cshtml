@@ -1,15 +1,12 @@
 @page "/Error/{statusCode:int}"
 @model ErrorModel
 @{
-    Layout = "_Layout";
     ViewData["Title"] = Model.ErrorMessage;
 }
 
-<div class="d-flex flex-column flex-root">
-    <div class="d-flex flex-row-fluid flex-column bgi-size-cover bgi-position-center bgi-no-repeat p-10 p-sm-30" style="background-image: url(/images/error-bg.jpg);">
-        <h1 class="font-weight-boldest text-dark-75 mt-15" style="font-size: 10rem">@Model.ErrorStatusCode</h1>
-        <p class="font-size-h3 text-muted font-weight-normal">
-            @Model.ErrorMessage
-        </p>
-    </div>
-</div>
+<section class="page-hero text-center py-5 px-3" aria-labelledby="error-title">
+    <p class="error-code mb-2" aria-hidden="true">@Model.ErrorStatusCode</p>
+    <h1 id="error-title" class="h3 mb-2">@Model.ErrorMessage</h1>
+    <p class="text-muted mx-auto mb-4" style="max-width: 32rem;">@Model.ErrorDescription</p>
+    <a asp-page="/Directory" class="btn btn-brand px-4">Back to the home page</a>
+</section>

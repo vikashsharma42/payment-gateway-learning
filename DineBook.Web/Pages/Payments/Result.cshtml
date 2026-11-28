@@ -3,23 +3,33 @@
 @{
     ViewData["Title"] = "Payment status";
 
-    var badge = Model.CurrentOrder.Status switch
+    var (badge, bannerClass, headline, detail) = Model.CurrentOrder.Status switch
     {
-        PaymentStatus.Paid => "text-bg-success",
-        PaymentStatus.Refunded => "text-bg-secondary",
-        PaymentStatus.Failed => "text-bg-danger",
-        _ => "text-bg-warning"
+        PaymentStatus.Paid => ("text-bg-success", "status-banner-success", "Payment received",
+            "Thank you. Your order is confirmed."),
+        PaymentStatus.Refunded => ("text-bg-secondary", "status-banner-muted", "Payment refunded",
+            "The refund has been issued. Banks can take several days to show it on your statement."),
+        PaymentStatus.Failed => ("text-bg-danger", "status-banner-danger", "Payment didn't go through",
+            "The payment wasn't completed, so your booking hasn't changed. You can try again from your booking."),
+        _ => ("text-bg-warning", "status-banner-warning", "Waiting for confirmation",
+            "We haven't heard back from the payment provider yet. This usually takes a minute. Use Check again to refresh.")
     };
 }
 
-<h1 class="h2 mb-4">Payment status</h1>
+<div class="page-hero mb-4">
+    <h1 class="h2 mb-1">Payment status</h1>
+    <p class="text-muted mb-0">Here is what happened to your payment.</p>
+</div>
+
+<div class="status-banner @bannerClass mb-4" role="status" aria-live="polite" style="max-width: 32rem;">
+    <span class="badge @badge mb-2">@Model.CurrentOrder.Status</span>
+    <h2 class="h5 mb-1">@headline</h2>
+    <p class="mb-0">@detail</p>
+</div>
 
 <div class="card shadow-sm" style="max-width: 32rem;">
     <div class="card-body">
         <dl class="row mb-0">
-            <dt class="col-5">Status</dt>
-            <dd class="col-7"><span class="badge @badge">@Model.CurrentOrder.Status</span></dd>
-
             <dt class="col-5">Order reference</dt>
             <dd class="col-7"><code>@Model.CurrentOrder.GatewayOrderId</code></dd>
 
@@ -29,13 +39,13 @@
     </div>
 </div>
 
-<div class="d-flex gap-2 mt-4">
+<div class="d-flex flex-wrap gap-2 mt-4">
     @if (Model.CurrentOrder.Status == PaymentStatus.Pending)
     {
-        <a asp-page="/Payments/Result" asp-route-order_id="@Model.Query.OrderId" class="btn btn-outline-primary">Check again</a>
+        <a asp-page="/Payments/Result" asp-route-order_id="@Model.Query.OrderId" class="btn btn-brand">Check again</a>
     }
     @if (!string.IsNullOrEmpty(Model.RestaurantSlug))
     {
-        <a asp-page="/Reservations/Details" asp-route-slug="@Model.RestaurantSlug" asp-route-code="@Model.ReservationCode" class="btn btn-outline-secondary">Back to your booking</a>
+        <a asp-page="/Reservations/Details" asp-route-slug="@Model.RestaurantSlug" asp-route-locationSlug="@Model.LocationSlug" asp-route-code="@Model.ReservationCode" class="btn btn-outline-primary">Back to your booking</a>
     }
 </div>

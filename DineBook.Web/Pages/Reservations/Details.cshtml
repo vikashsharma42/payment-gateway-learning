@@ -1,4 +1,4 @@
-@page "/{slug}/Reservations/{code}"
+@page "/{slug}/{locationSlug}/Reservations/{code}"
 @model DetailsModel
 @{
     ViewData["Title"] = "Your booking";
@@ -181,7 +181,7 @@ else if (isConfirmed)
         <div class="card-body">
             <h2 class="h6">Pay your booking deposit</h2>
             <p class="small text-muted">Pay the @Money.Inr(Model.BookingAdvance) deposit to secure your table. It is deducted from your food bill.</p>
-            <a class="btn btn-brand" asp-page="/Reservations/Deposit" asp-route-slug="@Model.Restaurant.Slug" asp-route-code="@Model.Reservation.Code">Pay @Money.Inr(Model.BookingAdvance)</a>
+            <a class="btn btn-brand" asp-page="/Reservations/Deposit" asp-route-slug="@Model.Restaurant.Slug" asp-route-locationSlug="@Model.Restaurant.LocationSlugFor(Model.Reservation)" asp-route-code="@Model.Reservation.Code">Pay @Money.Inr(Model.BookingAdvance)</a>
         </div>
     </div>
 }

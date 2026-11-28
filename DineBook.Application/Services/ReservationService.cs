@@ -233,7 +233,7 @@ namespace DineBook.Application.Services
         public Task<Reservation> FindByCodeAsync(string code, CancellationToken ct = default)
         {
             var normalized = (code ?? string.Empty).Trim().ToUpperInvariant();
-            return _db.Reservations.AsNoTracking().FirstOrDefaultAsync(r => r.Code == normalized, ct);
+            return _db.Reservations.AsNoTracking().IgnoreQueryFilters().Include(r => r.Table).FirstOrDefaultAsync(r => r.Code == normalized, ct);
         }
 
         public async Task<Reservation> CancelAsync(string code, string phone, CancellationToken ct = default)

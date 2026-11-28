@@ -4,11 +4,18 @@
     ViewData["Title"] = "My payments";
 }
 
-<h1 class="h2 mb-4">Payments and refunds</h1>
+<div class="page-hero mb-4">
+    <h1 class="h2 mb-1">Payments and refunds</h1>
+    <p class="text-muted mb-0">Food orders and booking deposits, with any refunds.</p>
+</div>
 
 @if (Model.Payments.Count == 0)
 {
-    <p class="text-muted">No payments yet. Payments for food orders appear here.</p>
+    <div class="empty-state">
+        <p class="empty-state-icon" aria-hidden="true">💳</p>
+        <h2 class="h5 mb-1">No payments yet</h2>
+        <p class="text-muted mb-0">Payments for food orders and booking deposits appear here.</p>
+    </div>
 }
 else
 {

@@ -51,6 +51,13 @@ namespace DineBook.Web.Pages
         [BindProperty(SupportsGet = true)]
         public string Slug { get; set; }
 
+        // The location in the address. The booking's own location is the one that counts (see OnGetAsync).
+        [BindProperty(SupportsGet = true)]
+        public string LocationSlug { get; set; } = string.Empty;
+
+        // The location of this order's booking, used for links back to the booking
+        public string BookingLocationSlug { get; private set; } = string.Empty;
+
         // Email, phone and the idempotency key (see CheckoutDto)
         [BindProperty]
         public CheckoutDto Input { get; set; } = new();
@@ -79,6 +86,11 @@ namespace DineBook.Web.Pages
         {
             if (!await LoadOrderAsync(id, ct))
                 return NotFound();
+
+            // The booking's own location decides the address of this order: a wrong location in the URL is corrected
+            if (!string.IsNullOrEmpty(BookingLocationSlug)
+                && !string.Equals(BookingLocationSlug, LocationSlug, StringComparison.OrdinalIgnoreCase))
+                return RedirectToPage(new { slug = Slug, locationSlug = BookingLocationSlug, id });
 
             if (Order.Status == OrderStatus.Cancelled || Order.IsPaid)
                 return RedirectToSettled();
@@ -122,7 +134,7 @@ namespace DineBook.Web.Pages
                 if (session.Amount <= 0m)
                 {
                     ToastSuccess("Your booking advance covers this order. No payment is needed.");
-                    return RedirectToPage("/Reservations/Details", new { slug = Slug, code = ReservationCode });
+                    return RedirectToPage("/Reservations/Details", new { slug = Slug, locationSlug = BookingLocationSlug, code = ReservationCode });
                 }
 
                 var pending = new PendingPayment(
@@ -130,7 +142,7 @@ namespace DineBook.Web.Pages
 
                 // Post/Redirect/Get: a refresh shows this session instead of creating another payment
                 TempData[PendingKey] = JsonSerializer.Serialize(pending);
-                return RedirectToPage(new { slug = Slug, id });
+                return RedirectToPage(new { slug = Slug, locationSlug = LocationSlug, id });
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
@@ -165,6 +177,7 @@ namespace DineBook.Web.Pages
                 return false;
 
             ReservationCode = Order.Reservation?.Code ?? string.Empty;
+            BookingLocationSlug = Order.Restaurant?.LocationSlugFor(Order.Reservation) ?? string.Empty;
             RestaurantName = Order.Restaurant?.Name ?? string.Empty;
 
             Credit = await _payments.AdvanceCreditAsync(Order, ct);
@@ -199,7 +212,7 @@ namespace DineBook.Web.Pages
             ToastSuccess("This order has already been paid or cancelled.");
             return string.IsNullOrEmpty(ReservationCode)
                 ? RedirectToPage("/Restaurants/Index", new { slug = Slug })
-                : RedirectToPage("/Reservations/Details", new { slug = Slug, code = ReservationCode });
+                : RedirectToPage("/Reservations/Details", new { slug = Slug, locationSlug = BookingLocationSlug, code = ReservationCode });
         }
     }
 

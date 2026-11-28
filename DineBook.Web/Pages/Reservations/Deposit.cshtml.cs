@@ -56,6 +56,9 @@ namespace DineBook.Web.Pages.Reservations
         [FromRoute]
         public string Code { get; set; } = string.Empty;
 
+        [FromRoute]
+        public string LocationSlug { get; set; } = string.Empty;
+
         // Email, phone and the idempotency key (see CheckoutDto)
         [BindProperty]
         public CheckoutDto Input { get; set; } = new();
@@ -84,11 +87,17 @@ namespace DineBook.Web.Pages.Reservations
             if (!await LoadAsync(ct))
                 return NotFound();
 
+            // The booking's own location decides its address: a wrong location in the URL is corrected
+            var bookingLocation = Restaurant.LocationSlugFor(Reservation);
+            if (!string.IsNullOrEmpty(bookingLocation)
+                && !string.Equals(bookingLocation, LocationSlug, StringComparison.OrdinalIgnoreCase))
+                return RedirectToPage(new { slug = Slug, locationSlug = bookingLocation, code = Code });
+
             if (!IsCustomerOf(Restaurant.Id))
                 return RedirectToPage("/Restaurants/Login", new { slug = Slug, ReturnUrl = Request.Path.ToString() });
 
             if (!IsPayable())
-                return RedirectToPage("/Reservations/Details", new { slug = Slug, code = Code });
+                return RedirectToPage("/Reservations/Details", new { slug = Slug, locationSlug = LocationSlug, code = Code });
 
             Pending = ReadPending();
             Input.IdempotencyKey = Guid.NewGuid().ToString("N");
@@ -105,7 +114,7 @@ namespace DineBook.Web.Pages.Reservations
                 return RedirectToPage("/Restaurants/Login", new { slug = Slug, ReturnUrl = Request.Path.ToString() });
 
             if (!IsPayable())
-                return RedirectToPage("/Reservations/Details", new { slug = Slug, code = Code });
+                return RedirectToPage("/Reservations/Details", new { slug = Slug, locationSlug = LocationSlug, code = Code });
 
             if (!ModelState.IsValid)
             {
@@ -126,7 +135,7 @@ namespace DineBook.Web.Pages.Reservations
 
                 // Post/Redirect/Get: a refresh shows this session instead of creating another payment
                 TempData[PendingKey] = JsonSerializer.Serialize(pending);
-                return RedirectToPage(new { slug = Slug, code = Code });
+                return RedirectToPage(new { slug = Slug, locationSlug = LocationSlug, code = Code });
             }
             catch (DomainException ex)
             {
