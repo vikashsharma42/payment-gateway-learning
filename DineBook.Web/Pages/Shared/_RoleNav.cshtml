@@ -10,9 +10,9 @@
     // A customer counts as signed in here only when their account belongs to the restaurant in the address.
     // The sign-in cookie covers the whole site, so an account from another restaurant is a guest here.
     var accountHere = signedIn
-                      && role == "Customer"
-                      && slug is not null
-                      && string.Equals(User.FindFirst(DineBook.Application.Security.UserClaimsFactory.RestaurantSlugClaim)?.Value, slug, System.StringComparison.OrdinalIgnoreCase);
+                      && role == UserRole.Customer.ToString()
+              && slug is not null
+                      && string.Equals(User.FindFirst(UserClaimsFactory.RestaurantSlugClaim)?.Value, slug, System.StringComparison.OrdinalIgnoreCase);
 
     var showHome = slug is not null && (!signedIn || role == "Customer");
 }
