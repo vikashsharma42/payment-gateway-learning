@@ -1,4 +1,3 @@
-
 using DineBook.Application.Configuration;
 using DineBook.Application.DependencyInjection;
 using DineBook.Application.Services;
@@ -204,7 +203,7 @@ namespace DineBook.Web
                 app.UseForwardedHeaders(forwarded);
             }
 
-            app.UseSecurityHeaders();
+            app.UseSecurityHeaders(_environment.IsDevelopment());
 
             // Attack detection, scanner and probe refusal, and per-address risk checks before any page runs
             app.UseMiddleware<SecurityMiddleware>();
