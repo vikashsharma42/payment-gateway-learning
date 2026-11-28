@@ -32,8 +32,8 @@ else
                 {
                     <tr>
                         <td>@payment.CreatedDateTime.LocalDateTime.ToString("dd MMM yyyy HH:mm")</td>
-                        <td>@payment.Order.Restaurant.Name</td>
-                        <td><code>@payment.Order.OrderNo</code></td>
+                        <td>@(payment.Order?.Restaurant.Name ?? "Booking deposit")</td>
+                        <td><code>@(payment.Order?.OrderNo ?? "Deposit")</code></td>
                         <td class="small">@payment.CustomerEmail</td>
                         <td class="text-end">@DineBook.Web.Helpers.Money.Inr(payment.Amount.Amount)</td>
                         <td>

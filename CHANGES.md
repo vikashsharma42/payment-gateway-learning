@@ -2,6 +2,29 @@
 
 > Entries below are a history of each change. Where a later entry changes an earlier one, the later entry applies. The current behaviour is in [README.md](README.md) and [architecture.md](architecture.md).
 
+## Customer country and phone format (latest)
+
+- **Country on every customer account:** `ApplicationUser.CountryCode` (ISO alpha-2, for example `IN`). Registration asks for the country first. The country sets the flag, the dial code, the number of digits and the grouping.
+- **Stored phone:** the dial code plus the national number, digits only (`919876543210`). Lookups use the same form, so a booking phone matches whether it was typed as `98765 43210` or `+91 98765 43210`.
+- **Phone field (all customer forms):** a country dropdown with flags, then the national number. `wwwroot/js/phone-field.js` (custom, self-hosted, no CSP change) groups the digits as the country writes them and changes the placeholder when the country changes. A number typed with `+` is left as typed and checked on the server.
+- **Countries:** the `Country` enum (`Domain/Enums/Country.cs`, 24 countries) is the country type everywhere. Its name is the ISO code, so the database column holds the same values as before. Phone rules for each country (dial code, digit length, grouping, example) are in `Domain/Enums/CountryRules.cs`. To add a country, add a value to the enum and a rule in `Rules()`. `PhoneNumbers.Resolve` turns what was typed into the stored form and rejects a number of the wrong length for its country.
+- **Display:** `Helpers/PhoneDisplay.cs` shows `🇮🇳 +91 98765 43210` (flag from the ISO code). Used on staff and manager booking lists.
+- **Replaces** the India-only helper from the entry below (`IndianPhone` is removed).
+- **Existing databases:** run `DB-Schema/customer-country-migration.sql`. It adds the column (existing accounts become `IN`) and adds `91` to 10-digit Indian customer phones. Check the review query in the script first.
+- **Staff and admin accounts:** the country is set to India by default. Staff phones are not asked for on the admin form, as before.
+- **Files:** `Domain/Entities/ApplicationUser.cs`, `Domain/Entities/Reservation.cs`, `Domain/Enums/Country.cs` and `CountryRules.cs` (new), `Domain/ValueObjects/PhoneNumbers.cs` (new), `Infrastructure/.../ApplicationUserConfiguration.cs`, `DB-Schema/ddd-domain-migration.sql`, `DB-Schema/customer-country-migration.sql` (new), `Application/Services/RegistrationService.cs`, `CustomerService.cs`, `AdminAccountSeeder.cs`, `Interface/IRegistrationService.cs`, `Interface/ICustomerService.cs`, `Web/Helpers/PhoneDisplay.cs` (new), `Web/Models/PhoneFieldModel.cs` (new), `Web/wwwroot/js/phone-field.js` (new), `Web/Pages/Shared/_PhoneField.cshtml` (new), `Web/Pages/Shared/_Layout.cshtml`, the customer DTOs, and the registration, profile, checkout, deposit, booking-details and staff and manager pages.
+- **Not built here:** no .NET SDK in this environment. Run `dotnet build` and apply the migration before testing.
+- **To check:** the phone sent to Cashfree is now the full number with the dial code (for example `919876543210`). Confirm the sandbox accepts it.
+
+## Indian flag on phone numbers (latest)
+
+- Customer phone numbers are shown with the Indian flag and +91, for example `🇮🇳 +91 98765 43210`. This applies to the staff and manager booking lists.
+- Every customer phone box now has a `🇮🇳 +91` prefix and expects the 10-digit number (placeholder `98765 43210`). This covers registration, profile, checkout, the booking deposit page, and the change, cancel, pre-order and pay forms on the booking page. The browser autofills the national number (`autocomplete="tel-national"`).
+- Storage and lookups are unchanged. Phone numbers are still saved as digits only. A number saved with 91 in front is still shown correctly, but to find a booking the phone must be typed the same way it was saved. See the open item below.
+- Open item: a number saved as `91XXXXXXXXXX` does not match the same number typed as 10 digits when looking up a booking or paying. Fixing this needs one normalization rule and a one-time data update of existing `Users.Phone` values.
+- Files: `Helpers/IndianPhone.cs` (new), `Pages/Restaurants/Registration.cshtml`, `Pages/Restaurants/Profile.cshtml`, `Pages/Checkout.cshtml`, `Pages/Reservations/Deposit.cshtml`, `Pages/Reservations/Details.cshtml`, `Pages/Staff/Reservations.cshtml`, `Pages/Manager/Reservations.cshtml`.
+- Not built here: no .NET SDK in this environment. Run `dotnet build` before release.
+
 ## Location picker (latest)
 
 - The restaurant header has a **Change location** button. It opens a picker that lists every location of the restaurant with its address and an Open or Closed badge, and an arrow on each open location.

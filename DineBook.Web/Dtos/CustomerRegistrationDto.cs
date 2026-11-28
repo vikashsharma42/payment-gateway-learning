@@ -1,8 +1,9 @@
+using DineBook.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace DineBook.Web.Dtos
 {
-public class CustomerRegistrationDto
+    public class CustomerRegistrationDto
     {
         [Required(ErrorMessage = "First name is required.")]
         [StringLength(100)]
@@ -20,8 +21,12 @@ public class CustomerRegistrationDto
         [Display(Name = "Email")]
         public string Email { get; set; }
 
+        [Required(ErrorMessage = "Choose your country.")]
+        [Display(Name = "Country")]
+        public Country CountryCode { get; set; } = CountryRules.Default;
+
         [Required(ErrorMessage = "Phone is required.")]
-        [RegularExpression(@"^\+?[0-9 ]{10,15}$", ErrorMessage = "Enter a valid phone number.")]
+        [RegularExpression(@"^\+?[0-9 ]{4,20}$", ErrorMessage = "Enter a valid phone number.")]
         [Display(Name = "Phone")]
         public string Phone { get; set; }
 

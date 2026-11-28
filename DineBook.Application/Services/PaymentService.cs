@@ -1,14 +1,17 @@
+using DineBook.Application.Configuration;
 using DineBook.Application.Events;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Exceptions;
 using DineBook.Domain.Specifications;
+using DineBook.Domain.ValueObjects;
 using DineBook.Email;
 using DineBook.Email.EmailModels;
 using DineBook.Infrastructure.Database;
 using DineBook.Payments.Gateway;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
@@ -30,19 +33,209 @@ namespace DineBook.Application.Services
         private readonly IEmailService _email;
         private readonly IDomainEventDispatcher _events;
         private readonly ILogger<PaymentService> _logger;
+        private readonly decimal _bookingAdvance;
+        private readonly decimal _cancellationFee;
 
         public PaymentService(
             ApplicationDbContext db,
             IPaymentGateway gateway,
             IEmailService email,
             IDomainEventDispatcher events,
-            ILogger<PaymentService> logger)
+            ILogger<PaymentService> logger,
+            IOptions<DiningOptions> dining)
         {
             _db = db;
+            _bookingAdvance = dining.Value.BookingAdvance;
+            _cancellationFee = dining.Value.CancellationFee;
             _gateway = gateway;
             _email = email;
             _events = events;
             _logger = logger;
+        }
+
+        public decimal BookingAdvance => _bookingAdvance;
+
+        public decimal CancellationFee => _cancellationFee;
+
+        // Deposits paid for this booking that are not refunded
+        public async Task<decimal> DepositHeldAsync(long reservationId, CancellationToken ct = default) =>
+            await _db.Payments.AsNoTracking()
+                .Where(p => p.ReservationId == reservationId && p.OrderId == null && p.Status == PaymentStatus.Paid)
+                .SumAsync(p => p.Amount.Amount - p.RefundedAmount, ct);
+
+        // Deposit money already used for food: paid, refunded, or pending and still within the session lifetime
+        private async Task<decimal> UsedAdvanceAsync(long reservationId, CancellationToken ct)
+        {
+            var cutoff = DateTimeOffset.UtcNow - SessionLifetime;
+
+            return await _db.Payments.AsNoTracking()
+                .Where(p => p.ReservationId == reservationId
+                    && p.OrderId != null
+                    && (p.Status == PaymentStatus.Paid
+                        || p.Status == PaymentStatus.Refunded
+                        || (p.Status == PaymentStatus.Pending && p.CreatedDateTime >= cutoff)))
+                .SumAsync(p => p.AdvanceApplied, ct);
+        }
+
+        // The deposit still available for this order: deposit held less what food already used, capped at the bill
+        public async Task<decimal> AdvanceCreditAsync(Orders order, CancellationToken ct = default)
+        {
+            var bill = order.BillFor(order.Restaurant).Total.Amount;
+            var held = await DepositHeldAsync(order.ReservationId, ct);
+            var used = await UsedAdvanceAsync(order.ReservationId, ct);
+
+            return Math.Min(Math.Max(0m, held - used), bill);
+        }
+
+        public async Task<PaymentOrderResult> CreateDepositAsync(
+            string reservationCode, string customerEmail, string customerPhone, string returnUrl,
+            string idempotencyKey, CancellationToken ct = default)
+        {
+            if (string.IsNullOrWhiteSpace(idempotencyKey) || idempotencyKey.Trim().Length > 64)
+                throw new DomainException("A valid idempotency key is required.");
+
+            var key = idempotencyKey.Trim();
+            var existing = await _db.Payments.AsNoTracking().FirstOrDefaultAsync(p => p.IdempotencyKey == key, ct);
+            if (existing is not null)
+                return ToResult(existing);
+
+            var code = (reservationCode ?? string.Empty).Trim().ToUpperInvariant();
+            var reservation = await _db.Reservations.AsNoTracking()
+                .Include(r => r.Customer)
+                .FirstOrDefaultAsync(r => r.Code == code, ct)
+                ?? throw new DomainException("Booking not found.");
+
+            var customer = reservation.Customer
+                ?? throw new DomainException("Customer information is not available for this booking.");
+
+            if (ApplicationUser.NormalizeEmail(customerEmail) != customer.Email
+                || ApplicationUser.NormalizePhone(customerPhone) != customer.Phone)
+                throw new DomainException("Customer details do not match this booking.");
+
+            if (reservation.Status == ReservationStatus.Cancelled || reservation.Status == ReservationStatus.NoShow)
+                throw new DomainException("This booking is no longer active.");
+
+            if (_bookingAdvance <= 0m)
+                throw new DomainException("No booking deposit is required.");
+
+            if (await DepositHeldAsync(reservation.Id, ct) > 0m)
+                throw new DomainException("The booking deposit is already paid.");
+
+            var now = DateTimeOffset.UtcNow;
+            var pending = await _db.Payments.AsNoTracking().FirstOrDefaultAsync(p =>
+                p.ReservationId == reservation.Id && p.OrderId == null && p.Status == PaymentStatus.Pending
+                && p.CreatedDateTime >= now - SessionLifetime, ct);
+            if (pending is not null)
+                return ToResult(pending);
+
+            var session = await _gateway.CreateOrderAsync(
+                _bookingAdvance,
+                $"dep_{Guid.NewGuid():N}",
+                customerEmail,
+                customerPhone,
+                returnUrl,
+                ct);
+
+            var payment = new Payment(
+                reservation.Id,
+                Money.Create(_bookingAdvance, Money.DefaultCurrency),
+                session.OrderId,
+                session.PaymentSessionId,
+                key,
+                customerEmail);
+            _db.Payments.Add(payment);
+            await _db.SaveChangesAsync(ct);
+
+            _logger.LogInformation("Deposit {GatewayOrderId} created for booking {Code} (amount {Amount})",
+                payment.GatewayOrderId, code, payment.Amount.Amount);
+
+            return ToResult(payment);
+        }
+
+        public async Task<decimal> RefundCancelledBookingAsync(string reservationCode, CancellationToken ct = default)
+        {
+            var code = (reservationCode ?? string.Empty).Trim().ToUpperInvariant();
+            var reservation = await _db.Reservations.AsNoTracking().FirstOrDefaultAsync(r => r.Code == code, ct);
+            if (reservation is null || reservation.Status != ReservationStatus.Cancelled)
+                return 0m;
+
+            // Tracked, so the refund id and refunded amount are saved
+            var deposit = await _db.Payments.FirstOrDefaultAsync(p =>
+                p.ReservationId == reservation.Id && p.OrderId == null && p.Status == PaymentStatus.Paid, ct);
+            if (deposit is null)
+                return 0m;
+
+            // Once food has been paid from the deposit, it is not refunded
+            if (await UsedAdvanceAsync(reservation.Id, ct) > 0m)
+                return 0m;
+
+            var refundable = Math.Max(0m, deposit.Amount.Amount - deposit.RefundedAmount - _cancellationFee);
+            if (refundable <= 0m)
+                return 0m;
+
+            // The refund id is stored before calling the gateway, so a retry reuses it
+            if (deposit.RefundId is null)
+            {
+                deposit.RecordRefundRequest($"rfnd_{Guid.NewGuid():N}");
+                await _db.SaveChangesAsync(ct);
+            }
+
+            var refundId = deposit.RefundId;
+            RefundResult result;
+            try
+            {
+                result = await _gateway.CreateRefundAsync(
+                    deposit.GatewayOrderId, refundId, refundable, "Booking cancelled", ct);
+            }
+            catch (InvalidOperationException)
+            {
+                // The gateway already has this refund id from an earlier attempt. Read its status instead.
+                result = await _gateway.GetRefundStatusAsync(deposit.GatewayOrderId, refundId, ct);
+            }
+            catch (HttpRequestException ex)
+            {
+                _logger.LogWarning(ex, "Deposit refund {RefundId} for booking {Code} could not be sent; it is retried later", refundId, code);
+                return 0m;
+            }
+
+            if (!result.IsSuccess)
+            {
+                if (result.Status == "CANCELLED")
+                {
+                    deposit.ClearRefundRequest();
+                    await _db.SaveChangesAsync(ct);
+                }
+
+                return 0m;
+            }
+
+            deposit.RecordPartialRefund(refundable);
+            await _db.SaveChangesAsync(ct);
+            _logger.LogInformation("Deposit {GatewayOrderId} partly refunded ({Amount}) for booking {Code}",
+                deposit.GatewayOrderId, refundable, code);
+
+            await SendEmailSafelyAsync(
+                new RefundIssuedEmailModel(deposit.CustomerEmail, deposit.GatewayOrderId, refundable), ct);
+
+            return refundable;
+        }
+
+        public async Task<PaymentBookingLinks> GetPaymentLinksAsync(string gatewayOrderId, CancellationToken ct = default)
+        {
+            var payment = await _db.Payments.AsNoTracking()
+                .Matching(new PaymentByGatewayOrderIdSpecification(gatewayOrderId))
+                .FirstOrDefaultAsync(ct);
+
+            if (payment?.ReservationId is not long reservationId)
+                return null;
+
+            var reservation = await _db.Reservations.AsNoTracking()
+                .Include(r => r.Restaurant)
+                .FirstOrDefaultAsync(r => r.Id == reservationId, ct);
+
+            return reservation is null
+                ? null
+                : new PaymentBookingLinks(reservation.Code, reservation.Restaurant?.Slug ?? string.Empty);
         }
 
         public async Task<Orders> GetOrderForCustomerAsync(long orderId, string restaurantSlug, long customerId, CancellationToken ct = default)
@@ -171,17 +364,35 @@ namespace DineBook.Application.Services
             if (pending is not null)
                 return ToResult(pending);
 
-            var session = await _gateway.CreateOrderAsync(
-                order.BillFor(order.Restaurant).Total.Amount,
-                $"cust_{Guid.NewGuid():N}",
-                customerEmail,
-                customerPhone,
-                returnUrl,
-                ct);
+            // The bill less the booking advance still unused for this booking
+            var bill = order.BillFor(order.Restaurant).Total;
+            var credit = await AdvanceCreditAsync(order, ct);
+            var due = Money.Create(bill.Amount - credit, bill.Currency);
 
-            // Same bill as sent to Cashfree above, so the stored amount always matches what the guest was charged
-            var payment = new Payment(
-                order, order.BillFor(order.Restaurant).Total, session.OrderId, session.PaymentSessionId, key, customerEmail);
+            string gatewayOrderId;
+            string paymentSessionId;
+            if (due.Amount > 0m)
+            {
+                var session = await _gateway.CreateOrderAsync(
+                    due.Amount,
+                    $"cust_{Guid.NewGuid():N}",
+                    customerEmail,
+                    customerPhone,
+                    returnUrl,
+                    ct);
+
+                gatewayOrderId = session.OrderId;
+                paymentSessionId = session.PaymentSessionId;
+            }
+            else
+            {
+                // The booking advance covers the whole bill, so nothing is sent to the gateway
+                gatewayOrderId = $"adv_{Guid.NewGuid():N}";
+                paymentSessionId = "booking-advance";
+            }
+
+            // Same amount as the stored payment, so what is stored always matches what the guest was charged
+            var payment = new Payment(order, due, gatewayOrderId, paymentSessionId, key, customerEmail, credit);
             _db.Payments.Add(payment);
 
             try
@@ -202,6 +413,14 @@ namespace DineBook.Application.Services
                     throw;
 
                 return ToResult(winner);
+            }
+
+            // Nothing to charge: settle the order now. No gateway call and no receipt email for zero rupees.
+            if (due.Amount == 0m)
+            {
+                payment.MarkAsPaid();
+                payment.ClearDomainEvents();
+                await _db.SaveChangesAsync(ct);
             }
 
             _logger.LogInformation(

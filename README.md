@@ -66,6 +66,7 @@ Run these once on an empty database, in this order:
 
 1. `DineBook.Infrastructure/Database/DB-Schema/ddd-domain-migration.sql`: the create-only script for the current domain model (includes `Restaurant.Slug` with a unique index).
 2. `DineBook.Infrastructure/Database/DB-Schema/security-events.sql`: creates the `SecurityEvents` table used by the security monitor. The app needs it.
+3. Existing databases only: `DineBook.Infrastructure/Database/DB-Schema/customer-country-migration.sql` (customer country and phone format).
 
 The project does not use EF migrations. An older database must be rebuilt, or the missing columns and tables added by hand, before the app will run.
 In the Development environment, `DiningSeeder` adds sample restaurants at startup, each with a slug from its name.

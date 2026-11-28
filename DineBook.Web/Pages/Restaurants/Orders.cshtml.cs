@@ -41,13 +41,9 @@ namespace DineBook.Web.Pages.Restaurants
             if (Restaurant is null || !Restaurant.IsActive)
                 return NotFound();
 
-            // Signed-out visitors sign in first, then come back here
-            if (User.Identity?.IsAuthenticated != true)
+            // Only customers of this restaurant have its orders. Everyone else signs in here first.
+            if (!IsCustomerOf(Restaurant.Id))
                 return RedirectToPage("/Restaurants/Login", new { slug = Slug, ReturnUrl = Request.Path.ToString() });
-
-            // Only customers have orders. Other accounts go to their own area.
-            if (User.FindFirstValue(ClaimTypes.Role) != nameof(UserRole.Customer))
-                return RedirectToPage("/Restaurants/Login", new { slug = Slug });
 
             DefaultLocation = Restaurant.ActiveLocations.FirstOrDefault(l => l.IsDefault)
                 ?? Restaurant.ActiveLocations.FirstOrDefault();

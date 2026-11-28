@@ -48,6 +48,18 @@
                     <strong class="price">@Money.Inr(Model.Order.BillFor(Model.Order.Restaurant).Total.Amount)</strong>
                 </div>
 
+                @if (Model.Credit > 0)
+                {
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span>Booking advance</span>
+                        <span>-@Money.Inr(Model.Credit)</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mt-2">
+                        <span>Amount due</span>
+                        <strong class="price">@Money.Inr(Model.AmountDue)</strong>
+                    </div>
+                }
+
                 <ul class="trust-list">
                     <li>Payment handled by Cashfree</li>
                     <li>We never see or store card details</li>
@@ -97,9 +109,10 @@
 
                         <div class="mb-3">
                             <label asp-for="Input.Phone" class="form-label"></label>
-                            <input asp-for="Input.Phone" type="tel" class="form-control form-control-lg"
-                                   placeholder="+91 9999999999" autocomplete="tel" inputmode="tel" />
-                            <span asp-validation-for="Input.Phone" class="text-danger small"></span>
+                            <div class="input-group input-group-lg phone-field">
+                                @{ var phoneField = new DineBook.Web.Models.PhoneFieldModel("Input_Phone", "Input.CountryCode", Model.Input.CountryCode, "Input.Phone", Model.Input.Phone, true); }
+                                <partial name="_PhoneField" model="phoneField" />
+                            </div>
                         </div>
 
 

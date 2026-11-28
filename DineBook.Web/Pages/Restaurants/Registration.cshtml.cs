@@ -70,8 +70,10 @@ namespace DineBook.Web.Pages.Restaurants
 
             try
             {
+                // What was typed becomes the stored form (dial code + number) for the chosen country
+                var phone = DineBook.Domain.ValueObjects.PhoneNumbers.Resolve(Input.CountryCode, Input.Phone);
                 await _registration.RegisterCustomerAsync(new CustomerRegistrationRequest(
-                    Input.FirstName, Input.LastName, Input.Email, Input.Phone, Input.Password, Restaurant.Id), ct);
+                    Input.FirstName, Input.LastName, Input.Email, Input.CountryCode, phone, Input.Password, Restaurant.Id), ct);
 
                 // Signed in straight away, through the same sign-in as the login page
                 await _authentication.LoginAsync(Input.Email, Input.Password, Restaurant.Id, ct);

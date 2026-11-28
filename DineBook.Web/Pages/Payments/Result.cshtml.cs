@@ -40,7 +40,7 @@ namespace DineBook.Web.Pages.Payments
             if (CurrentOrder is null)
                 return NotFound();
 
-            var links = await _payments.GetBookingLinksAsync(CurrentOrder.OrderId, ct);
+            var links = await _payments.GetPaymentLinksAsync(CurrentOrder.GatewayOrderId, ct);
             ReservationCode = links?.ReservationCode ?? string.Empty;
             RestaurantSlug = links?.RestaurantSlug ?? string.Empty;
 

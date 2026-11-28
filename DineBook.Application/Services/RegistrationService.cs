@@ -39,7 +39,7 @@ namespace DineBook.Application.Services
             var email = ApplicationUser.NormalizeEmail(request.Email);
             await EnsureEmailFreeAsync(email, request.RestaurantId, ct);
 
-            // Validates and normalizes the phone (digits only)
+            // Stored form: dial code + national number, digits only. The web layer resolves what the guest typed.
             var phone = ApplicationUser.NormalizePhone(request.Phone);
 
             // Phone is unique per restaurant, so the same number can register at another restaurant
@@ -52,6 +52,7 @@ namespace DineBook.Application.Services
                 request.FirstName,
                 request.LastName,
                 UserRole.Customer,
+                request.CountryCode,
                 phone,
                 request.RestaurantId);
 
@@ -85,6 +86,7 @@ namespace DineBook.Application.Services
                 request.FirstName,
                 request.LastName,
                 request.Role,
+                countryCode: DineBook.Domain.Enums.CountryRules.Default,
                 phone: null,
                 restaurantId);
 

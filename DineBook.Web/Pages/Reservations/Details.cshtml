@@ -55,7 +55,10 @@
             <div class="row g-3">
                 <div class="col-12">
                     <label class="form-label" for="change-phone">Phone number on this booking</label>
-                    <input id="change-phone" asp-for="Change.Phone" type="tel" class="form-control" autocomplete="tel" required />
+                    <div class="input-group phone-field">
+                        @{ var phoneChange = new DineBook.Web.Models.PhoneFieldModel("change-phone", "Change.CountryCode", Model.Change.CountryCode, "Change.Phone", Model.Change.Phone, true); }
+                        <partial name="_PhoneField" model="phoneChange" />
+                    </div>
                     <span asp-validation-for="Change.Phone" class="text-danger small"></span>
                 </div>
                 <div class="col-sm-4">
@@ -90,7 +93,10 @@
                     <p class="text-muted small">Enter the phone number on this booking to cancel it. Cancelling can't be undone.</p>
                     <input type="hidden" name="Code" value="@Model.Reservation.Code" />
                     <label class="form-label" for="cancel-phone">Phone number on this booking</label>
-                    <input id="cancel-phone" name="Input.Phone" type="tel" class="form-control" autocomplete="tel" required />
+                    <div class="input-group phone-field">
+                        @{ var phoneCancel = new DineBook.Web.Models.PhoneFieldModel("cancel-phone", "Input.CountryCode", Model.Input.CountryCode, "Input.Phone", Model.Input.Phone, true); }
+                        <partial name="_PhoneField" model="phoneCancel" />
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Keep booking</button>
@@ -119,7 +125,10 @@ else if (isConfirmed)
 
             <div class="mb-3">
                 <label class="form-label" for="OrderPhone">Phone number on this booking</label>
-                <input id="OrderPhone" name="Input.Phone" type="tel" class="form-control" required />
+                <div class="input-group phone-field">
+                    @{ var phoneOrder = new DineBook.Web.Models.PhoneFieldModel("OrderPhone", "Input.CountryCode", Model.Input.CountryCode, "Input.Phone", Model.Input.Phone, true); }
+                    <partial name="_PhoneField" model="phoneOrder" />
+                </div>
             </div>
 
             <table class="table align-middle mb-3">
@@ -166,6 +175,17 @@ else if (isConfirmed)
     </form>
 }
 
+@if (Model.NeedsDeposit)
+{
+    <div class="card shadow-sm mt-4" style="max-width: 36rem;">
+        <div class="card-body">
+            <h2 class="h6">Pay your booking deposit</h2>
+            <p class="small text-muted">Pay the @Money.Inr(Model.BookingAdvance) deposit to secure your table. It is deducted from your food bill.</p>
+            <a class="btn btn-brand" asp-page="/Reservations/Deposit" asp-route-slug="@Model.Restaurant.Slug" asp-route-code="@Model.Reservation.Code">Pay @Money.Inr(Model.BookingAdvance)</a>
+        </div>
+    </div>
+}
+
 @if (Model.CanPay)
 {
     <form method="post" asp-page-handler="Pay" class="card shadow-sm mt-4" style="max-width: 36rem;" data-submit-once>
@@ -173,9 +193,14 @@ else if (isConfirmed)
         <div class="card-body">
             <h2 class="h6">Pay your bill</h2>
             <p class="small text-muted">Pay for the food you ordered during this visit. Enter the phone number on this booking to see your bill.</p>
+            @if (Model.BookingAdvance > 0)
+            {
+                <p class="small mb-0">Your @Money.Inr(Model.BookingAdvance) booking advance is deducted from your food bill.</p>
+            }
             <input type="hidden" name="Code" value="@Model.Reservation.Code" />
-            <div class="input-group">
-                <input name="Input.Phone" type="tel" class="form-control" placeholder="Phone number" aria-label="Phone number" required />
+            <div class="input-group phone-field">
+                @{ var phonePay = new DineBook.Web.Models.PhoneFieldModel("pay-phone", "Input.CountryCode", Model.Input.CountryCode, "Input.Phone", Model.Input.Phone, true); }
+                <partial name="_PhoneField" model="phonePay" />
                 <button type="submit" class="btn btn-brand">Show my orders</button>
             </div>
         </div>
@@ -189,6 +214,7 @@ else if (isConfirmed)
         <div class="card-body">
             <h2 class="h6">Choose an order to pay</h2>
             <input type="hidden" name="Code" value="@Model.Reservation.Code" />
+            <input type="hidden" name="Input.CountryCode" value="@Model.Input.CountryCode" />
             <input type="hidden" name="Input.Phone" value="@Model.Input.Phone" />
 
             @foreach (var order in Model.PayableOrders)

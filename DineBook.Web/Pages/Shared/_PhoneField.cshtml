@@ -1,0 +1,23 @@
+@model DineBook.Web.Models.PhoneFieldModel
+@{
+    var phoneError = ViewData.ModelState[Model.PhoneName]?.Errors.FirstOrDefault()?.ErrorMessage;
+    var selectedRule = Model.Country.Rules();
+}
+<select id="@(Model.Id)-country" name="@Model.CountryName" class="form-select phone-country" aria-label="Country" style="max-width: 12.5rem;">
+    @foreach (var country in DineBook.Domain.Enums.CountryRules.All)
+    {
+        var rule = country.Rules();
+        <option value="@country" selected="@(country == Model.Country)"
+                data-dial="@rule.DisplayDial" data-max="@rule.MaxDigits"
+                data-groups="@string.Join(",", rule.Groups)" data-example="@rule.Example">
+            @PhoneDisplay.Flag(country) @rule.CountryName (@rule.DisplayDial)
+        </option>
+    }
+</select>
+<input id="@Model.Id" name="@Model.PhoneName" type="tel" class="form-control phone-national"
+       value="@Model.Phone" placeholder="@selectedRule.Example" autocomplete="tel-national" inputmode="tel"
+       aria-label="Phone number" required="@Model.Required" />
+@if (!string.IsNullOrEmpty(phoneError))
+{
+    <div class="text-danger small w-100 mt-1">@phoneError</div>
+}

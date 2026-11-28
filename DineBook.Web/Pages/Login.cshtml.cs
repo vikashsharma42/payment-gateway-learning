@@ -54,7 +54,9 @@ namespace DineBook.Web.Pages
                 return NotFound();
 
             // Already signed in: skip the form and go where this account belongs
-            if (User.Identity?.IsAuthenticated == true && Enum.TryParse<UserRole>(User.FindFirstValue(ClaimTypes.Role), out var role))
+            if (User.Identity?.IsAuthenticated == true
+                && Enum.TryParse<UserRole>(User.FindFirstValue(ClaimTypes.Role), out var role)
+                && SignedInAccountBelongsHere(role))
             {
                 return await AfterSignInAsync(role, UserClaimsFactory.RestaurantIdOf(User), ct) ?? Page();
             }
@@ -100,6 +102,13 @@ namespace DineBook.Web.Pages
             ToastSuccess($"Welcome back, {user.FirstName}.");
             return await AfterSignInAsync(user.Role, user.RestaurantId, ct) ?? Page();
         }
+
+        // A customer signed in to another restaurant stays on this restaurant's sign-in form,
+        // so the address alone never shows another restaurant's pages.
+        private bool SignedInAccountBelongsHere(UserRole role) =>
+            Restaurant is null
+            || role != UserRole.Customer
+            || UserClaimsFactory.RestaurantIdOf(User) == Restaurant.Id;
 
         // Null means there is nowhere to go, so the sign-in page stays.
         private async Task<IActionResult> AfterSignInAsync(UserRole role, long? restaurantId, CancellationToken ct)

@@ -90,6 +90,14 @@
 
                         <p class="mt-4 mb-3 small">We'll book this in the name of <strong>@Model.BookingName</strong>, using the phone number and email on your account.</p>
 
+                        @if (Model.BookingAdvance > 0)
+                        {
+                            <p class="mb-3 small text-muted">
+                                Pay a @Money.Inr(Model.BookingAdvance) deposit to secure your table. It is deducted from your food bill.
+                                If you cancel, @Money.Inr(Model.BookingAdvance - Model.CancellationFee) is refunded and @Money.Inr(Model.CancellationFee) is kept as a cancellation fee.
+                            </p>
+                        }
+
                         <div class="mb-2">
                             <label asp-for="Input.SpecialRequests" class="form-label"></label>
                             <textarea asp-for="Input.SpecialRequests" class="form-control" rows="2" maxlength="200"></textarea>

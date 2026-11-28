@@ -23,6 +23,12 @@ namespace DineBook.Application.Configuration
         // Time slots are offered every SlotMinutes
         public int SlotMinutes { get; set; } = 30;
 
+        // Booking advance in rupees. Deducted from the food bill once per booking, at checkout.
+        public decimal BookingAdvance { get; set; } = 500m;
+
+        // Kept from the deposit when a booking is cancelled. The rest is refunded.
+        public decimal CancellationFee { get; set; } = 100m;
+
         public ReservationPolicy ToPolicy() => new ReservationPolicy(
             MaxGuestsPerBooking, MinNoticeMinutes, MaxAdvanceDays, DefaultDurationMinutes, SlotMinutes);
     }

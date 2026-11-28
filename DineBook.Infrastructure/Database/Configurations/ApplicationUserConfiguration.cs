@@ -11,6 +11,9 @@ namespace DineBook.Infrastructure.Database.Configurations
             builder.ToTable(nameof(ApplicationUser));
             builder.Property(x => x.Role).HasConversion<string>().HasMaxLength(20).IsRequired();
 
+            // ISO 3166-1 alpha-2 country code, for example IN
+            builder.Property(x => x.CountryCode).HasConversion<string>().HasMaxLength(2).IsRequired();
+
             // Restaurant of a customer or staff member. Null for admins.
             builder.HasOne<Restaurant>()
                 .WithMany()

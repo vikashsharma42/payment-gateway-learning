@@ -1,6 +1,7 @@
 using DineBook.Domain.Abstractions;
 using DineBook.Domain.Enums;
 using DineBook.Domain.Validation;
+using DineBook.Domain.ValueObjects;
 using System;
 using System.Linq;
 
@@ -15,6 +16,7 @@ namespace DineBook.Domain.Entities
             string firstName,
             string lastName,
             UserRole role,
+            Country countryCode,
             string phone,
             long? restaurantId)
         {
@@ -24,11 +26,18 @@ namespace DineBook.Domain.Entities
             DomainValidation<string>.Ensure(lastName).IsNotNullOrWhiteSpace().HasMaxLength(100);
             DomainValidation<UserRole>.Ensure(role).IsDefinedEnum();
 
+            DomainValidation<bool>.Ensure(Enum.IsDefined(countryCode)).IsTrue("Choose your country.");
+
             var normalizedPhone = NormalizePhone(phone);
             if (role == UserRole.Customer)
+            {
                 DomainValidation<string>.Ensure(normalizedPhone, nameof(phone)).IsNotNullOrWhiteSpace("A phone number is required for customers.").HasMaxLength(15);
+                PhoneNumbers.EnsureStored(countryCode, normalizedPhone);
+            }
             else
+            {
                 DomainValidation<string>.Ensure(normalizedPhone, nameof(phone)).HasMaxLength(15);
+            }
 
             if (role == UserRole.Admin)
                 DomainValidation<bool>.Ensure(restaurantId is null).IsTrue("Admins are not tied to a restaurant.");
@@ -40,6 +49,7 @@ namespace DineBook.Domain.Entities
             FirstName = firstName.Trim();
             LastName = lastName.Trim();
             Role = role;
+            CountryCode = countryCode;
             // Null for staff without a phone, so several accounts can leave it empty without clashing on a unique index
             Phone = normalizedPhone.Length == 0 ? null : normalizedPhone;
             RestaurantId = role == UserRole.Admin ? null : restaurantId;
@@ -59,7 +69,10 @@ namespace DineBook.Domain.Entities
 
         public string PasswordHash { get; private set; }
 
-        // Required for customers. Optional for staff.
+        // ISO 3166-1 alpha-2 code of the country the phone number belongs to, for example IN. Drives the flag and the phone format.
+        public Country CountryCode { get; private set; }
+
+        // Stored as the country's dial code plus the national number, digits only (919876543210). Required for customers.
         public string Phone { get; private set; }
 
         public bool IsActive { get; private set; }
@@ -87,20 +100,28 @@ namespace DineBook.Domain.Entities
 
         public void Deactivate() => IsActive = false;
 
-        // Same rules as the constructor: customers must keep a phone number
-        public void UpdateProfile(string firstName, string lastName, string phone)
+        // Same rules as the constructor: customers must keep a phone number. The phone is in stored form (see PhoneNumbers.Resolve).
+        public void UpdateProfile(string firstName, string lastName, Country countryCode, string phone)
         {
             DomainValidation<string>.Ensure(firstName).IsNotNullOrWhiteSpace().HasMaxLength(100);
             DomainValidation<string>.Ensure(lastName).IsNotNullOrWhiteSpace().HasMaxLength(100);
 
+            DomainValidation<bool>.Ensure(Enum.IsDefined(countryCode)).IsTrue("Choose your country.");
+
             var normalizedPhone = NormalizePhone(phone);
             if (Role == UserRole.Customer)
+            {
                 DomainValidation<string>.Ensure(normalizedPhone, nameof(phone)).IsNotNullOrWhiteSpace("A phone number is required for customers.").HasMaxLength(15);
+                PhoneNumbers.EnsureStored(countryCode, normalizedPhone);
+            }
             else
+            {
                 DomainValidation<string>.Ensure(normalizedPhone, nameof(phone)).HasMaxLength(15);
+            }
 
             FirstName = firstName.Trim();
             LastName = lastName.Trim();
+            CountryCode = countryCode;
             Phone = normalizedPhone.Length == 0 ? null : normalizedPhone;
         }
 

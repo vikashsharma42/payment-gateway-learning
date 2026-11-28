@@ -25,6 +25,10 @@ namespace DineBook.Application.Configuration
                     "Dining:DefaultDurationMinutes must be between 30 and 300.")
                 .Validate(o => o.SlotMinutes >= 5 && o.SlotMinutes <= 120,
                     "Dining:SlotMinutes must be between 5 and 120.")
+                .Validate(o => o.BookingAdvance >= 0m && o.BookingAdvance <= 10000m,
+                    "Dining:BookingAdvance must be between 0 and 10000.")
+                .Validate(o => o.CancellationFee >= 0m && o.CancellationFee <= o.BookingAdvance,
+                    "Dining:CancellationFee must be between 0 and the booking advance.")
                 .ValidateOnStart();
 
             return services;

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using System.Security.Claims;
 using System.Text.Json;
+using DineBook.Application.Security;
 using DineBook.Domain.Enums;
 using DineBook.Domain.ValueObjects;
 
@@ -15,6 +16,13 @@ namespace DineBook.Web.Infrastructure
         // The signed-in account's id (set from the cookie at sign-in). 0 when nobody is signed in.
         protected long UserId =>
             long.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : 0;
+
+        // True only when the signed-in account is a customer registered with this restaurant.
+        // The sign-in cookie covers the whole site, so being signed in elsewhere must not open this restaurant's pages.
+        protected bool IsCustomerOf(long restaurantId) =>
+            User.Identity?.IsAuthenticated == true
+            && User.FindFirstValue(ClaimTypes.Role) == nameof(UserRole.Customer)
+            && UserClaimsFactory.RestaurantIdOf(User) == restaurantId;
 
         protected void ToastSuccess(string message) => SetToast("success", message);
 

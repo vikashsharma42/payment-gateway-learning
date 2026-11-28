@@ -1,4 +1,5 @@
 using DineBook.Domain.Entities;
+using DineBook.Domain.Enums;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,7 +14,7 @@ namespace DineBook.Application.Services.Interface
     {
         Task<ApplicationUser> GetProfileAsync(long customerId, CancellationToken ct = default);
 
-        Task UpdateProfileAsync(long customerId, string firstName, string lastName, string phone, CancellationToken ct = default);
+        Task UpdateProfileAsync(long customerId, string firstName, string lastName, Country countryCode, string phone, CancellationToken ct = default);
 
         /// <summary>Bookings, newest first. Restaurant is loaded.</summary>
         Task<IReadOnlyList<Reservation>> GetReservationsAsync(long customerId, CancellationToken ct = default);

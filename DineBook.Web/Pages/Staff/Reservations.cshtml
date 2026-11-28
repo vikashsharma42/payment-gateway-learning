@@ -39,7 +39,7 @@ else
                         <td>@booking.StartsAt.ToString("ddd dd MMM") @booking.StartsAt.ToString("HH:mm")</td>
                         <td>
                             <div class="fw-semibold">@booking.CustomerName</div>
-                            <div class="small text-muted">@booking.CustomerPhone</div>
+                            <div class="small text-muted">@PhoneDisplay.Show(booking.CustomerCountryCode, booking.CustomerPhone)</div>
                             @if (!string.IsNullOrWhiteSpace(booking.SpecialRequests))
                             {
                                 <div class="small fst-italic">@booking.SpecialRequests</div>

@@ -48,6 +48,7 @@ namespace DineBook.Application.Services
                 "System",
                 "Administrator",
                 UserRole.Admin,
+                countryCode: CountryRules.Default,
                 phone: null,
                 restaurantId: null);
 

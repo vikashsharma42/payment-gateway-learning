@@ -75,6 +75,7 @@ BEGIN TRY
         FirstName       NVARCHAR(100) NOT NULL,
         LastName        NVARCHAR(100) NOT NULL,
         Role            NVARCHAR(20)  NOT NULL,
+        CountryCode     NVARCHAR(2)   NOT NULL,
         Phone           NVARCHAR(15)  NULL,
         RestaurantId    BIGINT        NULL,
         IsActive        BIT           NOT NULL,

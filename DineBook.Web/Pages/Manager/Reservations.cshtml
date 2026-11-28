@@ -33,7 +33,7 @@ else
                 {
                     <tr>
                         <td>@booking.StartsAt.ToString("ddd dd MMM") @booking.StartsAt.ToString("HH:mm")</td>
-                        <td>@booking.CustomerName<div class="small text-muted">@booking.CustomerPhone</div></td>
+                        <td>@booking.CustomerName<div class="small text-muted">@PhoneDisplay.Show(booking.CustomerCountryCode, booking.CustomerPhone)</div></td>
                         <td>@booking.Table?.Location · @booking.Table?.Label</td>
                         <td>@booking.Guests</td>
                         <td><span class="badge text-bg-light border">@booking.Status</span></td>

@@ -13,6 +13,14 @@ namespace DineBook.Infrastructure.Database.Configurations
 
             // Amount is a Money value object, stored as Amount_Amount and Amount_Currency
             builder.OwnsOne(x => x.Amount, a => ValueObjectMappings.MapMoney(a));
+            builder.Property(x => x.AdvanceApplied).HasPrecision(18, 2);
+            builder.Property(x => x.RefundedAmount).HasPrecision(18, 2);
+
+            // A booking deposit has no food order, so the booking is linked directly
+            builder.HasOne<Reservation>()
+                .WithMany()
+                .HasForeignKey(x => x.ReservationId)
+                .OnDelete(DeleteBehavior.Restrict);
 
             // Many payment attempts can belong to one order. Restrict: a paid order is never deleted with its payments.
             builder.HasOne(x => x.Order)

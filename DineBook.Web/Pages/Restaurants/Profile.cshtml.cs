@@ -48,7 +48,8 @@ namespace DineBook.Web.Pages.Restaurants
             {
                 FirstName = profile.FirstName,
                 LastName = profile.LastName,
-                Phone = profile.Phone ?? string.Empty
+                CountryCode = profile.CountryCode,
+                Phone = DineBook.Domain.ValueObjects.PhoneNumbers.National(profile.CountryCode, profile.Phone ?? string.Empty)
             };
             return Page();
         }
@@ -67,7 +68,8 @@ namespace DineBook.Web.Pages.Restaurants
 
             try
             {
-                await _customers.UpdateProfileAsync(UserId, Input.FirstName, Input.LastName, Input.Phone, ct);
+                await _customers.UpdateProfileAsync(UserId, Input.FirstName, Input.LastName, Input.CountryCode,
+                    DineBook.Domain.ValueObjects.PhoneNumbers.Resolve(Input.CountryCode, Input.Phone), ct);
                 ToastSuccess("Your profile has been updated.");
                 return RedirectToPage(new { slug = Slug });
             }
@@ -86,13 +88,9 @@ namespace DineBook.Web.Pages.Restaurants
             if (Restaurant is null || !Restaurant.IsActive)
                 return NotFound();
 
-            // Signed-out visitors sign in first, then come back here
-            if (User.Identity?.IsAuthenticated != true)
+            // Only customers of this restaurant have a profile here. Everyone else signs in here first.
+            if (!IsCustomerOf(Restaurant.Id))
                 return RedirectToPage("/Restaurants/Login", new { slug = Slug, ReturnUrl = Request.Path.ToString() });
-
-            // Only customers have a profile here. Other accounts go to their own area.
-            if (User.FindFirstValue(ClaimTypes.Role) != nameof(UserRole.Customer))
-                return RedirectToPage("/Restaurants/Login", new { slug = Slug });
 
             return null;
         }

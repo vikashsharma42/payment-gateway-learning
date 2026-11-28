@@ -1,6 +1,6 @@
 using DineBook.Domain.Entities;
-using System.Collections.Generic;
 using DineBook.Payments.Gateway;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -66,6 +66,43 @@ namespace DineBook.Application.Services.Interface
         /// Returns null when the order does not exist.
         /// </summary>
         Task<PaymentBookingLinks> GetBookingLinksAsync(long orderId, CancellationToken ct = default);
+
+        /// <summary>The booking advance in rupees, from configuration (Dining:BookingAdvance).</summary>
+        decimal BookingAdvance { get; }
+
+        /// <summary>
+        /// How much of the booking advance is applied to this food order's bill: the advance still
+        /// unused for the booking, capped at the bill. Counts paid, refunded and recent pending payments.
+        /// </summary>
+        Task<decimal> AdvanceCreditAsync(Orders order, CancellationToken ct = default);
+
+        /// <summary>The part of the deposit kept when a booking is cancelled, in rupees.</summary>
+        decimal CancellationFee { get; }
+
+        /// <summary>Deposit paid for a booking and not yet refunded.</summary>
+        Task<decimal> DepositHeldAsync(long reservationId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Creates the gateway order for a booking's deposit and stores a pending deposit payment.
+        /// Same key returns the same payment. Throws when the booking is not active or the deposit is paid.
+        /// </summary>
+        Task<PaymentOrderResult> CreateDepositAsync(
+            string reservationCode,
+            string customerEmail,
+            string customerPhone,
+            string returnUrl,
+            string idempotencyKey,
+            CancellationToken ct = default);
+
+        /// <summary>
+        /// Refunds the deposit minus the cancellation fee after a booking is cancelled. Returns the amount
+        /// refunded now (0 when nothing is due, food was already paid from it, or the gateway is unavailable).
+        /// Safe to call again: a failed refund is retried.
+        /// </summary>
+        Task<decimal> RefundCancelledBookingAsync(string reservationCode, CancellationToken ct = default);
+
+        /// <summary>The booking code and restaurant address of any payment, for the return page links.</summary>
+        Task<PaymentBookingLinks> GetPaymentLinksAsync(string gatewayOrderId, CancellationToken ct = default);
     }
 
     public sealed record PaymentBookingLinks(string ReservationCode, string RestaurantSlug);

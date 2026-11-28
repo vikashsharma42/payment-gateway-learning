@@ -35,13 +35,13 @@ namespace DineBook.Application.Services
                 ?? throw new DomainException("Account not found. Please sign in again.");
         }
 
-        public async Task UpdateProfileAsync(long customerId, string firstName, string lastName, string phone, CancellationToken ct = default)
+        public async Task UpdateProfileAsync(long customerId, string firstName, string lastName, Country countryCode, string phone, CancellationToken ct = default)
         {
             var user = await _db.Users.FirstOrDefaultAsync(u => u.Id == customerId && u.Role == UserRole.Customer, ct)
                 ?? throw new DomainException("Account not found. Please sign in again.");
 
             // The domain validates and normalizes the name and phone
-            user.UpdateProfile(firstName, lastName, phone);
+            user.UpdateProfile(firstName, lastName, countryCode, phone);
 
             // Phone is unique per restaurant, so another account at the same restaurant cannot use it
             var phoneTaken = await _db.Users.AnyAsync(
@@ -100,7 +100,8 @@ namespace DineBook.Application.Services
             return await _db.Payments.AsNoTracking()
                 .Include(p => p.Order)
                 .ThenInclude(o => o.Restaurant)
-                .Where(p => p.Order.Reservation.ApplicationUserId == customerId)
+                // Food payments and booking deposits both belong to one of the customer's bookings
+                .Where(p => _db.Reservations.Any(r => r.Id == p.ReservationId && r.ApplicationUserId == customerId))
                 .OrderByDescending(p => p.CreatedDateTime)
                 .Take(MaxRows)
                 .ToListAsync(ct);

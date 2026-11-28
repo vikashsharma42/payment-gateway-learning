@@ -53,7 +53,7 @@ namespace DineBook.Web.Pages
 
         // Email, phone and the idempotency key (see CheckoutDto)
         [BindProperty]
-        public CheckoutDto Input { get; set; }
+        public CheckoutDto Input { get; set; } = new();
 
         // The food order being paid. Its items, categories and prices are shown as the bill.
         public Orders Order { get; private set; }
@@ -61,6 +61,11 @@ namespace DineBook.Web.Pages
         public string ReservationCode { get; private set; } = string.Empty;
 
         public string RestaurantName { get; private set; } = string.Empty;
+
+        // The booking advance applied to this order, and what is still due after it
+        public decimal Credit { get; private set; }
+
+        public decimal AmountDue { get; private set; }
 
         // Null when there is no live payment session for this order
         public PendingPayment Pending { get; private set; }
@@ -108,10 +113,17 @@ namespace DineBook.Web.Pages
 
                 // The amount is read from the order inside PaymentService, never from the form
                 var session = await _payments.CreateOrderAsync(
-                    id, Input.Email.Trim(), Input.Phone.Trim(), returnUrl, Input.IdempotencyKey, ct);
+                    id, Input.Email.Trim(), DineBook.Domain.ValueObjects.PhoneNumbers.Resolve(Input.CountryCode, Input.Phone), returnUrl, Input.IdempotencyKey, ct);
 
                 if (session is null)
                     return NotFound();
+
+                // The booking advance covers the whole bill: nothing to pay, the order is settled
+                if (session.Amount <= 0m)
+                {
+                    ToastSuccess("Your booking advance covers this order. No payment is needed.");
+                    return RedirectToPage("/Reservations/Details", new { slug = Slug, code = ReservationCode });
+                }
 
                 var pending = new PendingPayment(
                     id, session.OrderId, session.PaymentSessionId, session.Amount, DateTimeOffset.UtcNow);
@@ -154,6 +166,9 @@ namespace DineBook.Web.Pages
 
             ReservationCode = Order.Reservation?.Code ?? string.Empty;
             RestaurantName = Order.Restaurant?.Name ?? string.Empty;
+
+            Credit = await _payments.AdvanceCreditAsync(Order, ct);
+            AmountDue = Order.BillFor(Order.Restaurant).Total.Amount - Credit;
             return true;
         }
 
@@ -172,7 +187,10 @@ namespace DineBook.Web.Pages
                 Input.Email = account.Email;
 
             if (string.IsNullOrEmpty(Input.Phone))
-                Input.Phone = account.Phone;
+            {
+                Input.CountryCode = account.CountryCode;
+                Input.Phone = DineBook.Domain.ValueObjects.PhoneNumbers.National(account.CountryCode, account.Phone);
+            }
         }
 
         // A paid or cancelled order needs no checkout: show the booking instead

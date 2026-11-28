@@ -80,7 +80,7 @@
                 @foreach (var payment in Model.RecentPayments)
                 {
                     <li class="list-group-item d-flex justify-content-between">
-                        <span><code>@payment.Order.OrderNo</code> <span class="text-muted small">· @payment.Order.Restaurant.Name</span></span>
+                        <span><code>@(payment.Order?.OrderNo ?? "Deposit")</code> <span class="text-muted small">· @(payment.Order?.Restaurant.Name ?? "Booking deposit")</span></span>
                         <span>@DineBook.Web.Helpers.Money.Inr(payment.Amount.Amount) <span class="badge text-bg-light border ms-1">@payment.Status</span></span>
                     </li>
                 }

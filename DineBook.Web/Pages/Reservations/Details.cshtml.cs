@@ -69,10 +69,20 @@ namespace DineBook.Web.Pages.Reservations
 
         public bool CanOrderFood { get; private set; }
 
+        // The booking advance, shown as a deduction from the food bill
+        public decimal BookingAdvance => _payments.BookingAdvance;
+
+        // True when the deposit is still to be paid for this booking
+        public bool NeedsDeposit { get; private set; }
+
         public async Task<IActionResult> OnGetAsync(CancellationToken ct)
         {
             if (!await LoadAsync(ct))
                 return NotFound();
+
+            // A cancelled booking's refund is retried here until it has gone through
+            if (Reservation.Status == ReservationStatus.Cancelled)
+                await _payments.RefundCancelledBookingAsync(Code, ct);
 
             // The edit form starts with the current values
             Change.Guests = Reservation.Guests;
@@ -97,7 +107,7 @@ namespace DineBook.Web.Pages.Reservations
 
             try
             {
-                await _reservations.UpdateBookingAsync(Code, Change.Phone, Change.Guests, Change.SpecialRequests ?? string.Empty, ct);
+                await _reservations.UpdateBookingAsync(Code, DineBook.Domain.ValueObjects.PhoneNumbers.Resolve(Change.CountryCode, Change.Phone), Change.Guests, Change.SpecialRequests ?? string.Empty, ct);
                 ToastSuccess("Your booking has been updated.");
             }
             catch (DomainException ex)
@@ -115,8 +125,13 @@ namespace DineBook.Web.Pages.Reservations
 
             try
             {
-                await _reservations.CancelAsync(Code, Input.Phone, ct);
-                ToastSuccess("Your booking has been cancelled.");
+                await _reservations.CancelAsync(Code, DineBook.Domain.ValueObjects.PhoneNumbers.Resolve(Input.CountryCode, Input.Phone), ct);
+
+                // The deposit, less the cancellation fee, goes back to the customer
+                var refund = await _payments.RefundCancelledBookingAsync(Code, ct);
+                ToastSuccess(refund > 0
+                    ? $"Your booking has been cancelled. {Money.Inr(refund)} will be refunded."
+                    : "Your booking has been cancelled.");
             }
             catch (DomainException ex)
             {
@@ -148,7 +163,7 @@ namespace DineBook.Web.Pages.Reservations
 
             try
             {
-                var order = await _orders.PlaceOrderAsync(Code, Input.Phone, selections, ct);
+                var order = await _orders.PlaceOrderAsync(Code, DineBook.Domain.ValueObjects.PhoneNumbers.Resolve(Input.CountryCode, Input.Phone), selections, ct);
                 ToastSuccess($"Order {order.OrderNo} placed with {order.Items.Count} item(s).");
                 TempData["Celebrate"] = "1";
             }
@@ -168,7 +183,7 @@ namespace DineBook.Web.Pages.Reservations
 
             try
             {
-                var orders = await _payments.GetPayableOrdersAsync(Code, Input.Phone, ct);
+                var orders = await _payments.GetPayableOrdersAsync(Code, DineBook.Domain.ValueObjects.PhoneNumbers.Resolve(Input.CountryCode, Input.Phone), ct);
                 PayableOrders = orders.Where(o => !o.IsPaid).ToList();
 
                 if (PayableOrders.Count == 0)
@@ -192,7 +207,7 @@ namespace DineBook.Web.Pages.Reservations
 
             try
             {
-                var orders = await _payments.GetPayableOrdersAsync(Code, Input.Phone, ct);
+                var orders = await _payments.GetPayableOrdersAsync(Code, DineBook.Domain.ValueObjects.PhoneNumbers.Resolve(Input.CountryCode, Input.Phone), ct);
                 if (!orders.Any(o => o.Id == orderId && !o.IsPaid))
                 {
                     ToastError("This order can't be paid right now.");
@@ -228,6 +243,9 @@ namespace DineBook.Web.Pages.Reservations
             Restaurant = await _reservations.GetRestaurantAsync(Reservation.RestaurantId, ct);
             if (Restaurant is null || !string.Equals(Restaurant.Slug, Slug, StringComparison.OrdinalIgnoreCase))
                 return false;
+
+            NeedsDeposit = CanPay && BookingAdvance > 0m
+                && await _payments.DepositHeldAsync(Reservation.Id, ct) == 0m;
 
             CanOrderFood = Reservation.AcceptsFoodOrders(_reservations.LocalNow());
             if (CanOrderFood)

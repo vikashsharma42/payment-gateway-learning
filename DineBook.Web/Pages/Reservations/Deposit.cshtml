@@ -1,0 +1,82 @@
+@page "/{slug}/Reservations/{code}/Deposit"
+@model DineBook.Web.Pages.Reservations.DepositModel
+@{
+    ViewData["Title"] = "Booking deposit · " + Model.Restaurant.Name;
+}
+
+<div class="page-hero mb-4">
+    <h1 class="h2 mb-1">Secure your table</h1>
+    <p class="text-muted mb-0">@Model.Restaurant.Name · Booking <code>@Model.Code</code></p>
+</div>
+
+<div class="row g-4">
+    <aside class="col-lg-5">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span>Booking deposit</span>
+                    <strong>@Money.Inr(Model.Amount)</strong>
+                </div>
+                <p class="small text-muted mt-3 mb-0">
+                    The deposit is deducted from your food bill. If you cancel, @Money.Inr(Model.Refund) is refunded
+                    and @Money.Inr(Model.CancellationFee) is kept as a cancellation fee.
+                </p>
+            </div>
+        </div>
+    </aside>
+
+    <section class="col-lg-7" aria-labelledby="deposit-heading">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                @if (Model.Pending is not null)
+                {
+                    <h2 id="deposit-heading" class="h5">Ready to pay</h2>
+                    <p class="text-muted small mb-1">Payment reference</p>
+                    <p><code>@Model.Pending.OrderId</code></p>
+
+                    <button id="payBtn" type="button" class="btn btn-success btn-lg w-100"
+                            data-session="@Model.Pending.SessionId"
+                            data-mode="@Model.CashfreeMode">
+                        Pay @Money.Inr(Model.Pending.Amount)
+                    </button>
+
+                    <p id="payError" class="text-danger small mt-2 mb-0" role="alert"></p>
+                    <p class="small text-muted mt-3 mb-0">You'll be taken to a secure payment page to finish.</p>
+                }
+                else
+                {
+                    <h2 id="deposit-heading" class="h5 mb-3">Your contact details</h2>
+
+                    <form method="post" data-submit-once>
+                        <div class="visually-hidden" aria-hidden="true"><label>Leave this field empty<input type="text" name="website_url" tabindex="-1" autocomplete="off" /></label></div>
+                        <div asp-validation-summary="ModelOnly" class="text-danger mb-3" role="alert"></div>
+
+                        <input type="hidden" asp-for="Input.IdempotencyKey" />
+
+                        <div class="mb-3">
+                            <label asp-for="Input.Email" class="form-label"></label>
+                            <input asp-for="Input.Email" type="email" class="form-control form-control-lg"
+                                   placeholder="you@example.com" autocomplete="email" />
+                            <span asp-validation-for="Input.Email" class="text-danger small"></span>
+                        </div>
+
+                        <div class="mb-3">
+                            <label asp-for="Input.Phone" class="form-label"></label>
+                            <div class="input-group input-group-lg phone-field">
+                                @{ var phoneField = new DineBook.Web.Models.PhoneFieldModel("Input_Phone", "Input.CountryCode", Model.Input.CountryCode, "Input.Phone", Model.Input.Phone, true); }
+                                <partial name="_PhoneField" model="phoneField" />
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-brand btn-lg w-100">Continue to payment</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </section>
+</div>
+
+@section Scripts {
+    <script src="https://sdk.cashfree.com/js/v3/cashfree.js" defer></script>
+    <script src="~/js/checkout.js" asp-append-version="true" defer></script>
+}

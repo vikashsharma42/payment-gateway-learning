@@ -20,11 +20,18 @@ namespace DineBook.Web.Pages.Restaurants
     public class BookModel : AppPageModel
     {
         private readonly IReservationService _reservations;
+        private readonly IPaymentService _payments;
 
-        public BookModel(IReservationService reservations)
+        public BookModel(IReservationService reservations, IPaymentService payments)
         {
             _reservations = reservations;
+            _payments = payments;
         }
+
+        // The booking advance, shown on the booking page
+        public decimal BookingAdvance => _payments.BookingAdvance;
+
+        public decimal CancellationFee => _payments.CancellationFee;
 
         // Restaurant and location from the address
         [BindProperty(SupportsGet = true)]
@@ -44,7 +51,8 @@ namespace DineBook.Web.Pages.Restaurants
 
         public IReadOnlyList<DateTime> Slots { get; private set; }
 
-        public bool IsSignedIn => User.Identity?.IsAuthenticated == true;
+        // True only for a customer of this restaurant. Being signed in at another restaurant does not count.
+        public bool IsSignedIn { get; private set; }
 
         public DateOnly Today => DateOnly.FromDateTime(_reservations.LocalNow());
 
@@ -56,6 +64,7 @@ namespace DineBook.Web.Pages.Restaurants
             if (!await LoadAsync(ct))
                 return NotFound();
 
+            IsSignedIn = IsCustomerOf(Restaurant.Id);
             if (IsSignedIn)
             {
                 Input.Date ??= Today;
@@ -67,12 +76,13 @@ namespace DineBook.Web.Pages.Restaurants
 
         public async Task<IActionResult> OnPostAsync(CancellationToken ct)
         {
-            // Booking is for signed-in accounts. Anyone else is sent to sign in, then back to this page.
-            if (!IsSignedIn)
-                return RedirectToPage("/Restaurants/Login", new { slug = Slug, ReturnUrl = Request.Path.ToString() });
-
             if (!await LoadAsync(ct))
                 return NotFound();
+
+            // Booking is for this restaurant's customers. Anyone else is sent to sign in here, then back to this page.
+            IsSignedIn = IsCustomerOf(Restaurant.Id);
+            if (!IsSignedIn)
+                return RedirectToPage("/Restaurants/Login", new { slug = Slug, ReturnUrl = Request.Path.ToString() });
 
             Input.Date ??= Today;
 
@@ -93,6 +103,13 @@ namespace DineBook.Web.Pages.Restaurants
                     (Input.SpecialRequests ?? string.Empty).Trim(),
                     SelectedLocation.Id),
                     ct);
+
+                // The deposit secures the table, so the customer pays it straight after booking
+                if (_payments.BookingAdvance > 0m)
+                {
+                    ToastSuccess("Your booking is created. Pay the deposit to secure your table.");
+                    return RedirectToPage("/Reservations/Deposit", new { slug = Restaurant.Slug, code = reservation.Code });
+                }
 
                 ToastSuccess("Your table is booked. See you soon!");
 

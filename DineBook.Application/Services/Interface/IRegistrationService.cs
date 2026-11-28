@@ -1,7 +1,6 @@
 using DineBook.Application.Paging;
 using DineBook.Domain.Entities;
 using DineBook.Domain.Enums;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,6 +35,7 @@ namespace DineBook.Application.Services.Interface
         string FirstName,
         string LastName,
         string Email,
+        Country CountryCode,
         string Phone,
         string Password,
         long RestaurantId);

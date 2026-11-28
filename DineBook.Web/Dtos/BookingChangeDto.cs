@@ -1,3 +1,4 @@
+using DineBook.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
 
 namespace DineBook.Web.Dtos
@@ -5,6 +6,8 @@ namespace DineBook.Web.Dtos
     // The edit form on the booking page: the phone number proves the booking, then the party size and special requests
     public class BookingChangeDto
     {
+        public Country CountryCode { get; set; } = CountryRules.Default;
+
         [Required(ErrorMessage = "Enter the phone number used for this booking.")]
         [StringLength(20)]
         public string Phone { get; set; }

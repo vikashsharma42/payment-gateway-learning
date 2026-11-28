@@ -36,9 +36,11 @@
 
             <div class="mb-3">
                 <label asp-for="Input.Phone" class="form-label"></label>
-                <input asp-for="Input.Phone" type="tel" class="form-control" autocomplete="tel" />
+                <div class="input-group phone-field">
+                    @{ var phoneField = new DineBook.Web.Models.PhoneFieldModel("Input_Phone", "Input.CountryCode", Model.Input.CountryCode, "Input.Phone", Model.Input.Phone, true); }
+                    <partial name="_PhoneField" model="phoneField" />
+                </div>
                 <div class="form-text">Used to confirm bookings and food orders.</div>
-                <span asp-validation-for="Input.Phone" class="text-danger small"></span>
             </div>
 
             <div class="row g-3 mb-4">

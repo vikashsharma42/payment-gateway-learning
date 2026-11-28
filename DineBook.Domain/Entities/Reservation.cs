@@ -79,6 +79,8 @@ namespace DineBook.Domain.Entities
 
         public string CustomerPhone => Customer?.Phone;
 
+        public Country? CustomerCountryCode => Customer?.CountryCode;
+
         public string CustomerEmail => Customer?.Email;
 
         public virtual Restaurant Restaurant { get; private set; }
