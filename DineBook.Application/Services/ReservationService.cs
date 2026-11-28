@@ -153,6 +153,10 @@ namespace DineBook.Application.Services
             var customer = await _db.Users.FirstOrDefaultAsync(u => u.Id == request.CustomerId, ct)
                 ?? throw new DomainException("Account not found. Please sign in again.");
 
+            // An account books only at the restaurant it was registered with
+            if (customer.RestaurantId != restaurant.Id)
+                throw new DomainException("Sign in at this restaurant to book a table.");
+
             ReservationRules.EnsureBookable(restaurant, policy, request.Guests, request.StartsAt, LocalNow());
             EnsureLocationOpen(restaurant, request.LocationId);
             var tables = TablesFor(restaurant, request.LocationId);

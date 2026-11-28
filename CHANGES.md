@@ -2,6 +2,19 @@
 
 > Entries below are a history of each change. Where a later entry changes an earlier one, the later entry applies. The current behaviour is in [README.md](README.md) and [architecture.md](architecture.md).
 
+## Customer accounts belong to one restaurant (latest)
+
+- A customer signed in to one restaurant is a guest at every other restaurant. The header shows Orders and Profile only at the restaurant the account belongs to. Elsewhere it shows Create account and Sign in for that restaurant.
+- The sign-in cookie now records the account's restaurant address (`restaurant_slug` claim). Accounts signed in before this change must sign in again to get the claim.
+- The booking service refuses to create a booking for an account registered with a different restaurant. Before, only the Book page checked this.
+
+## Interface refinements
+
+- Header stays visible while scrolling. Navigation links are pills with a clear hover state. The DineBook name links to the home page.
+- Forms: consistent field height, labels and colours. Tables: quiet headers, comfortable rows and hover. Alerts use an accent bar. Modals are rounder.
+- The home address (`/`) for an unknown restaurant now explains how to find a restaurant, with three steps. It keeps its 404 status.
+- The restaurant list on the home page is still commented out in `Directory.cshtml.cs`. Enabling it makes every open restaurant browsable without sign-in, so it is left as a product decision.
+
 ## Location in every booking, deposit and checkout address (latest)
 
 - Booking, deposit and checkout addresses now include the location, like the menu and book pages: `/{restaurant}/{location}/Reservations/{code}`, `/{restaurant}/{location}/Reservations/{code}/Deposit` and `/{restaurant}/{location}/Checkout/{id}`. The old addresses without the location no longer exist; bookmarks to them will show "Not Found".

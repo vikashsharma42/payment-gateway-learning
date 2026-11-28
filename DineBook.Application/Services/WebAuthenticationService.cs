@@ -1,4 +1,4 @@
-﻿
+
 using DineBook.Application.Security;
 using DineBook.Application.Services.Interface;
 using DineBook.Domain.Entities;
@@ -45,8 +45,16 @@ namespace DineBook.Application.Services
             if (!passwordValid || !user.IsActive)
                 return null;
 
+            // The address of the account's own restaurant, so the header can tell where this account belongs
+            var restaurantSlug = user.RestaurantId is { } ownRestaurantId
+                ? await _db.Restaurants.AsNoTracking()
+                    .Where(r => r.Id == ownRestaurantId)
+                    .Select(r => r.Slug)
+                    .FirstOrDefaultAsync(ct)
+                : null;
+
             // Generate user claims.
-            var claims = UserClaimsFactory.Create(user);
+            var claims = UserClaimsFactory.Create(user, restaurantSlug);
 
             // Create identity.
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);

@@ -1,4 +1,3 @@
-﻿
 using DineBook.Domain.Entities;
 using System.Collections.Generic;
 using System.Globalization;
@@ -11,7 +10,10 @@ namespace DineBook.Application.Security
         // Restaurant the signed-in user works at or registered with. Absent for admins.
         public const string RestaurantIdClaim = "restaurant_id";
 
-        public static IReadOnlyList<Claim> Create(ApplicationUser user)
+        // Address of that restaurant (its slug). The header uses it to tell whether this account belongs to the restaurant being viewed.
+        public const string RestaurantSlugClaim = "restaurant_slug";
+
+        public static IReadOnlyList<Claim> Create(ApplicationUser user, string restaurantSlug = null)
         {
             var claims = new List<Claim>
             {
@@ -25,6 +27,9 @@ namespace DineBook.Application.Security
 
             if (user.RestaurantId is { } restaurantId)
                 claims.Add(new Claim(RestaurantIdClaim, restaurantId.ToString(CultureInfo.InvariantCulture)));
+
+            if (!string.IsNullOrEmpty(restaurantSlug))
+                claims.Add(new Claim(RestaurantSlugClaim, restaurantSlug));
 
             return claims;
         }

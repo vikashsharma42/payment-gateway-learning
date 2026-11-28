@@ -1,14 +1,20 @@
 @{
-    // Each role sees only its own links. Access itself is enforced by the folder policies in Startup.
+    // Each role sees only its own links. Access itself is enforced by the folder policies in Startup and by each page.
     var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+    var signedIn = User.Identity?.IsAuthenticated == true;
 
     // The restaurant in the address, or the one remembered from an earlier visit
     var slug = ViewContext.RouteData.Values["slug"] as string
                ?? DineBook.Web.Infrastructure.RestaurantCookie.Recall(Context.Request);
 
-    // Guests and customers get a Home link to the restaurant they are using
-    var showHome = slug is not null
-                   && (User.Identity?.IsAuthenticated != true || role == "Customer");
+    // A customer counts as signed in here only when their account belongs to the restaurant in the address.
+    // The sign-in cookie covers the whole site, so an account from another restaurant is a guest here.
+    var accountHere = signedIn
+                      && role == "Customer"
+                      && slug is not null
+                      && string.Equals(User.FindFirst(DineBook.Application.Security.UserClaimsFactory.RestaurantSlugClaim)?.Value, slug, System.StringComparison.OrdinalIgnoreCase);
+
+    var showHome = slug is not null && (!signedIn || role == "Customer");
 }
 
 @if (showHome)
@@ -16,20 +22,18 @@
     <a class="link-light" asp-page="/Restaurants/Index" asp-route-slug="@slug">Home</a>
 }
 
-@if (User.Identity?.IsAuthenticated != true)
+@if (slug is not null && (!signedIn || (role == "Customer" && !accountHere)))
 {
-    if (slug is not null)
-    {
-        <a class="link-light" asp-page="/Restaurants/Registration" asp-route-slug="@slug">Create account</a>
-        <a class="link-light" asp-page="/Restaurants/Login" asp-route-slug="@slug">Sign in</a>
-    }
+    <a class="link-light" asp-page="/Restaurants/Registration" asp-route-slug="@slug">Create account</a>
+    <a class="link-light" asp-page="/Restaurants/Login" asp-route-slug="@slug">Sign in</a>
 }
-else
+
+@if (signedIn)
 {
     switch (role)
     {
         case "Customer":
-            if (slug is not null)
+            if (accountHere)
             {
                 <a class="link-light" asp-page="/Restaurants/Orders" asp-route-slug="@slug">Orders</a>
                 <a class="link-light" asp-page="/Restaurants/Profile" asp-route-slug="@slug">Profile</a>
